@@ -10,23 +10,37 @@
         "doctrine/doctrine-bundle": "^3.3.4",
         "doctrine/doctrine-migrations-bundle": "^4.0.1",
         "doctrine/orm": "^3.7.6",
+        "jcupitt/vips": "^2.6",
+        "kornrunner/blurhash": "^1.2",
+        "league/flysystem-bundle": "^3.7",
         "symfony/asset-mapper": "8.1.*",
         "symfony/console": "8.1.*",
         "symfony/doctrine-messenger": "8.1.*",
         "symfony/dotenv": "8.1.*",
         "symfony/flex": "^2.12",
+        "symfony/form": "8.1.*",
         "symfony/framework-bundle": "8.1.*",
         "symfony/messenger": "8.1.*",
+        "symfony/mime": "8.1.*",
         "symfony/monolog-bundle": "^4.1",
+        "symfony/process": "8.1.*",
+        "symfony/rate-limiter": "8.1.*",
         "symfony/runtime": "8.1.*",
         "symfony/scheduler": "8.1.*",
+        "symfony/security-bundle": "8.1.*",
         "symfony/stimulus-bundle": "^3.7",
+        "symfony/translation": "8.1.*",
         "symfony/twig-bundle": "8.1.*",
         "symfony/uid": "8.1.*",
+        "symfony/ux-live-component": "^3.7",
         "symfony/ux-turbo": "^3.7",
-        "symfony/yaml": "8.1.*"
+        "symfony/validator": "8.1.*",
+        "symfony/yaml": "8.1.*",
+        "twig/extra-bundle": "^3.29",
+        "twig/intl-extra": "^3.30"
     },
     "require-dev": {
+        "dama/doctrine-test-bundle": "^8.7",
         "deptrac/deptrac": "^4.7",
         "friendsofphp/php-cs-fixer": "^3.95",
         "phpstan/extension-installer": "^1.4",
@@ -41,7 +55,8 @@
         "symfony/debug-bundle": "8.1.*",
         "symfony/maker-bundle": "^1.68",
         "symfony/stopwatch": "8.1.*",
-        "symfony/web-profiler-bundle": "8.1.*"
+        "symfony/web-profiler-bundle": "8.1.*",
+        "zenstruck/foundry": "^2.16"
     },
     "config": {
         "allow-plugins": {

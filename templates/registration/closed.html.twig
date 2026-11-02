@@ -1,0 +1,15 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Inscriptions fermées · Socialize{% endblock %}
+
+{% block content %}
+<div class="auth">
+    <section class="card">
+        <h1>{{ mode.value == 'invite' ? 'Inscriptions sur invitation' : 'Inscriptions fermées' }}</h1>
+        <p class="small">{{ mode.value == 'invite'
+            ? 'Cette instance accueille de nouveaux comptes sur invitation. Demandez une invitation à la personne qui l’administre.'
+            : 'Cette instance n’accepte pas de nouveaux comptes pour le moment.' }}</p>
+        <a class="btn" href="{{ path('app_login') }}">Se connecter</a>
+    </section>
+</div>
+{% endblock %}

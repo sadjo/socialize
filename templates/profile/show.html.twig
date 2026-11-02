@@ -1,0 +1,59 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}{{ account.displayName }} (@{{ account.username }}) · Socialize{% endblock %}
+
+{% block content %}
+<div class="prof">
+    <section class="prof-h">
+        <span class="ring">{{ ui.avatar(account, 150) }}</span>
+        <div class="prof-i">
+            <div class="row">
+                <h1>{{ account.username }}</h1>
+                {% if is_owner %}
+                    <a class="btn sm" href="{{ path('app_settings') }}">Modifier le profil</a>
+                {% elseif app.user %}
+                    {% if is_following %}
+                        <form method="post" action="{{ path('app_profile_unfollow', {username: account.username}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.username) }}">
+                            <button class="btn sm done">Abonné · Ne plus suivre</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{{ path('app_profile_follow', {username: account.username}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.username) }}">
+                            <button class="btn sm pri">Suivre</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <a class="btn sm pri" href="{{ path('app_login') }}">Suivre</a>
+                {% endif %}
+                <button type="button" class="btn sm" data-controller="copy" data-copy-text-value="{{ handle(account, local_domain) }}" data-action="copy#copy">{{ ui.icon('copy', 'xs') }}Copier l’adresse</button>
+            </div>
+            <div class="stats num">
+                <span><b>{{ stats.posts|format_number(locale: 'fr') }}</b> publication{{ stats.posts > 1 ? 's' }}</span>
+                <span><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</span>
+                <span><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</span>
+            </div>
+            <div class="bio"><b>{{ account.displayName }}</b>{% if account.bio %}<br>{{ account.bio|rich_text }}{% endif %}</div>
+            <span class="handle">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>
+        </div>
+    </section>
+
+    <div>
+        <div class="ptabs" role="tablist"><button role="tab" aria-selected="true" class="on">{{ ui.icon('grid', 'xs') }}Publications</button></div>
+        {% if page.empty %}
+            <div class="empty">
+                {{ ui.icon('image') }}
+                {% if is_owner %}
+                    <b>Aucune publication pour l’instant</b>
+                    <a class="btn pri" href="{{ path('app_compose') }}">Publier une première photo</a>
+                {% else %}
+                    <b>Aucune publication visible</b>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="grid3">{{ include('profile/_grid_page.html.twig') }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% import '_macros.html.twig' as ui %}
+{% set frame_id = 'grid-page-' ~ (app.request.query.get('apres') ?? 'first')|replace({'.': '-'}) %}
+<turbo-frame id="{{ frame_id }}" target="_top" style="display:contents">
+    {% for post in page.posts %}
+        {% set cover = post.cover %}
+        <a class="gt" href="{{ path('app_post_show', {id: post.publicId}) }}" aria-label="Ouvrir la publication{{ post.caption ? ' : ' ~ post.caption|slice(0, 80) }}">
+            {% if cover and cover.ready %}
+                <img src="{{ media_url(cover, 'thumb') }}" alt="{{ cover.altText }}" loading="lazy" decoding="async">
+            {% else %}
+                <span class="processing skel">{{ ui.icon('reel') }}</span>
+            {% endif %}
+            {% if post.media|length > 1 %}<span class="gi">{{ ui.icon('stack', 'sm') }}</span>{% elseif post.hasVideo %}<span class="gi">{{ ui.icon('reel', 'sm') }}</span>{% endif %}
+            <span class="gh"><span>{{ ui.icon('heart') }}{{ post.likesCount }}</span><span>{{ ui.icon('comment') }}{{ post.commentsCount }}</span></span>
+        </a>
+    {% endfor %}
+    {% if page.next %}
+        {% set next = page.next.toString %}
+        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path('app_profile', {username: account.username, apres: next}) }}" loading="lazy" target="_top" style="display:contents"></turbo-frame>
+    {% endif %}
+</turbo-frame>

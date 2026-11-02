@@ -1,6 +1,7 @@
 # see https://symfony.com/doc/current/reference/configuration/framework.html
 framework:
     secret: '%env(APP_SECRET)%'
+    set_locale_from_accept_language: false
 
     # La session n'est démarrée que si elle est lue ou écrite.
     session: true

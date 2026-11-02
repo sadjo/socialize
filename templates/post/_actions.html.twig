@@ -1,0 +1,22 @@
+{# Boutons et compteurs, remplacés par Turbo Stream après un like. Variables : post, liked #}
+{% import '_macros.html.twig' as ui %}
+{% set is_liked = liked[post.publicId] ?? false %}
+<div id="post-{{ post.publicId }}-actions">
+    <div class="acts">
+        {% if app.user %}
+            <form method="post" action="{{ path('app_post_like', {id: post.publicId}) }}" data-like-target="form">
+                <input type="hidden" name="_token" value="{{ csrf_token('like-' ~ post.publicId) }}">
+                <input type="hidden" name="source" value="" data-like-target="source">
+                <button class="act{{ is_liked ? ' liked' }}" aria-pressed="{{ is_liked ? 'true' : 'false' }}" aria-label="{{ is_liked ? 'Je n’aime plus' : 'J’aime' }}">{{ ui.icon('heart') }}</button>
+            </form>
+        {% else %}
+            <a class="act" href="{{ path('app_login') }}" aria-label="Connectez-vous pour aimer">{{ ui.icon('heart') }}</a>
+        {% endif %}
+        <a class="act" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}" aria-label="Commenter">{{ ui.icon('comment') }}</a>
+        <button type="button" class="act" data-controller="copy" data-copy-text-value="{{ url('app_post_show', {id: post.publicId}) }}" data-action="copy#copy" aria-label="Copier le lien">{{ ui.icon('send') }}</button>
+        <span class="sp"></span>
+    </div>
+    <div class="pbody" style="padding-bottom:0">
+        <div class="num"><b>{{ post.likesCount|format_number(locale: 'fr') }} J’aime</b>{% if post.commentsCount %} <span class="meta">· {{ post.commentsCount }} commentaire{{ post.commentsCount > 1 ? 's' }}</span>{% endif %}</div>
+    </div>
+</div>

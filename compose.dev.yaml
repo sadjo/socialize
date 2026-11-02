@@ -18,6 +18,7 @@ services:
       - "${HTTP_PORT:-8080}:80"
     volumes:
       - ./:/app
+      - ./docker/frankenphp/Caddyfile:/etc/frankenphp/Caddyfile:ro
     extra_hosts:
       - host.docker.internal:host-gateway
     tty: true

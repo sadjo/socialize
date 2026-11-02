@@ -1,0 +1,16 @@
+{% macro icon(name, class = '') -%}
+    <svg class="i {{ class }}" aria-hidden="true"><use href="#i-{{ name }}"/></svg>
+{%- endmacro %}
+
+{% macro avatar(account, size = 36) -%}
+    {%- set url = avatar_url(account) -%}
+    {%- if url -%}
+        <img class="avatar-img" src="{{ url }}" width="{{ size }}" height="{{ size }}" alt="" loading="lazy">
+    {%- else -%}
+        <span class="av" style="--h:{{ account.hue }};width:{{ size }}px;height:{{ size }}px;font-size:{{ (size * 0.38)|round }}px" aria-hidden="true">{{ account.initials }}</span>
+    {%- endif -%}
+{%- endmacro %}
+
+{% macro ring(account, size = 36, seen = false) -%}
+    <span class="ring{{ seen ? ' seen' }}">{{ _self.avatar(account, size) }}</span>
+{%- endmacro %}

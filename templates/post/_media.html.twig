@@ -1,0 +1,35 @@
+{# Médias d'une publication : carrousel, vidéo, avertissement de contenu. Variables : post #}
+{% import '_macros.html.twig' as ui %}
+{% set count = post.media|length %}
+<div class="media" data-controller="carousel{{ post.sensitive ? ' reveal' }}" data-action="dblclick->like#doubleTap" data-carousel-count-value="{{ count }}">
+    <div class="track" data-carousel-target="track">
+        {% for media in post.media %}
+            <div class="slide{{ media.video ? ' vid' }}">
+                {% if media.ready and media.video %}
+                    <video controls playsinline preload="metadata" poster="{{ media_url(media, 'poster') }}"{% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
+                        <source src="{{ media_url(media, 'video') }}" type="video/mp4">
+                    </video>
+                {% elseif media.ready %}
+                    <img src="{{ media_url(media, 'large') }}" width="{{ media.width }}" height="{{ media.height }}"
+                         alt="{{ media.altText ?? ('Photo ' ~ loop.index ~ ' sur ' ~ count) }}" loading="lazy" decoding="async" draggable="false">
+                {% elseif media.status.value == 'failed' %}
+                    <div class="processing">{{ ui.icon('flag') }}<br>Ce média n’a pas pu être préparé.<br>{{ media.failureReason }}</div>
+                {% else %}
+                    <div class="processing skel">{{ ui.icon('reel') }}<br>Vidéo en cours de préparation…</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    {% if count > 1 %}
+        <span class="cnt num" data-carousel-target="counter">1/{{ count }}</span>
+        <button type="button" class="nb prev" data-action="carousel#prev" aria-label="Média précédent">{{ ui.icon('left', 'sm') }}</button>
+        <button type="button" class="nb next" data-action="carousel#next" aria-label="Média suivant">{{ ui.icon('right', 'sm') }}</button>
+        <div class="dots" aria-hidden="true">{% for i in 1..count %}<i class="{{ loop.first ? 'on' }}" data-carousel-target="dot"></i>{% endfor %}</div>
+    {% endif %}
+    {% if post.sensitive %}
+        <div class="cw-veil" data-reveal-target="veil">
+            <div>{{ ui.icon('eye') }}<b>Contenu sensible</b><span>{{ post.contentWarning }}</span><br>
+                <button type="button" class="btn sm" data-action="reveal#show">Afficher</button></div>
+        </div>
+    {% endif %}
+</div>

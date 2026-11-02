@@ -1,0 +1,39 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}{{ tab == 'home' ? 'Accueil' : 'Fil local' }} · Socialize{% endblock %}
+
+{% block content %}
+<div class="home">
+    <div class="feed-col">
+        {% if tab == 'welcome' %}
+            <section class="welcome">
+                <h1>Partagez vos photos, chez vous</h1>
+                <p class="small">Socialize est un réseau photo auto-hébergé. Voici les dernières publications publiques de {{ local_domain }}.</p>
+                <div class="row">
+                    <a class="btn pri" href="{{ path('app_login') }}">Se connecter</a>
+                    {% if registration_open %}<a class="btn" href="{{ path('app_register') }}">Créer un compte</a>{% endif %}
+                </div>
+            </section>
+        {% endif %}
+        {{ include('feed/_tabs.html.twig') }}
+        <div class="feed">
+            {% if page.empty %}
+                <div class="empty">
+                    {{ ui.icon('image') }}
+                    {% if tab == 'home' %}
+                        <b>Votre fil est vide pour l’instant</b>
+                        <span>Publiez votre première photo, ou suivez des comptes depuis le fil local.</span>
+                        <div class="row"><a class="btn pri" href="{{ path('app_compose') }}">Publier</a><a class="btn" href="{{ path('app_feed_local') }}">Voir le fil local</a></div>
+                    {% else %}
+                        <b>Aucune publication publique pour l’instant</b>
+                    {% endif %}
+                </div>
+            {% else %}
+                {{ include('feed/_page.html.twig') }}
+            {% endif %}
+        </div>
+    </div>
+    {{ include('feed/_rail.html.twig') }}
+</div>
+{% endblock %}
