@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+parameters:
+    app.name: 'Socialize'
+    app.storage_dir: '%env(resolve:STORAGE_DIR)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # Chaque classe de src/ est un service ; les modules suivent la structure
+    # Domain / Application / Infrastructure décrite dans le document de conception.
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/*/Domain/'

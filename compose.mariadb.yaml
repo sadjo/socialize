@@ -1,0 +1,31 @@
+# Variante MariaDB, à combiner avec compose.yaml :
+#   docker compose -f compose.yaml -f compose.mariadb.yaml up -d
+# Choisissez le mot de passe avant le premier lancement : export MARIADB_PASSWORD=...
+
+services:
+  app:
+    environment:
+      DATABASE_URL: "mysql://socialize:${MARIADB_PASSWORD:-socialize}@mariadb:3306/socialize?serverVersion=11.4.0-MariaDB&charset=utf8mb4"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: socialize
+      MARIADB_USER: socialize
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-socialize}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    volumes:
+      - mariadb:/var/lib/mysql
+
+volumes:
+  mariadb:

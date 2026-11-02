@@ -1,0 +1,31 @@
+# Frontières entre modules (voir le document de conception, « Organisation du code »).
+# Core et Media forment le socle ; les modules métier ne dépendent pas les uns des autres.
+deptrac:
+  cache_file: ./var/cache/.deptrac.cache
+  paths:
+    - ./src
+  exclude_files:
+    - '#.*/src/Kernel\.php$#'
+    - '#.*/src/Schedule\.php$#'
+  layers:
+    - { name: Core,              collectors: [{ type: classLike, value: '^App\\Core\\.*' }] }
+    - { name: Media,             collectors: [{ type: classLike, value: '^App\\Media\\.*' }] }
+    - { name: Federation,        collectors: [{ type: classLike, value: '^App\\Federation\\.*' }] }
+    - { name: ImportInstagram,   collectors: [{ type: classLike, value: '^App\\Import\\Instagram\\.*' }] }
+    - { name: CrosspostMeta,     collectors: [{ type: classLike, value: '^App\\Crosspost\\Meta\\.*' }] }
+    - { name: IntegrationImmich, collectors: [{ type: classLike, value: '^App\\Integration\\Immich\\.*' }] }
+    - { name: Api,               collectors: [{ type: classLike, value: '^App\\Api\\.*' }] }
+    - { name: Mcp,               collectors: [{ type: classLike, value: '^App\\Mcp\\.*' }] }
+    - { name: Web,               collectors: [{ type: classLike, value: '^App\\Web\\.*' }] }
+    - { name: Admin,             collectors: [{ type: classLike, value: '^App\\Admin\\.*' }] }
+  ruleset:
+    Core: ~
+    Media: [Core]
+    Federation: [Core, Media]
+    ImportInstagram: [Core, Media]
+    CrosspostMeta: [Core, Media]
+    IntegrationImmich: [Core, Media]
+    Api: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich]
+    Mcp: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich]
+    Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich]
+    Admin: [Core, Federation]

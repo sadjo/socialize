@@ -1,0 +1,23 @@
+# Développement : code monté depuis l'hôte, environnement dev, HTTP simple.
+#   docker compose -f compose.yaml -f compose.dev.yaml up
+# (ou plus simplement : make up)
+
+services:
+  app:
+    image: socialize-dev
+    build:
+      target: frankenphp_dev
+    restart: "no"
+    environment:
+      APP_ENV: dev
+      APP_SECRET: dev-secret-ne-pas-utiliser-en-production
+      SERVER_NAME: ":80"
+      DEFAULT_URI: "http://localhost:${HTTP_PORT:-8080}"
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+    ports: !override
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - ./:/app
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    tty: true

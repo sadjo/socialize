@@ -1,0 +1,41 @@
+doctrine:
+    dbal:
+        # SQLite ou MySQL / MariaDB, choisi par DATABASE_URL.
+        # Pour MySQL / MariaDB, la version du serveur est donnée dans l'URL (serverVersion).
+        url: '%env(resolve:DATABASE_URL)%'
+        profiling_collect_backtrace: '%kernel.debug%'
+    orm:
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore
+        auto_mapping: true
+        # Chaque module déclare ici le dossier de ses entités (src/<Module>/Domain).
+        mappings:
+            Core:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Core/Domain'
+                prefix: 'App\Core\Domain'
+
+when@test:
+    doctrine:
+        dbal:
+            # "TEST_TOKEN" est défini par ParaTest
+            dbname_suffix: '_test%env(default::TEST_TOKEN)%'
+
+when@prod:
+    doctrine:
+        orm:
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system

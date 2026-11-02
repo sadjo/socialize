@@ -1,0 +1,30 @@
+# Socialize : un seul conteneur, base SQLite dans le volume « data ».
+#
+#   cp docker.env.example docker.env   # puis renseigner APP_SECRET et SERVER_NAME
+#   docker compose up -d
+#
+# Avec MariaDB : docker compose -f compose.yaml -f compose.mariadb.yaml up -d
+# En développement : docker compose -f compose.yaml -f compose.dev.yaml up
+
+services:
+  app:
+    image: ${IMAGE:-socialize}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      target: frankenphp_prod
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: ./docker.env
+        required: false
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - data:/data
+      - media:/media
+
+volumes:
+  data:
+  media:

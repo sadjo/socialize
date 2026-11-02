@@ -1,0 +1,49 @@
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		{$FRANKENPHP_CONFIG}
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$SERVER_NAME:localhost} {
+	log {
+		{$CADDY_SERVER_LOG_OPTIONS}
+		# Ne jamais journaliser les jetons d'accès.
+		format filter {
+			request>headers>Authorization delete
+			request>headers>Cookie delete
+			request>uri query {
+				replace access_token REDACTED
+			}
+		}
+	}
+
+	root /app/public
+	encode zstd br gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "browsing-topics=(), interest-cohort=()"
+		-Server
+	}
+
+	{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+	# Les fichiers existants (assets compilés) sont servis directement,
+	# tout le reste passe par le contrôleur frontal Symfony.
+	@phpRoute {
+		not file {path}
+	}
+	rewrite @phpRoute index.php
+
+	@frontController path index.php
+	php @frontController
+
+	file_server {
+		hide *.php
+	}
+}
