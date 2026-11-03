@@ -8,8 +8,9 @@ use App\Core\Infrastructure\Doctrine\UserRepository;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Qui peut créer un compte. Le tout premier compte est toujours accepté :
- * il devient l'administrateur de l'instance.
+ * Qui peut créer un compte. Le tout premier compte devient l'administrateur de l'instance :
+ * il peut s'inscrire depuis le site, sauf quand les inscriptions sont fermées (closed).
+ * Dans ce cas, l'administrateur se crée avec la commande app:user:create.
  */
 final readonly class RegistrationPolicy
 {
@@ -35,6 +36,10 @@ final readonly class RegistrationPolicy
 
     public function isOpen(): bool
     {
-        return RegistrationMode::Open === $this->mode || $this->isFirstAccount();
+        return match ($this->mode) {
+            RegistrationMode::Open => true,
+            RegistrationMode::Invite => $this->isFirstAccount(),
+            RegistrationMode::Closed => false,
+        };
     }
 }

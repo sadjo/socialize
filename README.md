@@ -62,7 +62,7 @@ et renseignez `TRUSTED_PROXIES`.
 | `DATABASE_URL` | `sqlite:////data/socialize.db` | Ou `mysql://user:pass@hote:3306/socialize?serverVersion=11.4.0-MariaDB&charset=utf8mb4` |
 | `WORKERS` | `1` | Consommateurs Messenger lancés dans le conteneur, `0` pour aucun |
 | `TRUSTED_PROXIES` | vide | Adresses des reverse proxies de confiance |
-| `REGISTRATION` | `invite` | Inscriptions : `open`, `invite` ou `closed`. Le premier compte créé est toujours accepté et devient administrateur |
+| `REGISTRATION` | `invite` | Inscriptions : `open`, `invite` (seul le premier compte, administrateur, peut s'inscrire) ou `closed` (aucune ; administrateur créé avec `app:user:create`) |
 
 Au démarrage, le conteneur applique les migrations (avec une copie de sécurité préalable de la base SQLite),
 prépare la file Messenger, puis lance FrankenPHP et le consommateur Messenger. La sonde `/healthz` renvoie l'état

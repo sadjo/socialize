@@ -43,6 +43,21 @@ final class AccountTest extends AppWebTestCase
         self::assertSelectorTextContains('h1', 'Inscriptions sur invitation');
     }
 
+    public function testClosedRegistrationAlsoBlocksTheFirstAccount(): void
+    {
+        $_SERVER['REGISTRATION'] = $_ENV['REGISTRATION'] = 'closed';
+        try {
+            self::ensureKernelShutdown();
+            $client = self::createClient();
+            $client->request('GET', '/inscription');
+
+            self::assertResponseStatusCodeSame(403);
+            self::assertSelectorTextContains('h1', 'Inscriptions fermées');
+        } finally {
+            $_SERVER['REGISTRATION'] = $_ENV['REGISTRATION'] = 'invite';
+        }
+    }
+
     public function testRegistrationRejectsAnInvalidUsername(): void
     {
         $this->client->request('GET', '/inscription');
