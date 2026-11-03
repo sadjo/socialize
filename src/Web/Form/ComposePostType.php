@@ -1,0 +1,76 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Web\Form;
+
+use App\Core\Domain\Post\Post;
+use App\Core\Domain\Post\Visibility;
+use App\Media\Application\MediaRules;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Validator\Constraints as Assert;
+
+/**
+ * @extends AbstractType<array<string, mixed>>
+ */
+final class ComposePostType extends AbstractType
+{
+    public function buildForm(FormBuilderInterface $builder, array $options): void
+    {
+        $builder
+            ->add('media', FileType::class, [
+                'label' => 'Photos et vidéos',
+                'multiple' => true,
+                'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input'],
+                'constraints' => [
+                    new Assert\Count(min: 1, max: Post::MAX_MEDIA, minMessage: 'Ajoutez au moins une photo ou une vidéo.', maxMessage: 'Une publication contient au plus {{ limit }} médias.'),
+                    new Assert\All([
+                        new Assert\File(
+                            maxSize: MediaRules::MAX_VIDEO_SIZE,
+                            mimeTypes: MediaRules::acceptedMimeTypes(),
+                            mimeTypesMessage: 'Ce format n’est pas accepté. Formats possibles : JPEG, PNG, WebP, HEIC, AVIF, GIF, MP4, MOV, WebM.',
+                        ),
+                    ]),
+                ],
+            ])
+            ->add('altTexts', CollectionType::class, [
+                'label' => false,
+                'entry_type' => TextType::class,
+                'entry_options' => ['label' => false, 'required' => false, 'constraints' => [new Assert\Length(max: 1500)]],
+                'allow_add' => true,
+                'required' => false,
+            ])
+            ->add('caption', TextareaType::class, [
+                'label' => 'Légende',
+                'required' => false,
+                'attr' => ['rows' => 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'placeholder' => 'Écrivez une légende… #hashtags et @mentions acceptés', 'data-compose-target' => 'caption'],
+                'constraints' => [new Assert\Length(max: Post::MAX_CAPTION_LENGTH)],
+            ])
+            ->add('location', TextType::class, [
+                'label' => 'Lieu',
+                'required' => false,
+                'attr' => ['maxlength' => 255, 'placeholder' => 'Étretat, Normandie'],
+                'constraints' => [new Assert\Length(max: 255)],
+            ])
+            ->add('visibility', EnumType::class, [
+                'label' => 'Visibilité',
+                'class' => Visibility::class,
+                'expanded' => true,
+                'choice_label' => static fn (Visibility $v): string => $v->label(),
+                'data' => Visibility::Public,
+            ])
+            ->add('contentWarning', TextType::class, [
+                'label' => 'Avertissement de contenu',
+                'required' => false,
+                'help' => 'Facultatif. Les médias restent floutés jusqu’à ce qu’on clique dessus.',
+                'attr' => ['maxlength' => 500, 'placeholder' => 'Exemple : macro d’insecte'],
+                'constraints' => [new Assert\Length(max: 500)],
+            ]);
+    }
+}

@@ -1,0 +1,24 @@
+{% import '_macros.html.twig' as ui %}
+<aside class="rail">
+    {% if app.user %}
+        {% set me = app.user.account %}
+        <div class="who">{{ ui.avatar(me, 48) }}<div class="t"><b>{{ me.username }}</b><small>{{ me.displayName }}</small></div><a class="lnk small" href="{{ path('app_profile', {username: me.username}) }}">Profil</a></div>
+        {% if suggestions is defined and suggestions is not empty %}
+            <div class="sugg">
+                <span class="small" style="font-weight:600">Suggestions sur cette instance</span>
+                {% for account in suggestions %}
+                    <div class="who">
+                        <a href="{{ path('app_profile', {username: account.username}) }}">{{ ui.avatar(account, 36) }}</a>
+                        <div class="t"><b>{{ account.username }}</b><small>{{ account.displayName }}</small></div>
+                        <form method="post" action="{{ path('app_profile_follow', {username: account.username}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.username) }}">
+                            <button class="btn sm pri">Suivre</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
+    <div class="fedstat"><span class="lab">Instance {{ local_domain }}</span><small>Réseau photo auto-hébergé. La fédération avec Mastodon et Pixelfed arrive dans une prochaine version.</small></div>
+    <div class="foot">Socialize · logiciel auto-hébergé</div>
+</aside>

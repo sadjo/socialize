@@ -1,0 +1,29 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Connexion · Socialize{% endblock %}
+
+{% block content %}
+<div class="auth">
+    <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
+    <section class="card">
+        <h1>Connexion</h1>
+        <form method="post" action="{{ path('app_login') }}" class="form">
+            {% if error %}
+                <ul class="form-errors"><li>{{ error.messageKey|trans(error.messageData, 'security') }}</li></ul>
+            {% endif %}
+            <div class="field">
+                <label for="email">Adresse e-mail</label>
+                <input class="inp" type="email" id="email" name="email" value="{{ last_email }}" autocomplete="email" required autofocus>
+            </div>
+            <div class="field">
+                <label for="password">Mot de passe</label>
+                <input class="inp" type="password" id="password" name="password" autocomplete="current-password" required>
+            </div>
+            <label class="row" for="remember_me"><input type="checkbox" class="sw" id="remember_me" name="_remember_me" checked> <span>Rester connecté 30 jours</span></label>
+            <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
+            <button class="btn pri">Se connecter</button>
+        </form>
+    </section>
+    {% if registration_open %}<p class="alt">Pas encore de compte ? <a class="lnk" href="{{ path('app_register') }}">Créer un compte</a></p>{% endif %}
+</div>
+{% endblock %}

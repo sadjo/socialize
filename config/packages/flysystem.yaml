@@ -1,0 +1,29 @@
+# Deux espaces de stockage des médias, dans STORAGE_DIR (/media dans le conteneur) :
+# - originals : fichiers d'origine, jamais servis publiquement ;
+# - derivatives : copies publiques (WebP, MP4, affiches), servies par Caddy sous /m/.
+# Un adaptateur S3 pourra remplacer « local » sans changer le code.
+flysystem:
+    storages:
+        originals.storage:
+            adapter: 'local'
+            options:
+                directory: '%app.storage_dir%/originals'
+        derivatives.storage:
+            adapter: 'local'
+            options:
+                directory: '%app.storage_dir%/public'
+                permissions:
+                    file: { public: 0o644, private: 0o644 }
+                    dir: { public: 0o755, private: 0o755 }
+
+when@test:
+    flysystem:
+        storages:
+            originals.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/test-storage/originals'
+            derivatives.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.project_dir%/var/test-storage/public'

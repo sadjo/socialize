@@ -17,13 +17,15 @@ WORKDIR /app
 
 # hadolint ignore=DL3008
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends file git unzip \
+    && apt-get install -y --no-install-recommends file git unzip libvips42t64 ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
     install-php-extensions \
         @composer \
         apcu \
+        exif \
+        ffi \
         intl \
         opcache \
         zip \

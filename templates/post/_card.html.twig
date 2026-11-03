@@ -1,0 +1,22 @@
+{# Carte d'une publication dans un fil. Variables : post, liked #}
+{% import '_macros.html.twig' as ui %}
+{% set author = post.account %}
+<article class="post" id="post-{{ post.publicId }}" data-controller="like">
+    <header class="ph">
+        <a href="{{ path('app_profile', {username: author.username}) }}" aria-label="Profil de {{ author.displayName }}">{{ ui.avatar(author, 36) }}</a>
+        <div class="pmeta">
+            <div class="pname"><a href="{{ path('app_profile', {username: author.username}) }}"><b>{{ author.username }}</b></a>
+                {% if post.visibility.value != 'public' %}<span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon('lock', 'xs') }}{{ post.visibility.label }}</span>{% endif %}
+            </div>
+            {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
+        </div>
+        <a class="ib" href="{{ path('app_post_show', {id: post.publicId}) }}" aria-label="Ouvrir la publication">{{ ui.icon('more') }}</a>
+    </header>
+    {{ include('post/_media.html.twig') }}
+    {{ include('post/_actions.html.twig') }}
+    <div class="pbody">
+        {% if post.caption %}<div><b>{{ author.username }}</b> {{ post.caption|rich_text }}</div>{% endif %}
+        {% if post.commentsCount %}<a class="meta" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}">Voir {{ post.commentsCount > 1 ? 'les ' ~ post.commentsCount ~ ' commentaires' : 'le commentaire' }}</a>{% endif %}
+        <a class="ago" href="{{ path('app_post_show', {id: post.publicId}) }}"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></a>
+    </div>
+</article>

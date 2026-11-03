@@ -15,7 +15,7 @@ framework:
             sync: 'sync://'
 
         routing:
-            # Les messages des modules seront routés vers « async » ici.
+            App\Media\Application\ProcessVideo: async
 
 when@test:
     framework:

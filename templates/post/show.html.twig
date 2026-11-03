@@ -1,0 +1,56 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+{% set author = post.account %}
+
+{% block title %}{{ author.displayName }} : {{ post.caption ? (post.caption|length > 60 ? post.caption|slice(0, 60) ~ '…' : post.caption) : 'Publication' }} · Socialize{% endblock %}
+
+{% block content %}
+<div class="pd" style="max-height:none;margin:0 auto;animation:none" data-controller="like" id="post-{{ post.publicId }}">
+    <div class="pd-media">
+        {% if post.cover and post.cover.ready %}<div class="glow" style="background-image:url({{ media_url(post.cover, 'thumb') }})"></div>{% endif %}
+        {{ include('post/_media.html.twig') }}
+    </div>
+    <div class="pd-side">
+        <header class="ph">
+            <a href="{{ path('app_profile', {username: author.username}) }}">{{ ui.avatar(author, 36) }}</a>
+            <div class="pmeta">
+                <div class="pname"><a href="{{ path('app_profile', {username: author.username}) }}"><b>{{ author.username }}</b></a>
+                    <span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon(post.visibility.value == 'public' ? 'globe' : 'lock', 'xs') }}{{ post.visibility.label }}</span></div>
+                {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
+            </div>
+        </header>
+
+        <div class="cmts" id="commentaires">
+            {% if post.caption %}
+                <div class="cmt">{{ ui.avatar(author, 32) }}<div class="t"><b>{{ author.username }}</b> {{ post.caption|rich_text }}<small><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></small></div></div>
+            {% endif %}
+            {% for comment in comments %}
+                <div class="cmt">{{ ui.avatar(comment.account, 32) }}<div class="t"><a href="{{ path('app_profile', {username: comment.account.username}) }}"><b>{{ comment.account.username }}</b></a> {{ comment.content|rich_text }}<small><time datetime="{{ comment.createdAt|date('c') }}">{{ comment.createdAt|ago }}</time></small></div></div>
+            {% else %}
+                {% if not post.caption %}<p class="small">Aucun commentaire pour l’instant.</p>{% endif %}
+            {% endfor %}
+        </div>
+
+        {{ include('post/_actions.html.twig') }}
+        <div class="pbody"><div class="ago"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></div></div>
+
+        {% if app.user %}
+            {{ form_start(comment_form, {attr: {class: 'addc'}}) }}
+                {{ form_widget(comment_form.content) }}
+                <button class="lnk">Publier</button>
+            {{ form_end(comment_form) }}
+        {% else %}
+            <div class="addc"><a class="lnk" href="{{ path('app_login') }}">Connectez-vous pour commenter</a></div>
+        {% endif %}
+
+        {% if post.ownedBy(app.user ? app.user.account : null) %}
+            <div class="post-actions-row">
+                <form method="post" action="{{ path('app_post_delete', {id: post.publicId}) }}" data-turbo-confirm="Supprimer cette publication et ses médias ? Cette action est définitive.">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete-' ~ post.publicId) }}">
+                    <button class="btn sm ghost danger">{{ ui.icon('trash', 'xs') }}Supprimer</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

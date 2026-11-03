@@ -1,0 +1,13 @@
+{# Une page du fil, et le cadre Turbo qui chargera la suivante. #}
+{% set frame_id = 'feed-page-' ~ (app.request.query.get('apres') ?? 'first')|replace({'.': '-'}) %}
+<turbo-frame id="{{ frame_id }}">
+    {% for post in page.posts %}
+        {{ include('post/_card.html.twig') }}
+    {% endfor %}
+    {% if page.next %}
+        {% set next = page.next.toString %}
+        <turbo-frame id="feed-page-{{ next|replace({'.': '-'}) }}" src="{{ path(route, {apres: next}) }}" loading="lazy" target="_top">
+            <div class="more"><a class="btn" href="{{ path(route, {apres: next}) }}">Charger la suite</a></div>
+        </turbo-frame>
+    {% endif %}
+</turbo-frame>

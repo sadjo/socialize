@@ -1,0 +1,202 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Core\Domain\Post;
+
+use App\Core\Domain\Account\Account;
+use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Media\MediaStatus;
+use App\Core\Infrastructure\Doctrine\PostRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Types\UuidType;
+use Symfony\Component\Uid\Uuid;
+
+#[ORM\Entity(repositoryClass: PostRepository::class)]
+#[ORM\Table(name: 'posts')]
+#[ORM\Index(name: 'idx_posts_account_published', columns: ['account_id', 'published_at'])]
+#[ORM\Index(name: 'idx_posts_visibility_published', columns: ['visibility', 'published_at'])]
+class Post
+{
+    public const int MAX_MEDIA = 20;
+    public const int MAX_CAPTION_LENGTH = 2200;
+
+    #[ORM\Id]
+    #[ORM\Column(type: UuidType::NAME)]
+    private Uuid $id;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    private \DateTimeImmutable $publishedAt;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $originalCreatedAt = null;
+
+    #[ORM\Column(length: 30, enumType: PostSource::class)]
+    private PostSource $source = PostSource::Local;
+
+    #[ORM\Column]
+    private int $likesCount = 0;
+
+    #[ORM\Column]
+    private int $commentsCount = 0;
+
+    /** @var Collection<int, MediaAttachment> */
+    #[ORM\OneToMany(targetEntity: MediaAttachment::class, mappedBy: 'post', cascade: ['persist', 'remove'], fetch: 'EAGER', orphanRemoval: true)]
+    #[ORM\OrderBy(['position' => 'ASC'])]
+    private Collection $media;
+
+    public function __construct(
+        #[ORM\ManyToOne]
+        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+        private Account $account,
+        #[ORM\Column(type: Types::TEXT)]
+        private string $caption = '',
+        #[ORM\Column(length: 20, enumType: Visibility::class)]
+        private Visibility $visibility = Visibility::Public,
+        #[ORM\Column(length: 500, nullable: true)]
+        private ?string $contentWarning = null,
+        #[ORM\Column(length: 255, nullable: true)]
+        private ?string $location = null,
+    ) {
+        $this->id = Uuid::v7();
+        $this->caption = trim($caption);
+        $this->contentWarning = $this->nullIfBlank($contentWarning);
+        $this->location = $this->nullIfBlank($location);
+        $this->publishedAt = new \DateTimeImmutable();
+        $this->media = new ArrayCollection();
+    }
+
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    /**
+     * Identifiant court utilisé dans les URL (/p/…).
+     */
+    public function getPublicId(): string
+    {
+        return $this->id->toBase58();
+    }
+
+    public function getAccount(): Account
+    {
+        return $this->account;
+    }
+
+    public function getCaption(): string
+    {
+        return $this->caption;
+    }
+
+    public function getVisibility(): Visibility
+    {
+        return $this->visibility;
+    }
+
+    public function isSensitive(): bool
+    {
+        return null !== $this->contentWarning;
+    }
+
+    public function getContentWarning(): ?string
+    {
+        return $this->contentWarning;
+    }
+
+    public function getLocation(): ?string
+    {
+        return $this->location;
+    }
+
+    public function getPublishedAt(): \DateTimeImmutable
+    {
+        return $this->publishedAt;
+    }
+
+    public function getOriginalCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->originalCreatedAt;
+    }
+
+    public function getSource(): PostSource
+    {
+        return $this->source;
+    }
+
+    public function getLikesCount(): int
+    {
+        return $this->likesCount;
+    }
+
+    public function getCommentsCount(): int
+    {
+        return $this->commentsCount;
+    }
+
+    /**
+     * @return Collection<int, MediaAttachment>
+     */
+    public function getMedia(): Collection
+    {
+        return $this->media;
+    }
+
+    public function getCover(): ?MediaAttachment
+    {
+        return $this->media->first() ?: null;
+    }
+
+    public function isProcessing(): bool
+    {
+        return $this->media->exists(static fn (int $i, MediaAttachment $m): bool => MediaStatus::Processing === $m->getStatus());
+    }
+
+    public function hasVideo(): bool
+    {
+        return $this->media->exists(static fn (int $i, MediaAttachment $m): bool => $m->isVideo());
+    }
+
+    public function addMedia(MediaAttachment $media): void
+    {
+        if ($this->media->count() >= self::MAX_MEDIA) {
+            throw new \DomainException(\sprintf('Une publication contient au plus %d médias.', self::MAX_MEDIA));
+        }
+        $this->media->add($media);
+    }
+
+    public function isOwnedBy(?Account $account): bool
+    {
+        return $account instanceof Account && $account->getId()->equals($this->account->getId());
+    }
+
+    public function incrementLikes(): void
+    {
+        ++$this->likesCount;
+    }
+
+    public function decrementLikes(): void
+    {
+        $this->likesCount = max(0, $this->likesCount - 1);
+    }
+
+    public function incrementComments(): void
+    {
+        ++$this->commentsCount;
+    }
+
+    public function decrementComments(): void
+    {
+        $this->commentsCount = max(0, $this->commentsCount - 1);
+    }
+
+    private function nullIfBlank(?string $value): ?string
+    {
+        $value = null !== $value ? trim($value) : null;
+
+        return '' === $value ? null : $value;
+    }
+}

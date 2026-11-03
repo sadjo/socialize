@@ -1,0 +1,21 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Réglages · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Réglages</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    <section class="card">
+        <h2>Profil public</h2>
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            <div class="row">{{ ui.avatar(account, 72) }}<div class="grow">{{ form_row(form.avatar) }}</div></div>
+            {{ form_row(form.displayName) }}
+            {{ form_row(form.bio) }}
+            <div><button class="btn pri">Enregistrer</button></div>
+        {{ form_end(form) }}
+    </section>
+    <p class="small">Le crosspost, Immich, les jetons API et le serveur MCP arriveront dans les prochaines versions.</p>
+</div>
+{% endblock %}

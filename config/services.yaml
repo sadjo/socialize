@@ -3,6 +3,8 @@
 parameters:
     app.name: 'Socialize'
     app.storage_dir: '%env(resolve:STORAGE_DIR)%'
+    # Domaine des adresses du fédivers (@nom@domaine), déduit de DEFAULT_URI.
+    app.local_domain: '%env(key:host:url:DEFAULT_URI)%'
 
 services:
     _defaults:
