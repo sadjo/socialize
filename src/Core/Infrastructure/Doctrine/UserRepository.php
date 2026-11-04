@@ -7,6 +7,7 @@ namespace App\Core\Infrastructure\Doctrine;
 use App\Core\Domain\Account\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
@@ -14,7 +15,7 @@ use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
 /**
  * @extends ServiceEntityRepository<User>
  */
-final class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
+final class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface, UserLoaderInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -24,6 +25,28 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
     public function findOneByEmail(string $email): ?User
     {
         return $this->findOneBy(['email' => mb_strtolower(trim($email))]);
+    }
+
+    /**
+     * Connexion avec l'adresse e-mail ou le nom d'utilisateur local (« camille » ou « @camille »).
+     */
+    public function loadUserByIdentifier(string $identifier): ?User
+    {
+        $identifier = trim($identifier);
+        if (str_contains($identifier, '@') && !str_starts_with($identifier, '@')) {
+            return $this->findOneByEmail($identifier);
+        }
+
+        $user = $this->createQueryBuilder('u')
+            ->join('u.account', 'a')
+            ->where('a.username = :username')
+            ->andWhere('a.domain IS NULL')
+            ->setParameter('username', mb_strtolower(ltrim($identifier, '@')))
+            ->getQuery()
+            ->getOneOrNullResult();
+        \assert(null === $user || $user instanceof User);
+
+        return $user;
     }
 
     public function hasAny(): bool
