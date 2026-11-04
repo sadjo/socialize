@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }} · Socialize{% endblock %}
+
+{% block body %}
+{# Le fond reste en place pendant toute la lecture : seule la story affichée change. #}
+<div class="ov story-viewer" data-controller="story-viewer" data-story-viewer-data-value="{{ data|json_encode|e('html_attr') }}" data-action="keydown@window->story-viewer#key" role="dialog" aria-modal="true" aria-label="{{ title }}">
+    <a class="ib x" href="{{ data.closeUrl }}" data-story-viewer-target="close" aria-label="Fermer"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></a>
+    <div class="sv" data-story-viewer-target="frame">
+        <div class="sv-media" data-story-viewer-target="media"></div>
+        <div class="bars" data-story-viewer-target="bars"></div>
+        <div class="sh">
+            <a class="sv-author" data-story-viewer-target="author" href="#"></a>
+            <div class="grow"><b data-story-viewer-target="name"></b> <span class="sv-meta" data-story-viewer-target="meta"></span></div>
+            <button type="button" class="ib sv-btn" data-action="story-viewer#togglePause" data-story-viewer-target="pause" aria-label="Mettre en pause"><svg class="i sm" aria-hidden="true"><use href="#i-pause"/></svg></button>
+            <button type="button" class="ib sv-btn" data-action="story-viewer#toggleMute" data-story-viewer-target="mute" hidden aria-label="Activer le son"><svg class="i sm" aria-hidden="true"><use href="#i-mute"/></svg></button>
+        </div>
+        <div class="stxt" data-story-viewer-target="text" hidden></div>
+        <button type="button" class="tapl" data-action="story-viewer#prev" aria-label="Story précédente"></button>
+        <button type="button" class="tapr" data-action="pointerdown->story-viewer#hold pointerup->story-viewer#release pointerleave->story-viewer#release" aria-label="Story suivante"></button>
+        <div class="sv-own" data-story-viewer-target="own" hidden></div>
+    </div>
+    <noscript><p class="small" style="color:#fff">La visionneuse de stories a besoin de JavaScript.</p></noscript>
+</div>
+{% endblock %}

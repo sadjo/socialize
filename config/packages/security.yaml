@@ -4,9 +4,9 @@ security:
 
     providers:
         app_users:
+            # Connexion avec l'adresse e-mail ou le nom d'utilisateur (UserRepository::loadUserByIdentifier).
             entity:
                 class: App\Core\Domain\Account\User
-                property: email
 
     firewalls:
         dev:
@@ -18,7 +18,7 @@ security:
             form_login:
                 login_path: app_login
                 check_path: app_login
-                username_parameter: email
+                username_parameter: identifier
                 password_parameter: password
                 enable_csrf: true
                 default_target_path: app_home
@@ -35,7 +35,7 @@ security:
                 interval: '1 minute'
 
     access_control:
-        - { path: ^/(publier|reglages), roles: ROLE_USER }
+        - { path: ^/(publier|reglages|stories/nouvelle|stories/mes-stories|stories$), roles: ROLE_USER }
 
 when@test:
     security:

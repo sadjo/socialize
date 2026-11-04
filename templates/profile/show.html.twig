@@ -6,7 +6,11 @@
 {% block content %}
 <div class="prof">
     <section class="prof-h">
-        <span class="ring">{{ ui.avatar(account, 150) }}</span>
+        {% if story_group %}
+            <a class="ring has-story{{ story_group.fullySeen ? ' seen' }}" href="{{ path('app_account_stories', {username: account.username}) }}" aria-label="Voir les stories de {{ account.displayName }}">{{ ui.avatar(account, 150) }}</a>
+        {% else %}
+            <span class="ring seen">{{ ui.avatar(account, 150) }}</span>
+        {% endif %}
         <div class="prof-i">
             <div class="row">
                 <h1>{{ account.username }}</h1>
@@ -38,6 +42,20 @@
             <span class="handle">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>
         </div>
     </section>
+
+    {% if highlights is not empty or is_owner %}
+        <div class="hls" aria-label="Stories à la une">
+            {% for highlight in highlights %}
+                {% set cover = highlight.cover %}
+                <a class="hl" href="{{ path('app_highlight', {username: account.username, id: highlight.publicId}) }}">
+                    <span class="c">{% if cover %}<img src="{{ media_url(cover.media, 'thumb') }}" alt="">{% endif %}</span>{{ highlight.title }}
+                </a>
+            {% endfor %}
+            {% if is_owner %}
+                <a class="hl" href="{{ path('app_story_manage') }}"><span class="c" style="display:grid;place-items:center">{{ ui.icon('plus') }}</span>Mes stories</a>
+            {% endif %}
+        </div>
+    {% endif %}
 
     <div>
         <div class="ptabs" role="tablist"><button role="tab" aria-selected="true" class="on">{{ ui.icon('grid', 'xs') }}Publications</button></div>

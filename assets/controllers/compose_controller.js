@@ -57,7 +57,7 @@ export default class extends Controller {
             preview.appendChild(frame);
 
             const field = this.altField(index);
-            field.placeholder = file.type.startsWith('video/') ? 'Décrivez la vidéo' : 'Texte alternatif : décrivez la photo';
+            field.placeholder = file.type.startsWith('video/') ? 'Décrire la vidéo' : 'Décrire la photo';
             field.setAttribute('aria-label', `Texte alternatif du média ${index + 1}`);
             preview.appendChild(field);
             this.previewsTarget.appendChild(preview);
@@ -74,7 +74,8 @@ export default class extends Controller {
     altField(index) {
         const template = document.createElement('template');
         template.innerHTML = this.prototypeValue.replace(/__name__/g, index).trim();
-        const input = template.content.firstElementChild;
+        const input = template.content.querySelector('input') ?? document.createElement('input');
+        if (!input.name) input.type = 'hidden';
         input.classList.add('inp');
         return input;
     }

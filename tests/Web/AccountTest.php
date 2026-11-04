@@ -77,11 +77,24 @@ final class AccountTest extends AppWebTestCase
         $this->register('camille', 'camille@exemple.test', 'un-mot-de-passe-long');
 
         $this->client->request('GET', '/connexion');
-        $this->client->submitForm('Se connecter', ['email' => 'camille@exemple.test', 'password' => 'un-mot-de-passe-long']);
+        $this->client->submitForm('Se connecter', ['identifier' => 'camille@exemple.test', 'password' => 'un-mot-de-passe-long']);
 
         self::assertResponseRedirects('/');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.seg a.on', 'Abonnements');
+    }
+
+    public function testLoginWithTheUsername(): void
+    {
+        $this->register('camille', 'camille@exemple.test', 'un-mot-de-passe-long');
+
+        foreach (['camille', '@Camille'] as $identifier) {
+            $this->client->request('GET', '/deconnexion');
+            $this->client->request('GET', '/connexion');
+            $this->client->submitForm('Se connecter', ['identifier' => $identifier, 'password' => 'un-mot-de-passe-long']);
+
+            self::assertResponseRedirects('/', message: $identifier);
+        }
     }
 
     public function testLoginShowsAFrenchErrorForAWrongPassword(): void
@@ -89,7 +102,7 @@ final class AccountTest extends AppWebTestCase
         $this->register('camille', 'camille@exemple.test');
 
         $this->client->request('GET', '/connexion');
-        $this->client->submitForm('Se connecter', ['email' => 'camille@exemple.test', 'password' => 'mauvais']);
+        $this->client->submitForm('Se connecter', ['identifier' => 'camille@exemple.test', 'password' => 'mauvais']);
         $this->client->followRedirect();
 
         self::assertSelectorTextContains('.form-errors', 'Identifiants invalides');

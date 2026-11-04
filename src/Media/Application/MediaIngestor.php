@@ -7,6 +7,7 @@ namespace App\Media\Application;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Media\MediaType;
 use App\Core\Domain\Post\Post;
+use App\Core\Domain\Story\Story;
 use App\Media\Infrastructure\FfmpegVideoProcessor;
 use App\Media\Infrastructure\VipsImageProcessor;
 use League\Flysystem\FilesystemOperator;
@@ -29,7 +30,7 @@ final readonly class MediaIngestor
     ) {
     }
 
-    public function attach(Post $post, File $file, ?string $altText, int $position): MediaAttachment
+    public function attach(Post|Story $owner, File $file, ?string $altText, int $position): MediaAttachment
     {
         $mimeType = $file->getMimeType() ?? 'application/octet-stream';
         $type = MediaRules::typeOf($mimeType) ?? throw new MediaProcessingException(\sprintf('Le format « %s » n’est pas accepté.', $mimeType));
@@ -46,7 +47,7 @@ final readonly class MediaIngestor
             }
         }
 
-        $media = new MediaAttachment($post, $type, $position, $path, $mimeType, (int) $file->getSize(), $altText);
+        $media = new MediaAttachment($owner, $type, $position, $path, $mimeType, (int) $file->getSize(), $altText);
 
         if (MediaType::Image === $type) {
             $this->processImage($media, (string) file_get_contents($file->getPathname()));

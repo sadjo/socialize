@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Domain\Media;
 
 use App\Core\Domain\Post\Post;
+use App\Core\Domain\Story\Story;
 use App\Core\Infrastructure\Doctrine\MediaAttachmentRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -12,7 +13,7 @@ use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * Photo ou vidéo d'une publication. L'original n'est jamais modifié ni servi publiquement ;
+ * Photo ou vidéo d'une publication ou d'une story. L'original n'est jamais modifié ni servi publiquement ;
  * seules les copies (« dérivés ») le sont, sans données de localisation.
  */
 #[ORM\Entity(repositoryClass: MediaAttachmentRepository::class)]
@@ -57,10 +58,16 @@ class MediaAttachment
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\ManyToOne(inversedBy: 'media')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    private ?Post $post = null;
+
+    #[ORM\OneToOne(inversedBy: 'media')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    private ?Story $story = null;
+
     public function __construct(
-        #[ORM\ManyToOne(inversedBy: 'media')]
-        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-        private Post $post,
+        Post|Story $owner,
         #[ORM\Column(length: 20, enumType: MediaType::class)]
         private MediaType $type,
         #[ORM\Column]
@@ -78,7 +85,13 @@ class MediaAttachment
         $altText = null !== $altText ? trim($altText) : null;
         $this->altText = '' === $altText ? null : $altText;
         $this->createdAt = new \DateTimeImmutable();
-        $post->addMedia($this);
+        if ($owner instanceof Post) {
+            $this->post = $owner;
+            $owner->addMedia($this);
+        } else {
+            $this->story = $owner;
+            $owner->attach($this);
+        }
     }
 
     public function getId(): Uuid
@@ -86,9 +99,14 @@ class MediaAttachment
         return $this->id;
     }
 
-    public function getPost(): Post
+    public function getPost(): ?Post
     {
         return $this->post;
+    }
+
+    public function getStory(): ?Story
+    {
+        return $this->story;
     }
 
     public function getType(): MediaType

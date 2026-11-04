@@ -67,6 +67,20 @@ final class PublishTest extends AppWebTestCase
         self::assertSelectorExists('.grid3 .gt .gi');
     }
 
+    public function testTheMediaPickerIsWiredToTheComposeController(): void
+    {
+        $this->login($this->register('camille'));
+
+        foreach (['/publier' => 'compose_post_media', '/stories/nouvelle' => 'compose_story_media'] as $url => $id) {
+            $this->client->request('GET', $url);
+            self::assertSelectorExists('form[data-controller="compose"]');
+            self::assertSelectorExists(\sprintf('input#%s[type="file"][multiple][data-compose-target="input"][accept*="image/jpeg"]', $id), 'Sans cette cible, l’aperçu des médias ne s’affiche pas.');
+            foreach (['previews', 'drop', 'submit', 'caption', 'counter', 'alts'] as $target) {
+                self::assertSelectorExists(\sprintf('[data-compose-target="%s"]', $target));
+            }
+        }
+    }
+
     public function testAPublicationNeedsAtLeastOneMedia(): void
     {
         $this->login($this->register('camille'));

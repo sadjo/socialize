@@ -6,10 +6,12 @@ namespace App\Web\Command;
 
 use App\Core\Application\Account\RegisterAccount;
 use App\Core\Application\Social\SocialActions;
+use App\Core\Application\Story\StoryActions;
 use App\Core\Domain\Account\User;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\UserRepository;
 use App\Media\Application\PostComposer;
+use App\Media\Application\StoryComposer;
 use Jcupitt\Vips\Image;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -37,6 +39,8 @@ final readonly class SeedDemoCommand
         private UserRepository $users,
         private PostComposer $composer,
         private SocialActions $social,
+        private StoryComposer $stories,
+        private StoryActions $storyActions,
         #[Autowire(param: 'kernel.environment')]
         private string $environment,
     ) {
@@ -73,6 +77,13 @@ final readonly class SeedDemoCommand
             $this->social->like($hugo->getAccount(), $post);
         }
 
+        $this->stories->publish($hugo->getAccount(), [$this->image(3, 1, true)], 'Café et brume');
+        $this->stories->publish($ines->getAccount(), [$this->image(4, 0, true), $this->image(0, 1, true)], 'Nouvelle série bientôt');
+        $highlight = null;
+        foreach ($this->stories->publish($camille->getAccount(), [$this->image(1, 0, true), $this->image(5, 1, true)], 'Lac Blanc, 5 h 12') as $story) {
+            $highlight = $this->storyActions->pin($story, $highlight, 'Montagne');
+        }
+
         $io->success('Comptes créés (mot de passe : demo-socialize) : camille@exemple.test, hugo@exemple.test, ines.lmb@exemple.test');
 
         return Command::SUCCESS;
@@ -84,11 +95,11 @@ final readonly class SeedDemoCommand
             ?? $this->register->register($username.'@exemple.test', $username, 'demo-socialize', $name);
     }
 
-    private function image(int $palette, int $variant): File
+    private function image(int $palette, int $variant, bool $vertical = false): File
     {
         [$from, $to] = self::PALETTES[$palette % \count(self::PALETTES)];
-        $width = 0 === $variant % 2 ? 1080 : 1350;
-        $height = 0 === $variant % 2 ? 1350 : 1080;
+        $width = $vertical ? 1080 : (0 === $variant % 2 ? 1080 : 1350);
+        $height = $vertical ? 1920 : (0 === $variant % 2 ? 1350 : 1080);
 
         $ramp = Image::xyz($width, $height)->extract_band(1)->divide($height);
         $bands = [];

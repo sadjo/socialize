@@ -7,9 +7,12 @@ namespace App\Web\Controller;
 use App\Core\Application\Feed\Cursor;
 use App\Core\Application\Post\PostAccess;
 use App\Core\Application\Social\SocialActions;
+use App\Core\Application\Story\StoryFeed;
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Story\Highlight;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
+use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -30,7 +33,7 @@ final class ProfileController extends AbstractController
     }
 
     #[Route('/@{username}', name: 'app_profile', requirements: ['username' => self::USERNAME], methods: ['GET'])]
-    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access): Response
+    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access, StoryFeed $stories, HighlightRepository $highlights): Response
     {
         $account = $this->account($username);
         $viewer = $this->currentAccount->get();
@@ -42,6 +45,11 @@ final class ProfileController extends AbstractController
             'page' => $page,
             'is_owner' => $viewer instanceof Account && $viewer->getId()->equals($account->getId()),
             'is_following' => $follows->isFollowing($viewer, $account),
+            'story_group' => $stories->groupOf($account, $viewer),
+            'highlights' => array_values(array_filter(
+                $highlights->forAccount($account),
+                static fn (Highlight $h): bool => $stories->highlight($h, $viewer) instanceof \App\Core\Application\Story\StoryGroup,
+            )),
             'stats' => [
                 'posts' => $posts->countForProfile($account, $visible),
                 'followers' => $follows->countFollowers($account),

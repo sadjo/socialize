@@ -11,7 +11,6 @@ use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -33,20 +32,9 @@ final readonly class CreateUserCommand
         #[Argument(description: 'Nom d’utilisateur (adresse dans le fédivers)')] string $username,
         #[Option(description: 'Donner les droits d’administration')] bool $admin = false,
         #[Option(description: 'Nom affiché')] ?string $name = null,
+        #[Option(description: 'Lire le mot de passe sur l’entrée standard (echo -n … | … --password-stdin)')] bool $passwordStdin = false,
     ): int {
-        $question = new Question('Mot de passe (10 caractères au minimum)')
-            ->setHidden(true)
-            ->setHiddenFallback(true)
-            ->setMaxAttempts(3)
-            ->setValidator(static function (mixed $value): string {
-                if (!\is_string($value) || mb_strlen($value) < 10) {
-                    throw new \RuntimeException('Le mot de passe doit contenir au moins 10 caractères.');
-                }
-
-                return $value;
-            });
-        $password = $io->askQuestion($question);
-        \assert(\is_string($password));
+        $password = PasswordPrompt::read($io, $passwordStdin);
 
         try {
             $user = $this->register->register($email, $username, $password, $name);
