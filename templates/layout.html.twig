@@ -20,6 +20,7 @@
         <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
         <a class="nav{{ current_route == 'app_home' ? ' on' }}" href="{{ path('app_home') }}"{% if current_route == 'app_home' %} aria-current="page"{% endif %}>{{ ui.icon('home') }}<span class="lbl">Accueil</span></a>
         <a class="nav{{ current_route == 'app_feed_local' ? ' on' }}" href="{{ path('app_feed_local') }}"{% if current_route == 'app_feed_local' %} aria-current="page"{% endif %}>{{ ui.icon('compass') }}<span class="lbl">Local</span></a>
+        <a class="nav{{ current_route == 'app_search' ? ' on' }}" href="{{ path('app_search') }}">{{ ui.icon('search') }}<span class="lbl">Rechercher</span></a>
         {% if me %}
             <a class="nav{{ current_route == 'app_compose' ? ' on' }}" href="{{ path('app_compose') }}">{{ ui.icon('plus') }}<span class="lbl">Créer</span></a>
             <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.username}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>

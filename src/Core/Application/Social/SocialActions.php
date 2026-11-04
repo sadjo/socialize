@@ -5,13 +5,20 @@ declare(strict_types=1);
 namespace App\Core\Application\Social;
 
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Event\AccountFollowed;
+use App\Core\Domain\Event\AccountUnfollowed;
+use App\Core\Domain\Event\CommentAdded;
+use App\Core\Domain\Event\PostLiked;
+use App\Core\Domain\Event\PostUnliked;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Social\Comment;
 use App\Core\Domain\Social\Follow;
+use App\Core\Domain\Social\FollowState;
 use App\Core\Domain\Social\Like;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Interactions entre comptes : suivre, aimer, commenter.
@@ -22,6 +29,7 @@ final readonly class SocialActions
         private EntityManagerInterface $em,
         private FollowRepository $follows,
         private LikeRepository $likes,
+        private EventDispatcherInterface $events,
     ) {
     }
 
@@ -30,16 +38,21 @@ final readonly class SocialActions
         if ($this->follows->findBetween($follower, $following) instanceof Follow) {
             return;
         }
-        $this->em->persist(new Follow($follower, $following));
+        // Un compte distant doit accepter l'abonnement (activité Accept) avant qu'il soit effectif.
+        $follow = new Follow($follower, $following, $following->isLocal() ? FollowState::Accepted : FollowState::Pending);
+        $this->em->persist($follow);
         $this->em->flush();
+        $this->events->dispatch(new AccountFollowed($follow));
     }
 
     public function unfollow(Account $follower, Account $following): void
     {
         $follow = $this->follows->findBetween($follower, $following);
         if ($follow instanceof Follow) {
+            $apUri = $follow->getApUri();
             $this->em->remove($follow);
             $this->em->flush();
+            $this->events->dispatch(new AccountUnfollowed($follower, $following, $apUri));
         }
     }
 
@@ -50,16 +63,20 @@ final readonly class SocialActions
     {
         $like = $this->likes->findOneFor($account, $post);
         if ($like instanceof Like) {
+            $apUri = $like->getApUri();
             $this->em->remove($like);
             $post->decrementLikes();
             $this->em->flush();
+            $this->events->dispatch(new PostUnliked($account, $post, $apUri));
 
             return false;
         }
 
-        $this->em->persist(new Like($account, $post));
+        $like = new Like($account, $post);
+        $this->em->persist($like);
         $post->incrementLikes();
         $this->em->flush();
+        $this->events->dispatch(new PostLiked($like));
 
         return true;
     }
@@ -82,6 +99,7 @@ final readonly class SocialActions
         $this->em->persist($comment);
         $post->incrementComments();
         $this->em->flush();
+        $this->events->dispatch(new CommentAdded($comment));
 
         return $comment;
     }

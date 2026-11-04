@@ -15,6 +15,6 @@
     {% endfor %}
     {% if page.next %}
         {% set next = page.next.toString %}
-        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path('app_profile', {username: account.username, apres: next}) }}" loading="lazy" target="_top" style="display:contents"></turbo-frame>
+        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path('app_profile', {username: account.acct, apres: next}) }}" loading="lazy" target="_top" style="display:contents"></turbo-frame>
     {% endif %}
 </turbo-frame>

@@ -1,0 +1,226 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Federation\Application;
+
+use App\Core\Domain\Account\Account;
+use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Post\Post;
+use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\Comment;
+use App\Media\Application\MediaUrls;
+
+/**
+ * Représentations ActivityPub (JSON-LD) des comptes, publications et commentaires locaux,
+ * au format attendu par Mastodon et Pixelfed.
+ */
+final readonly class Serializer
+{
+    public const array CONTEXT = [
+        'https://www.w3.org/ns/activitystreams',
+        'https://w3id.org/security/v1',
+        [
+            'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
+            'sensitive' => 'as:sensitive',
+            'Hashtag' => 'as:Hashtag',
+            'toot' => 'http://joinmastodon.org/ns#',
+            'blurhash' => 'toot:blurhash',
+            'discoverable' => 'toot:discoverable',
+        ],
+    ];
+
+    public function __construct(
+        private ApUrls $urls,
+        private Signer $signer,
+        private MediaUrls $media,
+    ) {
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function actor(Account $account): array
+    {
+        $actor = [
+            '@context' => self::CONTEXT,
+            'id' => $this->urls->actor($account),
+            'type' => 'Person',
+            'preferredUsername' => $account->getUsername(),
+            'name' => $account->getDisplayName(),
+            'summary' => null !== $account->getBio() ? $this->html($account->getBio()) : '',
+            'url' => $this->urls->profile($account),
+            'inbox' => $this->urls->inbox($account),
+            'outbox' => $this->urls->outbox($account),
+            'followers' => $this->urls->followers($account),
+            'following' => $this->urls->following($account),
+            'endpoints' => ['sharedInbox' => $this->urls->sharedInbox()],
+            'manuallyApprovesFollowers' => false,
+            'discoverable' => true,
+            'published' => $account->getCreatedAt()->format(\DATE_ATOM),
+            'publicKey' => [
+                'id' => $this->urls->key($account),
+                'owner' => $this->urls->actor($account),
+                'publicKeyPem' => $this->signer->publicKeyOf($account),
+            ],
+        ];
+        if (null !== $account->getAvatarPath()) {
+            $actor['icon'] = ['type' => 'Image', 'mediaType' => 'image/webp', 'url' => $this->urls->base().$this->media->path($account->getAvatarPath())];
+        }
+
+        return $actor;
+    }
+
+    /**
+     * Acteur de l'instance (type Application), qui signe les lectures faites au nom du serveur.
+     *
+     * @return array<string, mixed>
+     */
+    public function instanceActor(): array
+    {
+        $id = $this->urls->instanceActor();
+
+        return [
+            '@context' => self::CONTEXT,
+            'id' => $id,
+            'type' => 'Application',
+            'preferredUsername' => $this->urls->domain(),
+            'name' => 'Socialize',
+            'inbox' => $id.'/inbox',
+            'outbox' => $id.'/outbox',
+            'manuallyApprovesFollowers' => true,
+            'publicKey' => ['id' => $id.'#main-key', 'owner' => $id, 'publicKeyPem' => $this->signer->instance()['publicKey']],
+        ];
+    }
+
+    /**
+     * Objet Note d'une publication locale (sans @context, à ajouter si l'objet est servi seul).
+     *
+     * @return array<string, mixed>
+     */
+    public function note(Post $post): array
+    {
+        $author = $post->getAccount();
+        [$to, $cc] = $this->addressing($post->getVisibility(), $author);
+
+        $attachments = [];
+        foreach ($post->getMedia() as $media) {
+            if ($media->isReady()) {
+                $attachments[] = $this->attachment($media);
+            }
+        }
+
+        $note = [
+            'id' => $this->urls->note($post),
+            'type' => 'Note',
+            'attributedTo' => $this->urls->actor($author),
+            'published' => $post->getPublishedAt()->format(\DATE_ATOM),
+            'url' => $this->urls->note($post),
+            'to' => $to,
+            'cc' => $cc,
+            'content' => $this->html($post->getCaption()),
+            'contentMap' => ['fr' => $this->html($post->getCaption())],
+            'sensitive' => $post->isSensitive(),
+            'summary' => $post->getContentWarning(),
+            'attachment' => $attachments,
+            'tag' => $this->tags($post->getCaption()),
+        ];
+        if (null !== $post->getLocation()) {
+            $note['location'] = ['type' => 'Place', 'name' => $post->getLocation()];
+        }
+
+        return $note;
+    }
+
+    /**
+     * Objet Note d'un commentaire local (réponse à une publication).
+     *
+     * @return array<string, mixed>
+     */
+    public function commentNote(Comment $comment): array
+    {
+        $post = $comment->getPost();
+        $author = $comment->getAccount();
+        $postAuthor = $post->getAccount();
+
+        return [
+            'id' => $this->urls->comment($comment),
+            'type' => 'Note',
+            'attributedTo' => $this->urls->actor($author),
+            'inReplyTo' => $this->urls->note($post),
+            'published' => $comment->getCreatedAt()->format(\DATE_ATOM),
+            'url' => $this->urls->comment($comment),
+            'to' => [ApUrls::PUBLIC],
+            'cc' => array_values(array_unique([$this->urls->followers($author), $this->urls->actor($postAuthor)])),
+            'content' => $this->html($comment->getContent()),
+            'tag' => array_merge($this->tags($comment->getContent()), $postAuthor->isLocal() ? [] : [[
+                'type' => 'Mention',
+                'href' => $this->urls->actor($postAuthor),
+                'name' => '@'.$postAuthor->getAcct(),
+            ]]),
+        ];
+    }
+
+    /**
+     * Destinataires (to, cc) selon la visibilité. Les publications privées ne sont pas fédérées.
+     *
+     * @return array{0: list<string>, 1: list<string>}
+     */
+    public function addressing(Visibility $visibility, Account $author): array
+    {
+        $followers = $this->urls->followers($author);
+
+        return match ($visibility) {
+            Visibility::Public => [[ApUrls::PUBLIC], [$followers]],
+            Visibility::Unlisted => [[$followers], [ApUrls::PUBLIC]],
+            Visibility::Followers => [[$followers], []],
+            Visibility::Private => [[], []],
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $object
+     *
+     * @return array<string, mixed>
+     */
+    public function withContext(array $object): array
+    {
+        return ['@context' => self::CONTEXT] + $object;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function attachment(MediaAttachment $media): array
+    {
+        $name = $media->isVideo() ? MediaAttachment::DERIVATIVE_VIDEO : MediaAttachment::DERIVATIVE_LARGE;
+        $url = (string) $this->media->derivative($media, $name);
+
+        return array_filter([
+            'type' => $media->isVideo() ? 'Video' : 'Image',
+            'mediaType' => $media->isVideo() ? 'video/mp4' : 'image/webp',
+            'url' => str_starts_with($url, 'http') ? $url : $this->urls->base().$url,
+            'name' => $media->getAltText(),
+            'blurhash' => $media->getBlurhash(),
+            'width' => $media->getWidth(),
+            'height' => $media->getHeight(),
+        ], static fn (mixed $v): bool => null !== $v);
+    }
+
+    /**
+     * @return list<array<string, string>>
+     */
+    private function tags(string $text): array
+    {
+        return array_map(fn (string $tag): array => ['type' => 'Hashtag', 'href' => $this->urls->hashtag($tag), 'name' => '#'.$tag], HtmlText::hashtags($text));
+    }
+
+    private function html(string $text): string
+    {
+        return HtmlText::toHtml(
+            $text,
+            fn (string $tag): string => $this->urls->hashtag($tag),
+            fn (string $handle): string => $this->urls->base().'/@'.$handle,
+        );
+    }
+}

@@ -32,6 +32,32 @@ final class AccountRepository extends ServiceEntityRepository
         return $account;
     }
 
+    /**
+     * Comptes connus (locaux ou déjà vus du fédivers) dont le nom commence par le texte cherché.
+     *
+     * @return list<Account>
+     */
+    public function search(string $text, int $limit = 20): array
+    {
+        $text = mb_strtolower(trim($text));
+        if ('' === $text) {
+            return [];
+        }
+
+        /** @var list<Account> $found */
+        $found = $this->createQueryBuilder('a')
+            ->where('LOWER(a.username) LIKE :prefix OR LOWER(a.displayName) LIKE :contains')
+            ->setParameter('prefix', addcslashes($text, '%_').'%')
+            ->setParameter('contains', '%'.addcslashes($text, '%_').'%')
+            ->orderBy('a.domain', 'ASC')
+            ->addOrderBy('a.username', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $found;
+    }
+
     public function isLocalUsernameTaken(string $username): bool
     {
         return $this->findLocal($username) instanceof Account;

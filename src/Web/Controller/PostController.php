@@ -7,9 +7,12 @@ namespace App\Web\Controller;
 use App\Core\Application\Post\PostAccess;
 use App\Core\Application\Social\SocialActions;
 use App\Core\Domain\Post\Post;
+use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\CommentRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
+use App\Federation\Application\Serializer;
+use App\Federation\Infrastructure\Http\ActivityJsonResponse;
 use App\Media\Application\PostComposer;
 use App\Web\Form\CommentType;
 use App\Web\Security\CurrentAccount;
@@ -30,9 +33,21 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}', name: 'app_post_show', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET'])]
-    public function show(string $id, CommentRepository $comments, LikeRepository $likes): Response
+    public function show(string $id, Request $request, CommentRepository $comments, LikeRepository $likes, Serializer $serializer): Response
     {
         $post = $this->visiblePost($id);
+
+        // Une instance du fédivers demande l'objet Note de la publication.
+        if (ActivityJsonResponse::wanted($request)) {
+            if ($post->isFederated()) {
+                return $this->redirect((string) $post->getApUri());
+            }
+            if (!\in_array($post->getVisibility(), [Visibility::Public, Visibility::Unlisted], true)) {
+                throw new NotFoundHttpException();
+            }
+
+            return new ActivityJsonResponse($serializer->withContext($serializer->note($post)));
+        }
 
         return $this->render('post/show.html.twig', [
             'post' => $post,

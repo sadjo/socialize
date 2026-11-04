@@ -23,6 +23,10 @@ class Follow
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /** Identifiant de l'activité Follow (envoyée ou reçue). */
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $apUri = null;
+
     public function __construct(
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -38,6 +42,26 @@ class Follow
         }
         $this->id = Uuid::v7();
         $this->createdAt = new \DateTimeImmutable();
+    }
+
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    public function getApUri(): ?string
+    {
+        return $this->apUri;
+    }
+
+    public function setApUri(?string $apUri): void
+    {
+        $this->apUri = $apUri;
+    }
+
+    public function isAccepted(): bool
+    {
+        return FollowState::Accepted === $this->state;
     }
 
     public function getFollower(): Account

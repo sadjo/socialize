@@ -55,6 +55,10 @@ class MediaAttachment
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $failureReason = null;
 
+    /** Adresse du média sur son instance d'origine (publication reçue du fédivers). */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $remoteUrl = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -92,6 +96,31 @@ class MediaAttachment
             $this->story = $owner;
             $owner->attach($this);
         }
+    }
+
+    /**
+     * Média d'une publication distante : il reste sur son instance d'origine.
+     */
+    public static function remote(Post $post, MediaType $type, int $position, string $remoteUrl, string $mimeType, ?string $altText, ?int $width, ?int $height, ?string $blurhash): self
+    {
+        $media = new self($post, $type, $position, '', $mimeType, 0, $altText);
+        $media->remoteUrl = $remoteUrl;
+        $media->width = $width;
+        $media->height = $height;
+        $media->blurhash = $blurhash;
+        $media->status = MediaStatus::Ready;
+
+        return $media;
+    }
+
+    public function getRemoteUrl(): ?string
+    {
+        return $this->remoteUrl;
+    }
+
+    public function isRemote(): bool
+    {
+        return null !== $this->remoteUrl;
     }
 
     public function getId(): Uuid

@@ -1,0 +1,5 @@
+<form class="row" method="get" action="{{ path('app_search') }}" role="search" style="flex-wrap:wrap">
+    <label class="sr-only" for="search-q">Rechercher un compte</label>
+    <input class="inp grow" id="search-q" name="q" value="{{ app.request.query.get('q') }}" placeholder="Rechercher un compte : camille ou @nom@pixelfed.social" autocomplete="off" autocapitalize="none" spellcheck="false" style="flex:1;min-width:200px">
+    <button class="btn">Rechercher</button>
+</form>

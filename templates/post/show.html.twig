@@ -12,9 +12,10 @@
     </div>
     <div class="pd-side">
         <header class="ph">
-            <a href="{{ path('app_profile', {username: author.username}) }}">{{ ui.avatar(author, 36) }}</a>
+            <a href="{{ path('app_profile', {username: author.acct}) }}">{{ ui.avatar(author, 36) }}</a>
             <div class="pmeta">
-                <div class="pname"><a href="{{ path('app_profile', {username: author.username}) }}"><b>{{ author.username }}</b></a>
+                <div class="pname"><a href="{{ path('app_profile', {username: author.acct}) }}"><b>{{ author.username }}</b></a>
+                    {% if not author.local %}<span class="fed">{{ ui.icon('globe', 'xs') }}{{ author.domain }}</span>{% endif %}
                     <span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon(post.visibility.value == 'public' ? 'globe' : 'lock', 'xs') }}{{ post.visibility.label }}</span></div>
                 {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
             </div>
@@ -25,14 +26,14 @@
                 <div class="cmt">{{ ui.avatar(author, 32) }}<div class="t"><b>{{ author.username }}</b> {{ post.caption|rich_text }}<small><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></small></div></div>
             {% endif %}
             {% for comment in comments %}
-                <div class="cmt">{{ ui.avatar(comment.account, 32) }}<div class="t"><a href="{{ path('app_profile', {username: comment.account.username}) }}"><b>{{ comment.account.username }}</b></a> {{ comment.content|rich_text }}<small><time datetime="{{ comment.createdAt|date('c') }}">{{ comment.createdAt|ago }}</time></small></div></div>
+                <div class="cmt">{{ ui.avatar(comment.account, 32) }}<div class="t"><a href="{{ path('app_profile', {username: comment.account.acct}) }}"><b>{{ comment.account.username }}</b></a>{% if not comment.account.local %} <span class="small">@{{ comment.account.domain }}</span>{% endif %} {{ comment.content|rich_text }}<small><time datetime="{{ comment.createdAt|date('c') }}">{{ comment.createdAt|ago }}</time></small></div></div>
             {% else %}
                 {% if not post.caption %}<p class="small">Aucun commentaire pour l’instant.</p>{% endif %}
             {% endfor %}
         </div>
 
         {{ include('post/_actions.html.twig') }}
-        <div class="pbody"><div class="ago"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></div></div>
+        <div class="pbody"><div class="ago"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time>{% if post.url and not author.local %} · <a class="lnk" href="{{ post.url }}" target="_blank" rel="noopener nofollow">voir sur {{ author.domain }}</a>{% endif %}</div></div>
 
         {% if app.user %}
             {{ form_start(comment_form, {attr: {class: 'addc'}}) }}

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
+use App\Core\Domain\Event\ProfileUpdated;
 use App\Media\Application\AvatarUploader;
 use App\Media\Application\MediaProcessingException;
 use App\Web\Form\ProfileSettingsType;
 use App\Web\Security\CurrentAccount;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -19,7 +21,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class SettingsController extends AbstractController
 {
     #[Route('/reglages', name: 'app_settings', methods: ['GET', 'POST'])]
-    public function profile(Request $request, CurrentAccount $currentAccount, AvatarUploader $avatars, EntityManagerInterface $em): Response
+    public function profile(Request $request, CurrentAccount $currentAccount, AvatarUploader $avatars, EntityManagerInterface $em, EventDispatcherInterface $events): Response
     {
         $account = $currentAccount->require();
         $form = $this->createForm(ProfileSettingsType::class, [
@@ -39,6 +41,7 @@ final class SettingsController extends AbstractController
                     $avatars->replace($account, $avatar);
                 }
                 $em->flush();
+                $events->dispatch(new ProfileUpdated($account));
                 $this->addFlash('success', 'Profil enregistré.');
 
                 return $this->redirectToRoute('app_settings', status: Response::HTTP_SEE_OTHER);

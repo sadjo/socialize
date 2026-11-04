@@ -27,8 +27,11 @@ final readonly class SocializeExtension
     public function avatarUrl(Account $account): ?string
     {
         $path = $account->getAvatarPath();
+        if (null !== $path) {
+            return $this->urls->path($path);
+        }
 
-        return null !== $path ? $this->urls->path($path) : null;
+        return $account->isLocal() ? null : $account->getAvatarUrl();
     }
 
     #[AsTwigFunction('handle')]

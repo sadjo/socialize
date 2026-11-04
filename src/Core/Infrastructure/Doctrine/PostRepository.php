@@ -69,6 +69,19 @@ final class PostRepository extends ServiceEntityRepository
     }
 
     /**
+     * Fil « Fédéré » : publications publiques reçues des autres instances.
+     */
+    public function federatedTimeline(?Cursor $cursor, int $limit): TimelinePage
+    {
+        $qb = $this->base()
+            ->where('a.domain IS NOT NULL')
+            ->andWhere('p.visibility = :public')
+            ->setParameter('public', Visibility::Public);
+
+        return $this->page($qb, $cursor, $limit);
+    }
+
+    /**
      * Publications d'un profil, filtrées selon ce que le visiteur a le droit de voir.
      *
      * @param list<Visibility> $visible

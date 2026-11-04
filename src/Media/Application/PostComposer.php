@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Media\Application;
 
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Event\PostDeleting;
+use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -21,6 +24,7 @@ final readonly class PostComposer
         private EntityManagerInterface $em,
         private MediaIngestor $ingestor,
         private MessageBusInterface $bus,
+        private EventDispatcherInterface $events,
     ) {
     }
 
@@ -55,10 +59,16 @@ final readonly class PostComposer
         $this->em->persist($post);
         $this->em->flush();
 
+        $hasVideo = false;
         foreach ($post->getMedia() as $media) {
             if ($media->isVideo()) {
+                $hasVideo = true;
                 $this->bus->dispatch(new ProcessVideo($media->getId()->toRfc4122()));
             }
+        }
+        // Avec une vidéo, la publication est fédérée une fois la vidéo prête (ProcessVideoHandler).
+        if (!$hasVideo) {
+            $this->events->dispatch(new PostPublished($post));
         }
 
         return $post;
@@ -66,6 +76,7 @@ final readonly class PostComposer
 
     public function delete(Post $post): void
     {
+        $this->events->dispatch(new PostDeleting($post));
         $media = $post->getMedia()->toArray();
         $this->em->remove($post);
         $this->em->flush();

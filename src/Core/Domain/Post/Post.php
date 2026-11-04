@@ -37,6 +37,14 @@ class Post
     #[ORM\Column(length: 30, enumType: PostSource::class)]
     private PostSource $source = PostSource::Local;
 
+    /** Identifiant ActivityPub d'une publication reçue du fédivers. */
+    #[ORM\Column(length: 500, unique: true, nullable: true)]
+    private ?string $apUri = null;
+
+    /** Page HTML de la publication sur son instance d'origine. */
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $url = null;
+
     #[ORM\Column]
     private int $likesCount = 0;
 
@@ -67,6 +75,48 @@ class Post
         $this->location = $this->nullIfBlank($location);
         $this->publishedAt = new \DateTimeImmutable();
         $this->media = new ArrayCollection();
+    }
+
+    /**
+     * Publication reçue d'une instance distante.
+     */
+    public static function federated(
+        Account $author,
+        string $caption,
+        Visibility $visibility,
+        ?string $contentWarning,
+        string $apUri,
+        ?string $url,
+        \DateTimeImmutable $publishedAt,
+    ): self {
+        $post = new self($author, $caption, $visibility, $contentWarning);
+        $post->apUri = $apUri;
+        $post->url = $url;
+        $post->publishedAt = $publishedAt;
+        $post->source = PostSource::Federated;
+
+        return $post;
+    }
+
+    public function updateFederated(string $caption, ?string $contentWarning): void
+    {
+        $this->caption = trim($caption);
+        $this->contentWarning = self::nullIfBlank($contentWarning);
+    }
+
+    public function getApUri(): ?string
+    {
+        return $this->apUri;
+    }
+
+    public function getUrl(): ?string
+    {
+        return $this->url;
+    }
+
+    public function isFederated(): bool
+    {
+        return null !== $this->apUri;
     }
 
     public function getId(): Uuid

@@ -13,18 +13,23 @@
         {% endif %}
         <div class="prof-i">
             <div class="row">
-                <h1>{{ account.username }}</h1>
+                <h1>{{ account.local ? account.username : account.displayName }}</h1>
                 {% if is_owner %}
                     <a class="btn sm" href="{{ path('app_settings') }}">Modifier le profil</a>
                 {% elseif app.user %}
-                    {% if is_following %}
-                        <form method="post" action="{{ path('app_profile_unfollow', {username: account.username}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.username) }}">
+                    {% if follow_pending %}
+                        <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
+                            <button class="btn sm done" title="L’instance de ce compte n’a pas encore confirmé">Demande envoyée · Annuler</button>
+                        </form>
+                    {% elseif is_following %}
+                        <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
                             <button class="btn sm done">Abonné · Ne plus suivre</button>
                         </form>
                     {% else %}
-                        <form method="post" action="{{ path('app_profile_follow', {username: account.username}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.username) }}">
+                        <form method="post" action="{{ path('app_profile_follow', {username: account.acct}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
                             <button class="btn sm pri">Suivre</button>
                         </form>
                     {% endif %}
@@ -40,6 +45,9 @@
             </div>
             <div class="bio"><b>{{ account.displayName }}</b>{% if account.bio %}<br>{{ account.bio|rich_text }}{% endif %}</div>
             <span class="handle">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>
+            {% if not account.local %}
+                <p class="small">Compte de <b>{{ account.domain }}</b>. Seules les publications reçues par cette instance sont affichées{% if account.profileUrl %} · <a class="lnk" href="{{ account.profileUrl }}" target="_blank" rel="noopener nofollow">voir le profil sur son instance</a>{% endif %}.</p>
+            {% endif %}
         </div>
     </section>
 

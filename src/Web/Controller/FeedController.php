@@ -55,9 +55,13 @@ final class FeedController extends AbstractController
     }
 
     #[Route('/federe', name: 'app_feed_federated', methods: ['GET'])]
-    public function federated(): Response
+    public function federated(Request $request, AccountRepository $accounts): Response
     {
-        return $this->render('feed/federated.html.twig', ['tab' => 'federated']);
+        $viewer = $this->currentAccount->get();
+
+        return $this->renderFeed($request, 'federated', $this->posts->federatedTimeline($this->cursor($request), self::PAGE_SIZE), [
+            'suggestions' => $viewer instanceof \App\Core\Domain\Account\Account ? $accounts->suggestionsFor($viewer) : [],
+        ]);
     }
 
     /**

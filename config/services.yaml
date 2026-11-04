@@ -18,3 +18,14 @@ services:
         exclude:
             - '../src/Kernel.php'
             - '../src/*/Domain/'
+
+    # SQLite n'applique les clés étrangères (ON DELETE CASCADE…) que si on l'active à chaque connexion.
+    # Ce middleware de DBAL ne fait rien avec MySQL / MariaDB.
+    Doctrine\DBAL\Driver\AbstractSQLiteDriver\Middleware\EnableForeignKeys:
+        tags: ['doctrine.middleware']
+
+when@test:
+    services:
+        # Fausse instance du fédivers pour les tests (voir tests/Federation).
+        App\Tests\Federation\FakeFediverse:
+            public: true

@@ -20,6 +20,10 @@ final class MediaUrls
 
     public function derivative(MediaAttachment $media, string $name): ?string
     {
+        if ($media->isRemote()) {
+            // Média distant : pas de copie locale (pas d'affiche pour une vidéo).
+            return MediaAttachment::DERIVATIVE_POSTER === $name ? null : $media->getRemoteUrl();
+        }
         $path = $media->getDerivative($name);
 
         return null !== $path ? $this->path($path) : null;
