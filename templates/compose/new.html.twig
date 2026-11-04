@@ -17,7 +17,7 @@
                     <span class="small">JPEG, HEIC, PNG, WebP, AVIF, MP4, MOV, WebM · 50 Mo par photo, 500 Mo par vidéo</span>
                     <span class="btn pri">Choisir sur l’appareil</span>
                 </label>
-                {{ form_widget(form.media, {attr: {class: 'sr-only'}}) }}
+                {{ form_widget(form.media) }}
                 {{ form_errors(form.media) }}
                 <div class="previews" data-compose-target="previews" aria-live="polite"></div>
                 <div hidden data-compose-target="alts">{{ form_widget(form.altTexts) }}</div>

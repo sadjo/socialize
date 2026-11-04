@@ -34,7 +34,8 @@ final class ComposeStoryType extends AbstractType
             ->add('media', FileType::class, [
                 'label' => 'Photos et vidéos',
                 'multiple' => true,
-                'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input'],
+                // Champ masqué : on clique sur la zone de dépôt, qui est son label.
+                'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input', 'class' => 'sr-only'],
                 'help' => \sprintf('Chaque fichier devient une story, dans l’ordre choisi (%d au plus).', Story::MAX_PER_UPLOAD),
                 'constraints' => [
                     new Assert\Count(min: 1, max: Story::MAX_PER_UPLOAD, minMessage: 'Ajoutez au moins une photo ou une vidéo.', maxMessage: 'Vous pouvez publier {{ limit }} stories à la fois au plus.'),

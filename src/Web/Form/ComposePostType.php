@@ -27,7 +27,8 @@ final class ComposePostType extends AbstractType
             ->add('media', FileType::class, [
                 'label' => 'Photos et vidéos',
                 'multiple' => true,
-                'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input'],
+                // Champ masqué : on clique sur la zone de dépôt, qui est son label.
+                'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input', 'class' => 'sr-only'],
                 'constraints' => [
                     new Assert\Count(min: 1, max: Post::MAX_MEDIA, minMessage: 'Ajoutez au moins une photo ou une vidéo.', maxMessage: 'Une publication contient au plus {{ limit }} médias.'),
                     new Assert\All([
