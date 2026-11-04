@@ -1,0 +1,78 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Mes stories · Socialize{% endblock %}
+
+{% macro tile(story, highlights, active) %}
+    {% import '_macros.html.twig' as ui %}
+    {% set media = story.media %}
+    <article class="story-tile" id="story-{{ story.publicId }}">
+        <div class="th">
+            {% if media and media.ready %}<img src="{{ media_url(media, 'thumb') }}" alt="">{% else %}<span class="processing skel">{{ ui.icon('reel') }}</span>{% endif %}
+        </div>
+        <small>{{ story.createdAt|ago }}{{ active ? ' · en cours' : '' }} · {{ story.viewsCount }} vue{{ story.viewsCount > 1 ? 's' }}</small>
+        {% if story.highlight %}
+            <span class="chip on">{{ ui.icon('sparkle', 'xs') }}{{ story.highlight.title }}</span>
+            <form method="post" action="{{ path('app_story_unpin', {id: story.publicId}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('story-unpin-' ~ story.publicId) }}">
+                <button class="btn sm">Retirer de la une</button>
+            </form>
+        {% else %}
+            <form method="post" action="{{ path('app_story_pin', {id: story.publicId}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('story-pin-' ~ story.publicId) }}">
+                <label class="sr-only" for="hl-{{ story.publicId }}">Story à la une</label>
+                <select class="inp" name="highlight" id="hl-{{ story.publicId }}">
+                    {% for highlight in highlights %}<option value="{{ highlight.publicId }}">{{ highlight.title }}</option>{% endfor %}
+                    <option value="__new__"{{ highlights is empty ? ' selected' }}>Nouvelle…</option>
+                </select>
+                <input class="inp" name="title" placeholder="Titre si nouvelle" maxlength="30" aria-label="Titre de la nouvelle story à la une">
+                <button class="btn sm pri">Mettre à la une</button>
+            </form>
+        {% endif %}
+        <form method="post" action="{{ path('app_story_delete', {id: story.publicId}) }}" data-turbo-confirm="Supprimer définitivement cette story ?">
+            <input type="hidden" name="_token" value="{{ csrf_token('story-delete-' ~ story.publicId) }}">
+            <button class="btn sm ghost danger">{{ ui.icon('trash', 'xs') }}Supprimer</button>
+        </form>
+    </article>
+{% endmacro %}
+
+{% block content %}
+<div class="page">
+    <div class="page-h">
+        <div class="grow"><h1>Mes stories</h1><p>Les stories restent visibles 24 h, puis rejoignent vos archives, visibles par vous seul. Mettez-les à la une pour les garder sur votre profil.</p></div>
+        <a class="btn pri" href="{{ path('app_story_new') }}">{{ ui.icon('plus', 'sm') }}Nouvelle story</a>
+    </div>
+
+    {% if highlights is not empty %}
+        <section class="card">
+            <h2>Stories à la une</h2>
+            <div class="row" style="flex-wrap:wrap">
+                {% for highlight in highlights %}
+                    <div class="dom">
+                        <span class="grow"><b>{{ highlight.title }}</b> · {{ highlight.stories|length }} stor{{ highlight.stories|length > 1 ? 'ies' : 'y' }}</span>
+                        <a class="btn sm" href="{{ path('app_highlight', {username: app.user.account.username, id: highlight.publicId}) }}">Voir</a>
+                        <form method="post" action="{{ path('app_highlight_delete', {id: highlight.publicId}) }}" data-turbo-confirm="Supprimer cette story à la une ? Ses stories restent dans vos archives.">
+                            <input type="hidden" name="_token" value="{{ csrf_token('highlight-delete-' ~ highlight.publicId) }}">
+                            <button class="btn sm ghost danger">Supprimer</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    <section class="card">
+        <h2>En cours</h2>
+        {% if active is empty %}<p class="small">Aucune story en cours.</p>{% else %}
+            <div class="story-grid">{% for story in active %}{{ _self.tile(story, highlights, true) }}{% endfor %}</div>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h2>Archives</h2>
+        {% if archive is empty %}<p class="small">Vos stories expirées apparaîtront ici.</p>{% else %}
+            <div class="story-grid">{% for story in archive %}{{ _self.tile(story, highlights, false) }}{% endfor %}</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

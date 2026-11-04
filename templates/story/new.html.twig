@@ -1,0 +1,43 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Nouvelle story · Socialize{% endblock %}
+
+{% block content %}
+<div class="compose">
+    <div class="page-h"><div class="grow"><h1>Nouvelle story</h1><p>Visible 24 h, puis rangée dans vos archives. Vous pouvez la mettre à la une pour la garder sur votre profil.</p></div></div>
+    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-prototype-value': '<input type="hidden">'}}) }}
+        {{ form_errors(form) }}
+        <div class="compose-grid">
+            <section class="card picker">
+                <label class="drop" for="{{ form.media.vars.id }}" data-compose-target="drop">
+                    {{ ui.icon('image', 'big') }}
+                    <b>Choisissez des photos ou des vidéos</b>
+                    <span class="small">{{ form.media.vars.help }} Format vertical conseillé (9:16).</span>
+                    <span class="btn pri">Choisir sur l’appareil</span>
+                </label>
+                {{ form_widget(form.media, {attr: {class: 'sr-only'}}) }}
+                {{ form_errors(form.media) }}
+                <div class="previews" data-compose-target="previews" aria-live="polite"></div>
+                <div hidden data-compose-target="alts"></div>
+            </section>
+            <section class="card">
+                {{ form_row(form.text, {attr: {'data-compose-target': 'caption'}}) }}
+                <div class="counter num" data-compose-target="counter" hidden></div>
+                <fieldset class="field" style="border:0;padding:0;margin:0">
+                    <legend class="lab" style="margin-bottom:6px">Visible par</legend>
+                    <div class="choices">
+                        {% for choice in form.audience %}
+                            {{ form_widget(choice) }}
+                            <label for="{{ choice.vars.id }}">{{ choice.vars.label }}<small>{{ choice.vars.value == 'public' ? 'Tous les visiteurs' : 'Seulement vos abonnés' }}</small></label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                {{ form_row(form.highlight) }}
+                {{ form_row(form.highlightTitle) }}
+                <button class="btn pri" data-compose-target="submit">Partager la story</button>
+            </section>
+        </div>
+    {{ form_end(form) }}
+</div>
+{% endblock %}

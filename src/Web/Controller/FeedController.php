@@ -7,6 +7,7 @@ namespace App\Web\Controller;
 use App\Core\Application\Account\RegistrationPolicy;
 use App\Core\Application\Feed\Cursor;
 use App\Core\Application\Feed\TimelinePage;
+use App\Core\Application\Story\StoryFeed;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
@@ -28,7 +29,7 @@ final class FeedController extends AbstractController
     }
 
     #[Route('/', name: 'app_home', methods: ['GET'])]
-    public function home(Request $request, AccountRepository $accounts, RegistrationPolicy $registration): Response
+    public function home(Request $request, AccountRepository $accounts, RegistrationPolicy $registration, StoryFeed $stories): Response
     {
         $viewer = $this->currentAccount->get();
         if (!$viewer instanceof \App\Core\Domain\Account\Account) {
@@ -39,6 +40,7 @@ final class FeedController extends AbstractController
 
         return $this->renderFeed($request, 'home', $this->posts->homeTimeline($viewer, $this->cursor($request), self::PAGE_SIZE), [
             'suggestions' => $accounts->suggestionsFor($viewer),
+            'story_groups' => $stories->barFor($viewer),
         ]);
     }
 

@@ -16,6 +16,7 @@
                 </div>
             </section>
         {% endif %}
+        {% if tab == 'home' %}{{ include('feed/_stories_bar.html.twig') }}{% endif %}
         {{ include('feed/_tabs.html.twig') }}
         <div class="feed">
             {% if page.empty %}

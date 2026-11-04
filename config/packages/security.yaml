@@ -35,7 +35,7 @@ security:
                 interval: '1 minute'
 
     access_control:
-        - { path: ^/(publier|reglages), roles: ROLE_USER }
+        - { path: ^/(publier|reglages|stories/nouvelle|stories/mes-stories|stories$), roles: ROLE_USER }
 
 when@test:
     security:

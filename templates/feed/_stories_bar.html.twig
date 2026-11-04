@@ -1,0 +1,23 @@
+{# Barre de stories du fil Abonnements. Variables : story_groups (list<StoryGroup>) #}
+{% import '_macros.html.twig' as ui %}
+{% set me = app.user.account %}
+{% set own_group = null %}
+{% for group in story_groups %}{% if group.account.id == me.id %}{% set own_group = group %}{% endif %}{% endfor %}
+<div class="stories" role="list" aria-label="Stories">
+    <div class="st" role="listitem">
+        {% if own_group %}
+            <a href="{{ path('app_stories', {depuis: me.username}) }}" class="add-badge" aria-label="Voir votre story">{{ ui.ring(me, 62, own_group.fullySeen) }}</a>
+        {% else %}
+            <a href="{{ path('app_story_new') }}" class="add-badge" aria-label="Publier une story">{{ ui.ring(me, 62, true) }}<span class="plus" aria-hidden="true">+</span></a>
+        {% endif %}
+        <a class="n" href="{{ path('app_story_new') }}">{{ own_group ? 'Ajouter' : 'Votre story' }}</a>
+    </div>
+    {% for group in story_groups %}
+        {% if group.account.id != me.id %}
+            <a class="st" role="listitem" href="{{ path('app_stories', {depuis: group.account.username}) }}" aria-label="Stories de {{ group.account.displayName }}{{ group.fullySeen ? ' (vues)' : '' }}">
+                {{ ui.ring(group.account, 62, group.fullySeen) }}
+                <span class="n">{{ group.account.username }}</span>
+            </a>
+        {% endif %}
+    {% endfor %}
+</div>
