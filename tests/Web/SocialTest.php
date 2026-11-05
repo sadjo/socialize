@@ -88,6 +88,22 @@ final class SocialTest extends AppWebTestCase
         self::assertSame(1, $this->reload($post)->getCommentsCount());
     }
 
+    public function testDeletingAPostAlsoDeletesItsLikesAndComments(): void
+    {
+        $camille = $this->register('camille');
+        $post = $this->publish($camille->getAccount(), 'À supprimer', Visibility::Public);
+        $hugo = $this->register('hugo')->getAccount();
+        $social = self::getContainer()->get(\App\Core\Application\Social\SocialActions::class);
+        $social->like($hugo, $post);
+        $social->comment($hugo, $post, 'Bientôt supprimé');
+
+        self::getContainer()->get(PostComposer::class)->delete($post);
+
+        // Clés étrangères ON DELETE CASCADE, y compris avec SQLite.
+        self::assertSame(0, self::getContainer()->get(\App\Core\Infrastructure\Doctrine\LikeRepository::class)->count([]));
+        self::assertSame(0, self::getContainer()->get(\App\Core\Infrastructure\Doctrine\CommentRepository::class)->count([]));
+    }
+
     public function testFeedPaginationUsesACursor(): void
     {
         $camille = $this->register('camille');
