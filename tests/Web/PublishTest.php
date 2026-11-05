@@ -125,6 +125,17 @@ final class PublishTest extends AppWebTestCase
 
         $this->client->request('GET', '/p/'.$this->onlyPost()->getPublicId());
         self::assertSelectorExists('video source[type="video/mp4"]');
+
+        // Pour le fédivers : la vidéo est accompagnée de son affiche, que Mastodon utilise comme vignette.
+        $this->client->request('GET', '/p/'.$this->onlyPost()->getPublicId(), server: ['HTTP_ACCEPT' => 'application/activity+json']);
+        $note = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($note);
+        self::assertIsArray($note['attachment'] ?? null);
+        $attachment = $note['attachment'][0] ?? null;
+        self::assertIsArray($attachment);
+        self::assertSame('Video', $attachment['type'] ?? null);
+        self::assertIsArray($attachment['icon'] ?? null);
+        self::assertSame('http://localhost/m/'.$video->getDerivative(MediaAttachment::DERIVATIVE_POSTER), $attachment['icon']['url'] ?? null);
     }
 
     public function testPublishingAVideoQueuesItsTranscoding(): void

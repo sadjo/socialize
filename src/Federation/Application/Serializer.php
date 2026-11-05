@@ -197,17 +197,27 @@ final readonly class Serializer
     private function attachment(MediaAttachment $media): array
     {
         $name = $media->isVideo() ? MediaAttachment::DERIVATIVE_VIDEO : MediaAttachment::DERIVATIVE_LARGE;
-        $url = (string) $this->media->derivative($media, $name);
+        $url = $this->absolute((string) $this->media->derivative($media, $name));
+
+        // Vignette d'une vidéo : sans elle, Mastodon affiche une case vide dans une galerie mêlant photos et vidéos.
+        $poster = $media->isVideo() ? $this->media->derivative($media, MediaAttachment::DERIVATIVE_POSTER) : null;
+        $icon = null !== $poster ? ['type' => 'Image', 'mediaType' => 'image/webp', 'url' => $this->absolute($poster)] : null;
 
         return array_filter([
             'type' => $media->isVideo() ? 'Video' : 'Image',
             'mediaType' => $media->isVideo() ? 'video/mp4' : 'image/webp',
-            'url' => str_starts_with($url, 'http') ? $url : $this->urls->base().$url,
+            'url' => $url,
+            'icon' => $icon,
             'name' => $media->getAltText(),
             'blurhash' => $media->getBlurhash(),
             'width' => $media->getWidth(),
             'height' => $media->getHeight(),
         ], static fn (mixed $v): bool => null !== $v);
+    }
+
+    private function absolute(string $url): string
+    {
+        return str_starts_with($url, 'http') ? $url : $this->urls->base().$url;
     }
 
     /**
