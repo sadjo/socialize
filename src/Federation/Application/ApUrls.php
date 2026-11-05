@@ -85,7 +85,12 @@ final readonly class ApUrls
 
     public function note(Post $post): string
     {
-        return $post->getApUri() ?? $this->base.'/p/'.$post->getPublicId();
+        if (null !== $post->getApUri()) {
+            return $post->getApUri();
+        }
+
+        // Après un retrait du fédivers, l'objet revient sous un nouvel identifiant (/p/{id}/v2…).
+        return $this->base.'/p/'.$post->getPublicId().($post->getApRevision() > 1 ? '/v'.$post->getApRevision() : '');
     }
 
     public function comment(Comment $comment): string

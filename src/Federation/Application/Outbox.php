@@ -77,6 +77,8 @@ final readonly class Outbox
         }
         if ($wasFederated && !$isFederated) {
             $this->sendDelete($post, $event->previousVisibility);
+            $post->retireFromFediverse();
+            $this->em->flush();
 
             return;
         }

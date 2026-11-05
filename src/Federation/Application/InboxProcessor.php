@@ -338,7 +338,7 @@ final readonly class InboxProcessor
 
     private function localPost(?string $uri): ?Post
     {
-        if (null === $uri || !$this->urls->isLocal($uri) || !preg_match('#/p/([1-9A-HJ-NP-Za-km-z]{22})$#', $uri, $m)) {
+        if (null === $uri || !$this->urls->isLocal($uri) || !preg_match('#/p/([1-9A-HJ-NP-Za-km-z]{22})(?:/v\d+)?$#', $uri, $m)) {
             return null;
         }
 

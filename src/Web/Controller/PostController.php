@@ -40,7 +40,8 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}', name: 'app_post_show', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET'])]
-    public function show(string $id, Request $request, CommentRepository $comments, LikeRepository $likes, Serializer $serializer): Response
+    #[Route('/p/{id}/v{revision}', name: 'app_post_show_revision', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58, 'revision' => '[2-9]|[1-9]\d+'], methods: ['GET'])]
+    public function show(string $id, Request $request, CommentRepository $comments, LikeRepository $likes, Serializer $serializer, int $revision = 1): Response
     {
         $post = $this->visiblePost($id);
 
@@ -49,7 +50,8 @@ final class PostController extends AbstractController
             if ($post->isFederated()) {
                 return $this->redirect((string) $post->getApUri());
             }
-            if (!\in_array($post->getVisibility(), [Visibility::Public, Visibility::Unlisted], true)) {
+            // Seul l'identifiant courant existe : les anciens restent supprimés pour le fédivers.
+            if ($revision !== $post->getApRevision() || !\in_array($post->getVisibility(), [Visibility::Public, Visibility::Unlisted], true)) {
                 throw new NotFoundHttpException();
             }
 

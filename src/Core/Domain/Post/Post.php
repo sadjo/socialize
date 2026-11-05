@@ -45,6 +45,13 @@ class Post
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $url = null;
 
+    /**
+     * Version de l'identifiant ActivityPub. Elle augmente quand la publication est retirée du fédivers
+     * (passage en privé) : Mastodon refuse de recréer un objet supprimé avec le même identifiant.
+     */
+    #[ORM\Column(options: ['default' => 1])]
+    private int $apRevision = 1;
+
     /** Date de la dernière modification par l'auteur (null si jamais modifiée). */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
@@ -227,6 +234,19 @@ class Post
         $this->contentWarning = self::nullIfBlank($contentWarning);
         $this->location = self::nullIfBlank($location);
         $this->updatedAt = $now;
+    }
+
+    public function getApRevision(): int
+    {
+        return $this->apRevision;
+    }
+
+    /**
+     * La publication vient d'être retirée du fédivers : son prochain envoi aura un nouvel identifiant.
+     */
+    public function retireFromFediverse(): void
+    {
+        ++$this->apRevision;
     }
 
     public function getUpdatedAt(): ?\DateTimeImmutable

@@ -113,8 +113,21 @@ final class FederationTest extends AppWebTestCase
         $editor->edit($post, 'Après', Visibility::Private, null, null, $order);
         self::assertCount(1, $this->fediverse()->delivered('Delete'), 'Une publication passée en privé est retirée du fédivers.');
 
-        $editor->edit($post, 'Après', Visibility::Followers, null, null, $order);
-        self::assertCount(2, $this->fediverse()->delivered('Create'), 'Elle y revient quand elle redevient visible.');
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        self::assertSame($noteId, self::dig($this->fediverse()->delivered('Delete'), 0, 'object', 'id'));
+
+        $editor->edit($post, 'Après', Visibility::Public, null, null, $order);
+        $create = $this->fediverse()->delivered('Create');
+        self::assertCount(2, $create, 'Elle y revient quand elle redevient visible.');
+        // Mastodon garde une trace des objets supprimés : la publication revient sous un nouvel identifiant.
+        self::assertSame($noteId.'/v2', self::dig($create, 1, 'object', 'id'));
+
+        $this->client->request('GET', '/p/'.$post->getPublicId().'/v2', server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertSame($noteId.'/v2', $this->json()['id']);
+        $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertResponseStatusCodeSame(404, 'L’ancien identifiant reste supprimé.');
+        $this->client->request('GET', '/p/'.$post->getPublicId().'/v2');
+        self::assertResponseIsSuccessful('Un navigateur affiche la publication.');
     }
 
     public function testUnsignedOrForgedActivitiesAreRejected(): void
