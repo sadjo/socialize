@@ -24,8 +24,15 @@ services:
     Doctrine\DBAL\Driver\AbstractSQLiteDriver\Middleware\EnableForeignKeys:
         tags: ['doctrine.middleware']
 
+    # Client HTTP des échanges avec les autres instances (remplacé dans les tests).
+    federation.http_client:
+        alias: http_client
+
 when@test:
     services:
-        # Fausse instance du fédivers pour les tests (voir tests/Federation).
+        # Fausse instance du fédivers pour les tests (voir tests/Federation), limitée au client de la fédération.
         App\Tests\Federation\FakeFediverse:
             public: true
+        federation.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            arguments: ['@App\Tests\Federation\FakeFediverse']

@@ -21,6 +21,7 @@ final readonly class FederationClient
     private HttpClientInterface $client;
 
     public function __construct(
+        #[Autowire(service: 'federation.http_client')]
         HttpClientInterface $client,
         #[Autowire(env: 'bool:FEDERATION_ALLOW_PRIVATE_NETWORKS')]
         bool $allowPrivateNetworks = false,
