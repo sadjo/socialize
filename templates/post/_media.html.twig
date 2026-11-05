@@ -6,9 +6,15 @@
         {% for media in post.media %}
             <div class="slide{{ media.video ? ' vid' }}">
                 {% if media.ready and media.video %}
-                    <video controls playsinline preload="metadata" poster="{{ media_url(media, 'poster') }}"{% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
-                        <source src="{{ media_url(media, 'video') }}" type="video/mp4">
-                    </video>
+                    <div class="player muted" data-controller="video">
+                        <video playsinline muted loop preload="none" poster="{{ media_url(media, 'poster') }}" data-video-target="video"
+                               data-action="click->video#showControls volumechange->video#volumeChanged"{% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
+                            <source src="{{ media_url(media, 'video') }}" type="video/mp4">
+                        </video>
+                        <button type="button" class="snd" data-video-target="sound" data-action="video#toggleSound" aria-label="Activer le son" aria-pressed="false">
+                            {{- ui.icon('mute', 'off') }}{{ ui.icon('volume', 'on') -}}
+                        </button>
+                    </div>
                 {% elseif media.ready %}
                     <img src="{{ media_url(media, 'large') }}" width="{{ media.width }}" height="{{ media.height }}"
                          alt="{{ media.altText ?? ('Photo ' ~ loop.index ~ ' sur ' ~ count) }}" loading="lazy" decoding="async" draggable="false">
