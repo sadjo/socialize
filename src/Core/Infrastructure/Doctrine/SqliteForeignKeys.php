@@ -15,7 +15,9 @@ use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
  * Le middleware de DBAL ne regarde pas le pilote (MySQL / MariaDB refusent la commande PRAGMA),
  * et le pilote reçu ici peut déjà être enveloppé : on se fie au pilote déclaré dans les paramètres.
  */
-#[AsMiddleware]
+// Priorité haute : appliqué au plus près du pilote, avant tout middleware qui ouvrirait une transaction
+// (SQLite ignore PRAGMA foreign_keys dans une transaction).
+#[AsMiddleware(priority: 200)]
 final class SqliteForeignKeys implements Middleware
 {
     public function wrap(Driver $driver): Driver
