@@ -10,8 +10,8 @@
                     <div class="who">
                         <a href="{{ path('app_profile', {username: account.username}) }}">{{ ui.avatar(account, 36) }}</a>
                         <div class="t"><b>{{ account.username }}</b><small>{{ account.displayName }}</small></div>
-                        <form method="post" action="{{ path('app_profile_follow', {username: account.username}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.username) }}">
+                        <form method="post" action="{{ path('app_profile_follow', {username: account.acct}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
                             <button class="btn sm pri">Suivre</button>
                         </form>
                     </div>

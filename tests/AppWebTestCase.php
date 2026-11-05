@@ -59,10 +59,11 @@ abstract class AppWebTestCase extends WebTestCase
         return new UploadedFile($path, $name, 'image/jpeg', null, true);
     }
 
-    protected function mp4(string $name = 'video.mp4'): UploadedFile
+    protected function mp4(string $name = 'video.mp4', bool $sound = true): UploadedFile
     {
         $path = sys_get_temp_dir().'/'.uniqid('socialize-', true).'.mp4';
-        exec(\sprintf('ffmpeg -v error -y -f lavfi -i testsrc=duration=2:size=320x240:rate=10 -f lavfi -i sine=duration=2 -shortest -c:v libx264 -pix_fmt yuv420p -c:a aac %s', escapeshellarg($path)), $output, $code);
+        $audio = $sound ? '-f lavfi -i sine=duration=2 -shortest -c:a aac' : '-an';
+        exec(\sprintf('ffmpeg -v error -y -f lavfi -i testsrc=duration=2:size=320x240:rate=10 %s -c:v libx264 -pix_fmt yuv420p %s', $audio, escapeshellarg($path)), $output, $code);
         self::assertSame(0, $code, 'ffmpeg doit être installé pour les tests vidéo.');
 
         return new UploadedFile($path, $name, 'video/mp4', null, true);

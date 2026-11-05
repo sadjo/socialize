@@ -37,6 +37,25 @@ class Post
     #[ORM\Column(length: 30, enumType: PostSource::class)]
     private PostSource $source = PostSource::Local;
 
+    /** Identifiant ActivityPub d'une publication reçue du fédivers. */
+    #[ORM\Column(length: 500, unique: true, nullable: true)]
+    private ?string $apUri = null;
+
+    /** Page HTML de la publication sur son instance d'origine. */
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $url = null;
+
+    /**
+     * Version de l'identifiant ActivityPub. Elle augmente quand la publication est retirée du fédivers
+     * (passage en privé) : Mastodon refuse de recréer un objet supprimé avec le même identifiant.
+     */
+    #[ORM\Column(options: ['default' => 1])]
+    private int $apRevision = 1;
+
+    /** Date de la dernière modification par l'auteur (null si jamais modifiée). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $updatedAt = null;
+
     #[ORM\Column]
     private int $likesCount = 0;
 
@@ -67,6 +86,48 @@ class Post
         $this->location = $this->nullIfBlank($location);
         $this->publishedAt = new \DateTimeImmutable();
         $this->media = new ArrayCollection();
+    }
+
+    /**
+     * Publication reçue d'une instance distante.
+     */
+    public static function federated(
+        Account $author,
+        string $caption,
+        Visibility $visibility,
+        ?string $contentWarning,
+        string $apUri,
+        ?string $url,
+        \DateTimeImmutable $publishedAt,
+    ): self {
+        $post = new self($author, $caption, $visibility, $contentWarning);
+        $post->apUri = $apUri;
+        $post->url = $url;
+        $post->publishedAt = $publishedAt;
+        $post->source = PostSource::Federated;
+
+        return $post;
+    }
+
+    public function updateFederated(string $caption, ?string $contentWarning): void
+    {
+        $this->caption = trim($caption);
+        $this->contentWarning = self::nullIfBlank($contentWarning);
+    }
+
+    public function getApUri(): ?string
+    {
+        return $this->apUri;
+    }
+
+    public function getUrl(): ?string
+    {
+        return $this->url;
+    }
+
+    public function isFederated(): bool
+    {
+        return null !== $this->apUri;
     }
 
     public function getId(): Uuid
@@ -158,6 +219,44 @@ class Post
     public function hasVideo(): bool
     {
         return $this->media->exists(static fn (int $i, MediaAttachment $m): bool => $m->isVideo());
+    }
+
+    /**
+     * Modification par l'auteur : texte, lieu, visibilité et avertissement de contenu.
+     */
+    public function edit(string $caption, Visibility $visibility, ?string $contentWarning, ?string $location, \DateTimeImmutable $now): void
+    {
+        if ($this->isFederated()) {
+            throw new \DomainException('Une publication reçue du fédivers ne se modifie pas ici.');
+        }
+        $this->caption = trim($caption);
+        $this->visibility = $visibility;
+        $this->contentWarning = self::nullIfBlank($contentWarning);
+        $this->location = self::nullIfBlank($location);
+        $this->updatedAt = $now;
+    }
+
+    public function getApRevision(): int
+    {
+        return $this->apRevision;
+    }
+
+    /**
+     * La publication vient d'être retirée du fédivers : son prochain envoi aura un nouvel identifiant.
+     */
+    public function retireFromFediverse(): void
+    {
+        ++$this->apRevision;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    public function removeMedia(MediaAttachment $media): void
+    {
+        $this->media->removeElement($media);
     }
 
     public function addMedia(MediaAttachment $media): void

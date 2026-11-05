@@ -3,9 +3,13 @@
 <turbo-frame id="{{ frame_id }}" target="_top" style="display:contents">
     {% for post in page.posts %}
         {% set cover = post.cover %}
-        <a class="gt" href="{{ path('app_post_show', {id: post.publicId}) }}" aria-label="Ouvrir la publication{{ post.caption ? ' : ' ~ post.caption|slice(0, 80) }}">
-            {% if cover and cover.ready %}
-                <img src="{{ media_url(cover, 'thumb') }}" alt="{{ cover.altText }}" loading="lazy" decoding="async">
+        <a class="gt" href="{{ path('app_profile_feed', {username: account.acct, depuis: post.publicId, _fragment: 'post-' ~ post.publicId}) }}" aria-label="Ouvrir la publication{{ post.caption ? ' : ' ~ post.caption|slice(0, 80) }}">
+            {% set thumb = cover and cover.ready ? media_url(cover, 'thumb') : null %}
+            {% if thumb %}
+                <img src="{{ thumb }}" alt="{{ cover.altText }}" loading="lazy" decoding="async">
+            {% elseif cover and cover.ready and cover.video %}
+                {# Vidéo distante sans vignette : première image de la vidéo. #}
+                <video src="{{ media_url(cover, 'video') }}#t=0.1" muted playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video>
             {% else %}
                 <span class="processing skel">{{ ui.icon('reel') }}</span>
             {% endif %}
@@ -15,6 +19,6 @@
     {% endfor %}
     {% if page.next %}
         {% set next = page.next.toString %}
-        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path('app_profile', {username: account.username, apres: next}) }}" loading="lazy" target="_top" style="display:contents"></turbo-frame>
+        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path('app_profile', {username: account.acct, apres: next}) }}" loading="lazy" target="_top" style="display:contents"></turbo-frame>
     {% endif %}
 </turbo-frame>

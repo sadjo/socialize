@@ -34,6 +34,37 @@ final class FollowRepository extends ServiceEntityRepository
         return null !== $this->findOneBy(['follower' => $follower, 'following' => $following, 'state' => FollowState::Accepted]);
     }
 
+    /**
+     * Boîtes de réception des abonnés distants (boîte partagée de leur instance si possible), sans doublon.
+     *
+     * @return list<string>
+     */
+    public function remoteFollowerInboxes(Account $account): array
+    {
+        $inboxes = [];
+        foreach ($this->findBy(['following' => $account, 'state' => FollowState::Accepted]) as $follow) {
+            $follower = $follow->getFollower();
+            if (!$follower->isLocal() && null !== $follower->getDeliveryInbox()) {
+                $inboxes[$follower->getDeliveryInbox()] = true;
+            }
+        }
+
+        return array_keys($inboxes);
+    }
+
+    public function findByApUri(string $apUri): ?Follow
+    {
+        return $this->findOneBy(['apUri' => $apUri]);
+    }
+
+    /**
+     * Un compte local suit-il ce compte distant ? (pour accepter ses publications).
+     */
+    public function hasLocalFollower(Account $account): bool
+    {
+        return array_any($this->findBy(['following' => $account, 'state' => FollowState::Accepted]), static fn (Follow $follow): bool => $follow->getFollower()->isLocal());
+    }
+
     public function countFollowers(Account $account): int
     {
         return $this->count(['following' => $account, 'state' => FollowState::Accepted]);

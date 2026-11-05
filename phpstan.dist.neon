@@ -14,3 +14,8 @@ parameters:
         consoleApplicationLoader: tests/console-application.php
     doctrine:
         objectManagerLoader: tests/object-manager.php
+    ignoreErrors:
+        # La fausse instance du fédivers n'existe que dans le conteneur de test.
+        -
+            message: '#Service "App\\Tests\\Federation\\FakeFediverse" is not registered in the container#'
+            path: tests/Federation/FederationTest.php

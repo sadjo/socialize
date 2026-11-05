@@ -16,6 +16,9 @@ framework:
 
         routing:
             App\Media\Application\ProcessVideo: async
+            App\Federation\Application\DeliverActivity: async
+            App\Federation\Application\ProcessInboxActivity: async
+            App\Federation\Application\BackfillAccount: async
 
 when@test:
     framework:
@@ -23,3 +26,8 @@ when@test:
             transports:
                 async: 'in-memory://'
                 failed: 'in-memory://'
+            # Les activités sont envoyées et traitées tout de suite pendant les tests.
+            routing:
+                App\Federation\Application\DeliverActivity: sync
+                App\Federation\Application\ProcessInboxActivity: sync
+                App\Federation\Application\BackfillAccount: sync

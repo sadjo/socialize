@@ -6,7 +6,7 @@
 {% block content %}
 <div class="compose">
     <div class="page-h"><div class="grow"><h1>Nouvelle story</h1><p>Visible 24 h, puis rangée dans vos archives. Vous pouvez la mettre à la une pour la garder sur votre profil.</p></div></div>
-    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-prototype-value': '<input type="hidden">'}}) }}
+    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 10}}) }}
         {{ form_errors(form) }}
         <div class="compose-grid">
             <section class="card picker">
@@ -18,8 +18,9 @@
                 </label>
                 {{ form_widget(form.media) }}
                 {{ form_errors(form.media) }}
+                <p class="small">Les stories sont lues dans l’ordre des aperçus : faites-les glisser, ou utilisez ◀ ▶.</p>
                 <div class="previews" data-compose-target="previews" aria-live="polite"></div>
-                <div hidden data-compose-target="alts"></div>
+
             </section>
             <section class="card">
                 {{ form_row(form.text, {attr: {'data-compose-target': 'caption'}}) }}

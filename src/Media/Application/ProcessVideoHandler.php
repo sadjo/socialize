@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace App\Media\Application;
 
+use App\Core\Domain\Event\PostPublished;
+use App\Core\Domain\Event\PostUpdated;
+use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Media\MediaStatus;
 use App\Core\Infrastructure\Doctrine\MediaAttachmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Uid\Uuid;
@@ -18,6 +23,7 @@ final readonly class ProcessVideoHandler
         private MediaIngestor $ingestor,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
+        private EventDispatcherInterface $events,
     ) {
     }
 
@@ -36,5 +42,12 @@ final readonly class ProcessVideoHandler
         }
 
         $this->em->flush();
+
+        // Toutes les vidéos d'une publication sont traitées : elle peut partir dans le fédivers.
+        $post = $media->getPost();
+        if (null !== $post && !$post->getMedia()->exists(static fn (int $i, MediaAttachment $m): bool => MediaStatus::Processing === $m->getStatus())) {
+            // Vidéo ajoutée en modifiant la publication : c'est une mise à jour, pas une nouvelle publication.
+            $this->events->dispatch(null === $post->getUpdatedAt() ? new PostPublished($post) : new PostUpdated($post, $post->getVisibility()));
+        }
     }
 }

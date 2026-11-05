@@ -48,7 +48,9 @@ if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 			;;
 	esac
 
-	php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --all-or-nothing
+	# Clés étrangères SQLite désactivées pendant les migrations : Doctrine reconstruit certaines tables,
+	# et la suppression de l'ancienne table déclencherait sinon ON DELETE CASCADE sur les tables liées.
+	SQLITE_FOREIGN_KEYS=0 php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --all-or-nothing
 	php bin/console messenger:setup-transports --no-interaction
 
 	if [ "$1" = 'frankenphp' ] && [ "${WORKERS:-1}" -gt 0 ]; then

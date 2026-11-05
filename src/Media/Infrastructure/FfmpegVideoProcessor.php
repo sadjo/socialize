@@ -47,15 +47,32 @@ final class FfmpegVideoProcessor
 
     public function transcode(string $input, string $output): void
     {
+        $command = ['ffmpeg', '-y', '-v', 'error', '-i', $input];
+        if ($this->hasAudio($input)) {
+            $command = [...$command, '-map', '0:v:0', '-map', '0:a:0'];
+        } else {
+            // Piste muette ajoutée : sans son, Mastodon traite la vidéo comme un GIF animé,
+            // que ses applications affichent mal à côté de photos.
+            $command = [...$command, '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000', '-map', '0:v:0', '-map', '1:a:0', '-shortest'];
+        }
+
         $this->run([
-            'ffmpeg', '-y', '-v', 'error', '-i', $input,
-            '-map', '0:v:0', '-map', '0:a:0?',
+            ...$command,
             '-vf', "scale=w='min(1080,iw)':h='min(1920,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
             '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p',
             '-c:a', 'aac', '-b:a', '128k',
             '-map_metadata', '-1', '-movflags', '+faststart',
             $output,
         ]);
+    }
+
+    public function hasAudio(string $path): bool
+    {
+        $process = new Process(['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index', '-of', 'csv=p=0', $path]);
+        $process->setTimeout(120);
+        $process->run();
+
+        return $process->isSuccessful() && '' !== trim($process->getOutput());
     }
 
     public function poster(string $input, string $output, float $duration): void

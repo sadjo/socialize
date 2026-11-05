@@ -75,7 +75,7 @@ final class PublishTest extends AppWebTestCase
             $this->client->request('GET', $url);
             self::assertSelectorExists('form[data-controller="compose"]');
             self::assertSelectorExists(\sprintf('input#%s[type="file"][multiple][data-compose-target="input"][accept*="image/jpeg"]', $id), 'Sans cette cible, l’aperçu des médias ne s’affiche pas.');
-            foreach (['previews', 'drop', 'submit', 'caption', 'counter', 'alts'] as $target) {
+            foreach (['previews', 'drop', 'submit', 'caption', 'counter'] as $target) {
                 self::assertSelectorExists(\sprintf('[data-compose-target="%s"]', $target));
             }
         }
@@ -98,7 +98,7 @@ final class PublishTest extends AppWebTestCase
 
         $crawler = $this->client->request('GET', '/publier');
         $values = $crawler->selectButton('Publier')->form()->getPhpValues();
-        $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->mp4()]]]);
+        $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->mp4(sound: false)]]]);
         self::assertResponseRedirects();
 
         $post = $this->onlyPost();
@@ -122,9 +122,24 @@ final class PublishTest extends AppWebTestCase
         self::assertEqualsWithDelta(2.0, $video->getDuration() ?? 0, 0.3);
         self::assertTrue($this->storage('derivatives')->fileExists((string) $video->getDerivative(MediaAttachment::DERIVATIVE_VIDEO)));
         self::assertTrue($this->storage('derivatives')->fileExists((string) $video->getDerivative(MediaAttachment::DERIVATIVE_POSTER)));
+        $copy = sys_get_temp_dir().'/'.uniqid('socialize-', true).'.mp4';
+        file_put_contents($copy, $this->storage('derivatives')->read((string) $video->getDerivative(MediaAttachment::DERIVATIVE_VIDEO)));
+        self::assertTrue(self::getContainer()->get(\App\Media\Infrastructure\FfmpegVideoProcessor::class)->hasAudio($copy), 'Une vidéo sans son reçoit une piste muette.');
+        unlink($copy);
 
         $this->client->request('GET', '/p/'.$this->onlyPost()->getPublicId());
         self::assertSelectorExists('video source[type="video/mp4"]');
+
+        // Pour le fédivers : la vidéo est accompagnée de son affiche, que Mastodon utilise comme vignette.
+        $this->client->request('GET', '/p/'.$this->onlyPost()->getPublicId(), server: ['HTTP_ACCEPT' => 'application/activity+json']);
+        $note = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($note);
+        self::assertIsArray($note['attachment'] ?? null);
+        $attachment = $note['attachment'][0] ?? null;
+        self::assertIsArray($attachment);
+        self::assertSame('Video', $attachment['type'] ?? null);
+        self::assertIsArray($attachment['icon'] ?? null);
+        self::assertSame('http://localhost/m/'.$video->getDerivative(MediaAttachment::DERIVATIVE_POSTER), $attachment['icon']['url'] ?? null);
     }
 
     public function testPublishingAVideoQueuesItsTranscoding(): void

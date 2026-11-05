@@ -1,0 +1,19 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Rechercher · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Rechercher un compte</h1><p>Un compte de cette instance (« camille ») ou du fédivers (« @nom@mastodon.social »).</p></div></div>
+    {{ include('search/_form.html.twig') }}
+    {% if error %}<ul class="form-errors"><li>{{ error }}</li></ul>{% endif %}
+    {% for account in results %}
+        <div class="found">
+            <a href="{{ path('app_profile', {username: account.acct}) }}">{{ ui.avatar(account, 48) }}</a>
+            <div class="t"><b>{{ account.displayName }}</b><br><small>{{ handle(account, local_domain) }}</small></div>
+            <a class="btn sm" href="{{ path('app_profile', {username: account.acct}) }}">Voir le profil</a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

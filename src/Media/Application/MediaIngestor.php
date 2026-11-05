@@ -111,6 +111,9 @@ final readonly class MediaIngestor
      */
     public function delete(MediaAttachment $media): void
     {
+        if ($media->isRemote()) {
+            return;
+        }
         $this->originalsStorage->delete($media->getOriginalPath());
         foreach ($media->getDerivatives() as $path) {
             $this->derivativesStorage->delete($path);

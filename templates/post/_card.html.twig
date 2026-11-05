@@ -3,9 +3,10 @@
 {% set author = post.account %}
 <article class="post" id="post-{{ post.publicId }}" data-controller="like">
     <header class="ph">
-        <a href="{{ path('app_profile', {username: author.username}) }}" aria-label="Profil de {{ author.displayName }}">{{ ui.avatar(author, 36) }}</a>
+        <a href="{{ path('app_profile', {username: author.acct}) }}" aria-label="Profil de {{ author.displayName }}">{{ ui.avatar(author, 36) }}</a>
         <div class="pmeta">
-            <div class="pname"><a href="{{ path('app_profile', {username: author.username}) }}"><b>{{ author.username }}</b></a>
+            <div class="pname"><a href="{{ path('app_profile', {username: author.acct}) }}"><b>{{ author.username }}</b></a>
+                {% if not author.local %}<span class="fed" title="Compte fédéré">{{ ui.icon('globe', 'xs') }}{{ author.domain }}</span>{% endif %}
                 {% if post.visibility.value != 'public' %}<span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon('lock', 'xs') }}{{ post.visibility.label }}</span>{% endif %}
             </div>
             {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
@@ -17,6 +18,6 @@
     <div class="pbody">
         {% if post.caption %}<div><b>{{ author.username }}</b> {{ post.caption|rich_text }}</div>{% endif %}
         {% if post.commentsCount %}<a class="meta" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}">Voir {{ post.commentsCount > 1 ? 'les ' ~ post.commentsCount ~ ' commentaires' : 'le commentaire' }}</a>{% endif %}
-        <a class="ago" href="{{ path('app_post_show', {id: post.publicId}) }}"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></a>
+        <a class="ago" href="{{ path('app_post_show', {id: post.publicId}) }}"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time>{% if not author.local %} · via @{{ author.acct }}{% endif %}</a>
     </div>
 </article>

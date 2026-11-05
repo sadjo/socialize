@@ -6,8 +6,9 @@
     {% endfor %}
     {% if page.next %}
         {% set next = page.next.toString %}
-        <turbo-frame id="feed-page-{{ next|replace({'.': '-'}) }}" src="{{ path(route, {apres: next}) }}" loading="lazy" target="_top">
-            <div class="more"><a class="btn" href="{{ path(route, {apres: next}) }}">Charger la suite</a></div>
+        {% set next_url = path(route, (route_params|default({}))|merge({apres: next})) %}
+        <turbo-frame id="feed-page-{{ next|replace({'.': '-'}) }}" src="{{ next_url }}" loading="lazy" target="_top">
+            <div class="more"><a class="btn" href="{{ next_url }}">Charger la suite</a></div>
         </turbo-frame>
     {% endif %}
 </turbo-frame>

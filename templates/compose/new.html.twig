@@ -7,7 +7,7 @@
 <div class="compose">
     <div class="page-h"><div class="grow"><h1>Nouvelle publication</h1><p>Jusqu’à 20 photos ou vidéos. Les originaux et leurs métadonnées sont conservés ; les copies publiques ne contiennent pas votre position GPS.</p></div></div>
 
-    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-prototype-value': form_widget(form.altTexts.vars.prototype)}}) }}
+    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 20, 'data-compose-alt-name-value': 'compose_post[altTexts][__key__]'}}) }}
         {{ form_errors(form) }}
         <div class="compose-grid">
             <section class="card picker">
@@ -19,8 +19,9 @@
                 </label>
                 {{ form_widget(form.media) }}
                 {{ form_errors(form.media) }}
+                <p class="small">Chaque nouvelle sélection s’ajoute aux médias déjà choisis. Faites glisser les aperçus, ou utilisez ◀ ▶, pour changer l’ordre.</p>
                 <div class="previews" data-compose-target="previews" aria-live="polite"></div>
-                <div hidden data-compose-target="alts">{{ form_widget(form.altTexts) }}</div>
+                {% do form.altTexts.setRendered %}
             </section>
 
             <section class="card">

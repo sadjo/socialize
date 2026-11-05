@@ -26,6 +26,9 @@ class Comment
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(length: 500, unique: true, nullable: true)]
+    private ?string $apUri = null;
+
     public function __construct(
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -39,6 +42,25 @@ class Comment
         $this->id = Uuid::v7();
         $this->content = trim($content);
         $this->createdAt = new \DateTimeImmutable();
+    }
+
+    public static function federated(Post $post, Account $account, string $content, string $apUri, \DateTimeImmutable $createdAt): self
+    {
+        $comment = new self($post, $account, $content);
+        $comment->apUri = $apUri;
+        $comment->createdAt = $createdAt;
+
+        return $comment;
+    }
+
+    public function getApUri(): ?string
+    {
+        return $this->apUri;
+    }
+
+    public function getPublicId(): string
+    {
+        return $this->id->toBase58();
     }
 
     public function getId(): Uuid

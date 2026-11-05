@@ -4,10 +4,10 @@ Réseau photo et vidéo auto-hébergé, compatible avec le fédivers (Mastodon, 
 Socialize permet d'importer une archive Instagram sans perte, de choisir ses médias dans [Immich](https://immich.app)
 et de publier aussi sur Instagram et Facebook selon des règles réglables.
 
-> **État : jalon 3.** Comptes et connexion, publications avec photos et vidéos (carrousels, texte alternatif,
-> avertissement de contenu, 4 niveaux de visibilité), fils Abonnements et Local, profils, abonnements, likes,
-> commentaires, et stories : 24 h, visionneuse plein écran, vues, stories à la une et archives.
-> Jalons suivants : fédération ActivityPub, import Instagram, Immich, API/MCP, crosspost.
+> **État : jalon 4.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
+> stories, et fédération ActivityPub : les comptes se trouvent et se suivent depuis Mastodon et Pixelfed,
+> les publications, likes et réponses circulent dans les deux sens. Jalons suivants : import Instagram,
+> Immich, API/MCP, crosspost.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
 - Stack : PHP 8.5, Symfony 8.1, FrankenPHP (mode worker), Doctrine ORM, Symfony Messenger, Twig + Symfony UX.
@@ -52,6 +52,14 @@ Ou avec un serveur MySQL / MariaDB existant : définissez `DATABASE_URL` dans `d
 
 Si un reverse proxy (NAS, Traefik…) gère déjà le HTTPS, utilisez `SERVER_NAME=:80`, publiez seulement le port 80
 et renseignez `TRUSTED_PROXIES`.
+
+### Fédération (ActivityPub)
+
+`DEFAULT_URI` sert de base à toutes les adresses ActivityPub (acteurs, publications) : choisissez-la avant
+d'ouvrir l'instance au fédivers et ne la changez plus. Les comptes se trouvent par WebFinger
+(`@nom@domaine`), chaque compte local a sa paire de clés RSA (clé privée chiffrée avec `APP_SECRET`), et les
+activités reçues sont vérifiées par signature HTTP. Les requêtes vers les autres instances n'atteignent
+jamais le réseau privé.
 
 ### Variables d'environnement
 

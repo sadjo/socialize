@@ -55,6 +55,10 @@ class MediaAttachment
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $failureReason = null;
 
+    /** Adresse du média sur son instance d'origine (publication reçue du fédivers). */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $remoteUrl = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -94,6 +98,35 @@ class MediaAttachment
         }
     }
 
+    /**
+     * Média d'une publication distante : il reste sur son instance d'origine.
+     */
+    public static function remote(Post $post, MediaType $type, int $position, string $remoteUrl, string $mimeType, ?string $altText, ?int $width, ?int $height, ?string $blurhash, ?string $previewUrl = null): self
+    {
+        $media = new self($post, $type, $position, '', $mimeType, 0, $altText);
+        $media->remoteUrl = $remoteUrl;
+        // Vignette fournie par l'instance d'origine (adresse absolue), quand elle en publie une.
+        if (null !== $previewUrl) {
+            $media->derivatives = [self::DERIVATIVE_POSTER => $previewUrl];
+        }
+        $media->width = $width;
+        $media->height = $height;
+        $media->blurhash = $blurhash;
+        $media->status = MediaStatus::Ready;
+
+        return $media;
+    }
+
+    public function getRemoteUrl(): ?string
+    {
+        return $this->remoteUrl;
+    }
+
+    public function isRemote(): bool
+    {
+        return null !== $this->remoteUrl;
+    }
+
     public function getId(): Uuid
     {
         return $this->id;
@@ -122,6 +155,22 @@ class MediaAttachment
     public function getPosition(): int
     {
         return $this->position;
+    }
+
+    public function moveTo(int $position): void
+    {
+        $this->position = $position;
+    }
+
+    public function describe(?string $altText): void
+    {
+        $altText = null !== $altText ? trim($altText) : null;
+        $this->altText = '' === $altText ? null : $altText;
+    }
+
+    public function getPublicId(): string
+    {
+        return $this->id->toBase58();
     }
 
     public function getStatus(): MediaStatus

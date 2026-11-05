@@ -1,7 +1,7 @@
 {% extends 'layout.html.twig' %}
 {% import '_macros.html.twig' as ui %}
 
-{% block title %}{{ tab == 'home' ? 'Accueil' : 'Fil local' }} · Socialize{% endblock %}
+{% block title %}{{ tab == 'home' ? 'Accueil' : (tab == 'federated' ? 'Fil fédéré' : 'Fil local') }} · Socialize{% endblock %}
 
 {% block content %}
 <div class="home">
@@ -18,6 +18,7 @@
         {% endif %}
         {% if tab == 'home' %}{{ include('feed/_stories_bar.html.twig') }}{% endif %}
         {{ include('feed/_tabs.html.twig') }}
+        {% if tab in ['local', 'federated'] %}{{ include('search/_form.html.twig') }}{% endif %}
         <div class="feed">
             {% if page.empty %}
                 <div class="empty">
@@ -26,6 +27,9 @@
                         <b>Votre fil est vide pour l’instant</b>
                         <span>Publiez votre première photo, ou suivez des comptes depuis le fil local.</span>
                         <div class="row"><a class="btn pri" href="{{ path('app_compose') }}">Publier</a><a class="btn" href="{{ path('app_feed_local') }}">Voir le fil local</a></div>
+                    {% elseif tab == 'federated' %}
+                        <b>Aucune publication du fédivers pour l’instant</b>
+                        <span>Suivez des comptes Mastodon ou Pixelfed : leurs publications publiques apparaîtront ici. Cherchez-les avec leur adresse, par exemple @nom@pixelfed.social.</span>
                     {% else %}
                         <b>Aucune publication publique pour l’instant</b>
                     {% endif %}
