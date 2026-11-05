@@ -33,6 +33,13 @@ final class FederationTest extends AppWebTestCase
         $this->client->request('GET', '/.well-known/webfinger?resource=acct:personne@localhost');
         self::assertResponseStatusCodeSame(404);
 
+        // Acteur d'instance : Mastodon le résout par WebFinger avant d'accepter nos lectures signées.
+        $this->client->request('GET', '/.well-known/webfinger?resource=acct:localhost@localhost');
+        self::assertResponseIsSuccessful();
+        self::assertSame('http://localhost/actor', self::dig($this->json(), 'links', 0, 'href'));
+        $this->client->request('GET', '/actor', server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertSame('localhost', $this->json()['preferredUsername']);
+
         $this->client->request('GET', '/users/camille', server: ['HTTP_ACCEPT' => self::AP]);
         $actor = $this->json();
         self::assertSame('Person', $actor['type']);

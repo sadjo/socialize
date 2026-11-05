@@ -41,19 +41,38 @@ final readonly class WellKnownController
             $username = (string) preg_replace('#^.*/(?:users/|@)#', '', $resource);
         }
 
+        // Acteur d'instance (convention Mastodon : « domaine@domaine »). Mastodon le vérifie par WebFinger
+        // avant d'accepter les lectures signées au nom de l'instance (authorized fetch).
+        if (null !== $username && mb_strtolower($username) === $this->urls->domain() || $resource === $this->urls->instanceActor()) {
+            return $this->jrd('acct:'.$this->urls->domain().'@'.$this->urls->domain(), $this->urls->instanceActor(), [$this->urls->instanceActor()]);
+        }
+
         $account = null !== $username ? $this->accounts->findLocal($username) : null;
         if (!$account instanceof \App\Core\Domain\Account\Account) {
             return new JsonResponse(['error' => 'Compte inconnu.'], Response::HTTP_NOT_FOUND);
         }
 
-        $response = new JsonResponse([
-            'subject' => 'acct:'.$account->getUsername().'@'.$this->urls->domain(),
-            'aliases' => [$this->urls->actor($account), $this->urls->profile($account)],
-            'links' => [
-                ['rel' => 'self', 'type' => 'application/activity+json', 'href' => $this->urls->actor($account)],
-                ['rel' => 'http://webfinger.net/rel/profile-page', 'type' => 'text/html', 'href' => $this->urls->profile($account)],
-            ],
-        ], headers: ['Content-Type' => 'application/jrd+json; charset=utf-8', 'Access-Control-Allow-Origin' => '*']);
+        return $this->jrd(
+            'acct:'.$account->getUsername().'@'.$this->urls->domain(),
+            $this->urls->actor($account),
+            [$this->urls->actor($account), $this->urls->profile($account)],
+            $this->urls->profile($account),
+        );
+    }
+
+    /**
+     * @param list<string> $aliases
+     */
+    private function jrd(string $subject, string $actor, array $aliases, ?string $profile = null): JsonResponse
+    {
+        $links = [['rel' => 'self', 'type' => 'application/activity+json', 'href' => $actor]];
+        if (null !== $profile) {
+            $links[] = ['rel' => 'http://webfinger.net/rel/profile-page', 'type' => 'text/html', 'href' => $profile];
+        }
+        $response = new JsonResponse(
+            ['subject' => $subject, 'aliases' => $aliases, 'links' => $links],
+            headers: ['Content-Type' => 'application/jrd+json; charset=utf-8', 'Access-Control-Allow-Origin' => '*'],
+        );
         $response->setEncodingOptions(\JSON_UNESCAPED_SLASHES);
 
         return $response;
