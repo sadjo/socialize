@@ -1,0 +1,49 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Modifier la publication · Socialize{% endblock %}
+
+{% block content %}
+<div class="compose">
+    <div class="page-h">
+        <div class="grow"><h1>Modifier la publication</h1><p>Ajoutez, retirez ou réordonnez les médias, et changez le texte ou la visibilité. Vos abonnés du fédivers reçoivent la modification.</p></div>
+        <a class="btn" href="{{ path('app_post_show', {id: post.publicId}) }}">Annuler</a>
+    </div>
+
+    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 20, 'data-compose-alt-name-value': 'edit_post[altTexts][__key__]', 'data-compose-existing-value': existing|json_encode}}) }}
+        {{ form_errors(form) }}
+        {{ form_widget(form.order) }}
+        {% do form.altTexts.setRendered %}
+        <div class="compose-grid">
+            <section class="card picker">
+                <div class="previews" data-compose-target="previews" aria-live="polite"></div>
+                <p class="field-errors" data-compose-target="empty" hidden>Une publication garde au moins une photo ou une vidéo.</p>
+                <label class="drop" for="{{ form.media.vars.id }}" data-compose-target="drop" style="padding-block:24px">
+                    {{ ui.icon('plus', 'big') }}
+                    <b>Ajouter des photos ou des vidéos</b>
+                    <span class="small">Elles s’ajoutent à la suite. Faites glisser les aperçus, ou utilisez ◀ ▶, pour changer l’ordre.</span>
+                </label>
+                {{ form_widget(form.media) }}
+                {{ form_errors(form.media) }}
+            </section>
+
+            <section class="card">
+                {{ form_row(form.caption) }}
+                <div class="counter num" data-compose-target="counter"></div>
+                {{ form_row(form.location) }}
+                <fieldset class="field" style="border:0;padding:0;margin:0">
+                    <legend class="lab" style="margin-bottom:6px">Visibilité</legend>
+                    <div class="choices">
+                        {% for choice in form.visibility %}
+                            {{ form_widget(choice) }}
+                            <label for="{{ choice.vars.id }}">{{ choice.vars.label }}<small>{{ choice.vars.value == 'public' ? 'Fils publics et fédivers' : choice.vars.value == 'unlisted' ? 'Visible avec le lien' : choice.vars.value == 'followers' ? 'Vos abonnés' : 'Vous seulement' }}</small></label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                {{ form_row(form.contentWarning) }}
+                <button class="btn pri" data-compose-target="submit">Enregistrer les modifications</button>
+            </section>
+        </div>
+    {{ form_end(form) }}
+</div>
+{% endblock %}

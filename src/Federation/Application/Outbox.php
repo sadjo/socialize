@@ -12,6 +12,7 @@ use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\PostUnliked;
+use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Event\ProfileUpdated;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
@@ -54,15 +55,60 @@ final readonly class Outbox
         ]);
     }
 
+    /**
+     * Modification : Update pour les abonnés ; Create si la publication sort du privé,
+     * Delete si elle y entre (elle disparaît alors du fédivers).
+     */
+    #[AsEventListener]
+    public function onPostUpdated(PostUpdated $event): void
+    {
+        $post = $event->post;
+        $author = $post->getAccount();
+        if (!$author->isLocal()) {
+            return;
+        }
+        $wasFederated = Visibility::Private !== $event->previousVisibility;
+        $isFederated = Visibility::Private !== $post->getVisibility();
+
+        if (!$wasFederated && $isFederated) {
+            $this->onPostPublished(new PostPublished($post));
+
+            return;
+        }
+        if ($wasFederated && !$isFederated) {
+            $this->sendDelete($post, $event->previousVisibility);
+
+            return;
+        }
+        if (!$isFederated) {
+            return;
+        }
+
+        $note = $this->serializer->note($post);
+        $this->deliver($author, $this->followerInboxes($author), [
+            'id' => $this->urls->activity($author, 'update'),
+            'type' => 'Update',
+            'actor' => $this->urls->actor($author),
+            'to' => $note['to'],
+            'cc' => $note['cc'],
+            'object' => $note,
+        ]);
+    }
+
     #[AsEventListener]
     public function onPostDeleting(PostDeleting $event): void
     {
         $post = $event->post;
-        $author = $post->getAccount();
-        if (!$author->isLocal() || Visibility::Private === $post->getVisibility()) {
+        if (!$post->getAccount()->isLocal() || Visibility::Private === $post->getVisibility()) {
             return;
         }
-        [$to, $cc] = $this->serializer->addressing($post->getVisibility(), $author);
+        $this->sendDelete($post, $post->getVisibility());
+    }
+
+    private function sendDelete(\App\Core\Domain\Post\Post $post, Visibility $visibility): void
+    {
+        $author = $post->getAccount();
+        [$to, $cc] = $this->serializer->addressing($visibility, $author);
         $this->deliver($author, $this->followerInboxes($author), [
             'id' => $this->urls->activity($author, 'delete'),
             'type' => 'Delete',

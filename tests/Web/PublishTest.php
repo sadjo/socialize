@@ -75,7 +75,7 @@ final class PublishTest extends AppWebTestCase
             $this->client->request('GET', $url);
             self::assertSelectorExists('form[data-controller="compose"]');
             self::assertSelectorExists(\sprintf('input#%s[type="file"][multiple][data-compose-target="input"][accept*="image/jpeg"]', $id), 'Sans cette cible, l’aperçu des médias ne s’affiche pas.');
-            foreach (['previews', 'drop', 'submit', 'caption', 'counter', 'alts'] as $target) {
+            foreach (['previews', 'drop', 'submit', 'caption', 'counter'] as $target) {
                 self::assertSelectorExists(\sprintf('[data-compose-target="%s"]', $target));
             }
         }

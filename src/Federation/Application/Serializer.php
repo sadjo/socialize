@@ -125,6 +125,9 @@ final readonly class Serializer
             'attachment' => $attachments,
             'tag' => $this->tags($post->getCaption()),
         ];
+        if ($post->getUpdatedAt() instanceof \DateTimeImmutable) {
+            $note['updated'] = $post->getUpdatedAt()->format(\DATE_ATOM);
+        }
         if (null !== $post->getLocation()) {
             $note['location'] = ['type' => 'Place', 'name' => $post->getLocation()];
         }

@@ -153,6 +153,22 @@ class MediaAttachment
         return $this->position;
     }
 
+    public function moveTo(int $position): void
+    {
+        $this->position = $position;
+    }
+
+    public function describe(?string $altText): void
+    {
+        $altText = null !== $altText ? trim($altText) : null;
+        $this->altText = '' === $altText ? null : $altText;
+    }
+
+    public function getPublicId(): string
+    {
+        return $this->id->toBase58();
+    }
+
     public function getStatus(): MediaStatus
     {
         return $this->status;

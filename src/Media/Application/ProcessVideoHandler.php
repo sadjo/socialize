@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Media\Application;
 
 use App\Core\Domain\Event\PostPublished;
+use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Media\MediaStatus;
 use App\Core\Infrastructure\Doctrine\MediaAttachmentRepository;
@@ -45,7 +46,8 @@ final readonly class ProcessVideoHandler
         // Toutes les vidéos d'une publication sont traitées : elle peut partir dans le fédivers.
         $post = $media->getPost();
         if (null !== $post && !$post->getMedia()->exists(static fn (int $i, MediaAttachment $m): bool => MediaStatus::Processing === $m->getStatus())) {
-            $this->events->dispatch(new PostPublished($post));
+            // Vidéo ajoutée en modifiant la publication : c'est une mise à jour, pas une nouvelle publication.
+            $this->events->dispatch(null === $post->getUpdatedAt() ? new PostPublished($post) : new PostUpdated($post, $post->getVisibility()));
         }
     }
 }

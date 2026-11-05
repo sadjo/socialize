@@ -88,6 +88,28 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas dans le fédivers.');
     }
 
+    public function testEditingAPostIsFederated(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/9', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $post = $this->publish($this->reloadAccount($camille), 'Avant', Visibility::Public);
+        $editor = self::getContainer()->get(\App\Media\Application\PostEditor::class);
+        $order = array_values(array_map(\App\Media\Application\PostEditor::token(...), $post->getMedia()->toArray()));
+
+        $editor->edit($post, 'Après', Visibility::Public, null, null, $order);
+        $update = $this->fediverse()->delivered('Update');
+        self::assertCount(1, $update);
+        self::assertSame('Note', self::dig($update, 0, 'object', 'type'));
+        self::assertStringContainsString('Après', self::str($update, 0, 'object', 'content'));
+        self::assertIsString(self::dig($update, 0, 'object', 'updated'));
+
+        $editor->edit($post, 'Après', Visibility::Private, null, null, $order);
+        self::assertCount(1, $this->fediverse()->delivered('Delete'), 'Une publication passée en privé est retirée du fédivers.');
+
+        $editor->edit($post, 'Après', Visibility::Followers, null, null, $order);
+        self::assertCount(2, $this->fediverse()->delivered('Create'), 'Elle y revient quand elle redevient visible.');
+    }
+
     public function testUnsignedOrForgedActivitiesAreRejected(): void
     {
         $this->register('camille');

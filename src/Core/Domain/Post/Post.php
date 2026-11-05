@@ -45,6 +45,10 @@ class Post
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $url = null;
 
+    /** Date de la dernière modification par l'auteur (null si jamais modifiée). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $updatedAt = null;
+
     #[ORM\Column]
     private int $likesCount = 0;
 
@@ -208,6 +212,31 @@ class Post
     public function hasVideo(): bool
     {
         return $this->media->exists(static fn (int $i, MediaAttachment $m): bool => $m->isVideo());
+    }
+
+    /**
+     * Modification par l'auteur : texte, lieu, visibilité et avertissement de contenu.
+     */
+    public function edit(string $caption, Visibility $visibility, ?string $contentWarning, ?string $location, \DateTimeImmutable $now): void
+    {
+        if ($this->isFederated()) {
+            throw new \DomainException('Une publication reçue du fédivers ne se modifie pas ici.');
+        }
+        $this->caption = trim($caption);
+        $this->visibility = $visibility;
+        $this->contentWarning = self::nullIfBlank($contentWarning);
+        $this->location = self::nullIfBlank($location);
+        $this->updatedAt = $now;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    public function removeMedia(MediaAttachment $media): void
+    {
+        $this->media->removeElement($media);
     }
 
     public function addMedia(MediaAttachment $media): void

@@ -6,6 +6,7 @@ namespace App\Web\Controller;
 
 use App\Core\Application\Post\PostAccess;
 use App\Core\Application\Social\SocialActions;
+use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\CommentRepository;
@@ -13,10 +14,16 @@ use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\Serializer;
 use App\Federation\Infrastructure\Http\ActivityJsonResponse;
+use App\Media\Application\MediaProcessingException;
+use App\Media\Application\MediaUrls;
 use App\Media\Application\PostComposer;
+use App\Media\Application\PostEditor;
 use App\Web\Form\CommentType;
+use App\Web\Form\EditPostType;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -94,6 +101,62 @@ final class PostController extends AbstractController
         }
 
         return $this->redirectToRoute('app_post_show', ['id' => $id, '_fragment' => 'commentaires'], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/p/{id}/modifier', name: 'app_post_edit', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET', 'POST'])]
+    public function edit(string $id, Request $request, PostEditor $editor, MediaUrls $urls): Response
+    {
+        $post = $this->visiblePost($id);
+        if (!$post->isOwnedBy($this->currentAccount->get()) || $post->isFederated()) {
+            throw $this->createAccessDeniedException('Seule l’autrice ou l’auteur peut modifier cette publication.');
+        }
+
+        $existing = [];
+        $altTexts = [];
+        foreach ($post->getMedia() as $media) {
+            $token = PostEditor::token($media);
+            $existing[] = [
+                'token' => $token,
+                'src' => $urls->derivative($media, MediaAttachment::DERIVATIVE_THUMB) ?? $urls->derivative($media, MediaAttachment::DERIVATIVE_LARGE),
+                'video' => $media->isVideo(),
+                'alt' => $media->getAltText(),
+            ];
+            $altTexts[$token] = $media->getAltText();
+        }
+
+        $form = $this->createForm(EditPostType::class, [
+            'caption' => $post->getCaption(),
+            'location' => $post->getLocation(),
+            'visibility' => $post->getVisibility(),
+            'contentWarning' => $post->getContentWarning(),
+            'order' => implode(',', array_column($existing, 'token')),
+            'altTexts' => $altTexts,
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string} $data */
+            $data = $form->getData();
+            try {
+                $editor->edit(
+                    $post,
+                    $data['caption'] ?? '',
+                    $data['visibility'],
+                    $data['contentWarning'],
+                    $data['location'],
+                    array_values(array_filter(explode(',', $data['order']))),
+                    $data['media'] ?? [],
+                    $data['altTexts'] ?? [],
+                );
+                $this->addFlash('success', 'Publication modifiée.');
+
+                return $this->redirectToRoute('app_post_show', ['id' => $id], Response::HTTP_SEE_OTHER);
+            } catch (MediaProcessingException $e) {
+                $form->addError(new FormError($e->getMessage()));
+            }
+        }
+
+        return $this->render('post/edit.html.twig', ['post' => $post, 'form' => $form, 'existing' => $existing]);
     }
 
     #[Route('/p/{id}/supprimer', name: 'app_post_delete', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
