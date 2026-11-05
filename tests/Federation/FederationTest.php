@@ -202,6 +202,53 @@ final class FederationTest extends AppWebTestCase
         self::assertNull(self::getContainer()->get(PostRepository::class)->findOneBy(['apUri' => 'https://remote.test/notes/1']));
     }
 
+    public function testFollowingARemoteAccountImportsItsRecentHistory(): void
+    {
+        $create = fn (string $id, string $published, ?string $inReplyTo = null, bool $withImage = true): array => [
+            'id' => $id.'/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE,
+            'object' => ['published' => $published] + $this->remoteNote($id, 'Photo '.basename($id), $inReplyTo, $withImage),
+        ];
+        $day = static fn (int $days): string => new \DateTimeImmutable(\sprintf('-%d days', $days))->format(\DATE_ATOM);
+        FakeFediverse::$outbox = [
+            $create('https://remote.test/notes/recent', $day(1)),
+            ['id' => 'https://remote.test/boosts/1', 'type' => 'Announce', 'actor' => FakeFediverse::ALICE, 'object' => 'https://ailleurs.test/notes/9'],
+            $create('https://remote.test/notes/reply', $day(2), 'https://ailleurs.test/notes/9'),
+            $create('https://remote.test/notes/text', $day(3), withImage: false),
+        ];
+        // Deux pages : 30 publications récentes de plus (la limite de 50 n'est pas atteinte), puis une trop ancienne.
+        for ($i = 1; $i <= 30; ++$i) {
+            FakeFediverse::$outbox[] = $create('https://remote.test/notes/p'.$i, $day(10 + $i));
+        }
+        FakeFediverse::$outbox[] = $create('https://remote.test/notes/old', $day(200));
+        FakeFediverse::$outbox[] = $create('https://remote.test/notes/older', $day(210));
+
+        $this->followAlice();
+
+        $posts = self::getContainer()->get(PostRepository::class);
+        self::assertNotNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/recent']));
+        self::assertNotNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/p30']), 'Les pages suivantes de l’outbox sont lues.');
+        self::assertNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/old']), 'Rien au-delà de six mois.');
+        self::assertSame(31, $posts->count([]), 'Ni partages, ni réponses, ni messages sans photo.');
+
+        $this->client->request('GET', '/@alice@remote.test');
+        self::assertSelectorExists('a[href^="/p/"]');
+    }
+
+    public function testHistoryIsLimitedToTheLatestFiftyPosts(): void
+    {
+        for ($i = 1; $i <= 70; ++$i) {
+            FakeFediverse::$outbox[] = ['id' => 'https://remote.test/notes/'.$i.'/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE,
+                'object' => ['published' => new \DateTimeImmutable('-'.$i.' hours')->format(\DATE_ATOM)] + $this->remoteNote('https://remote.test/notes/'.$i, 'Photo '.$i)];
+        }
+
+        $this->followAlice();
+
+        $posts = self::getContainer()->get(PostRepository::class);
+        self::assertSame(50, $posts->count([]));
+        self::assertNotNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/50']));
+        self::assertNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/51']));
+    }
+
     public function testRemoteLikesAndRepliesOnALocalPost(): void
     {
         $camille = $this->register('camille')->getAccount();
@@ -230,6 +277,23 @@ final class FederationTest extends AppWebTestCase
     {
         $body = (string) json_encode($activity, \JSON_UNESCAPED_SLASHES);
         $this->client->request('POST', $path, server: FakeFediverse::signedServer('http://localhost'.$path, $body), content: $body);
+    }
+
+    protected function tearDown(): void
+    {
+        FakeFediverse::$outbox = [];
+        parent::tearDown();
+    }
+
+    private function followAlice(): void
+    {
+        $this->login($this->register('camille'));
+        $this->client->request('GET', '/recherche?q=@alice@remote.test');
+        $crawler = $this->client->followRedirect();
+        $this->client->submit($crawler->selectButton('Suivre')->form());
+        $follow = $this->fediverse()->delivered('Follow');
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#accepts/1', 'type' => 'Accept', 'actor' => FakeFediverse::ALICE, 'object' => $follow[0]]);
+        self::assertResponseStatusCodeSame(202);
     }
 
     /**

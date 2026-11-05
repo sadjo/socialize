@@ -22,6 +22,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -43,6 +44,7 @@ final readonly class InboxProcessor
         private Outbox $outbox,
         private ApUrls $urls,
         private LoggerInterface $logger,
+        private MessageBusInterface $bus,
     ) {
     }
 
@@ -116,9 +118,11 @@ final readonly class InboxProcessor
     private function accept(array $activity, Account $actor): void
     {
         $follow = $this->ourFollowOf($activity, $actor);
-        if ($follow instanceof Follow) {
+        if ($follow instanceof Follow && !$follow->isAccepted()) {
             $follow->accept();
             $this->em->flush();
+            // Abonnement accepté : on récupère l'historique récent du compte suivi.
+            $this->bus->dispatch(new BackfillAccount($actor->getId()->toRfc4122()));
         }
     }
 

@@ -25,6 +25,14 @@ final class FakeFediverse
     public array $deliveries = [];
 
     /**
+     * Activités de l'outbox d'alice, de la plus récente à la plus ancienne.
+     * Statique : le noyau (et donc ce service) est recréé à chaque requête du client de test.
+     *
+     * @var list<array<string, mixed>>
+     */
+    public static array $outbox = [];
+
+    /**
      * @param array<string, mixed> $options
      */
     public function __invoke(string $method, string $url, array $options = []): ResponseInterface
@@ -54,6 +62,21 @@ final class FakeFediverse
         }
         if ('/users/alice' === $path) {
             return $this->json(self::actor());
+        }
+        if ('/users/alice/outbox' === $path) {
+            // Comme Mastodon : la collection renvoie vers sa première page, paginée par 20.
+            $page = (int) (parse_url($url, \PHP_URL_QUERY) ? substr(parse_url($url, \PHP_URL_QUERY), 5) : 0);
+            if (0 === $page) {
+                return $this->json(['id' => self::ALICE.'/outbox', 'type' => 'OrderedCollection', 'totalItems' => \count(self::$outbox), 'first' => self::ALICE.'/outbox?page=1']);
+            }
+            $items = \array_slice(self::$outbox, ($page - 1) * 20, 20);
+
+            return $this->json(array_filter([
+                'id' => self::ALICE.'/outbox?page='.$page,
+                'type' => 'OrderedCollectionPage',
+                'orderedItems' => $items,
+                'next' => \count(self::$outbox) > $page * 20 ? self::ALICE.'/outbox?page='.($page + 1) : null,
+            ]));
         }
 
         return new MockResponse('{"error":"not found"}', ['http_code' => 404]);

@@ -18,6 +18,7 @@ framework:
             App\Media\Application\ProcessVideo: async
             App\Federation\Application\DeliverActivity: async
             App\Federation\Application\ProcessInboxActivity: async
+            App\Federation\Application\BackfillAccount: async
 
 when@test:
     framework:
@@ -29,3 +30,4 @@ when@test:
             routing:
                 App\Federation\Application\DeliverActivity: sync
                 App\Federation\Application\ProcessInboxActivity: sync
+                App\Federation\Application\BackfillAccount: sync
