@@ -98,6 +98,35 @@ final class PostRepository extends ServiceEntityRepository
     }
 
     /**
+     * Publications d'un profil plus récentes qu'une position donnée, les plus proches d'abord.
+     *
+     * @param list<Visibility> $visible
+     *
+     * @return list<Post> au plus $limit publications, de la plus récente à la plus ancienne
+     */
+    public function profileNewerThan(Account $account, array $visible, Cursor $from, int $limit): array
+    {
+        /** @var list<Post> $posts */
+        $posts = $this->createQueryBuilder('p')
+            ->addSelect('a')
+            ->join('p.account', 'a')
+            ->where('p.account = :account')
+            ->andWhere('p.visibility IN (:visible)')
+            ->andWhere('p.publishedAt > :cursorDate OR (p.publishedAt = :cursorDate AND p.id > :cursorId)')
+            ->setParameter('account', $account->getId(), UuidType::NAME)
+            ->setParameter('visible', $visible)
+            ->setParameter('cursorDate', $from->publishedAt)
+            ->setParameter('cursorId', $from->id, UuidType::NAME)
+            ->orderBy('p.publishedAt', 'ASC')
+            ->addOrderBy('p.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return array_reverse($posts);
+    }
+
+    /**
      * @param list<Visibility> $visible
      */
     public function countForProfile(Account $account, array $visible): int

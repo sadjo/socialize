@@ -101,10 +101,14 @@ class MediaAttachment
     /**
      * Média d'une publication distante : il reste sur son instance d'origine.
      */
-    public static function remote(Post $post, MediaType $type, int $position, string $remoteUrl, string $mimeType, ?string $altText, ?int $width, ?int $height, ?string $blurhash): self
+    public static function remote(Post $post, MediaType $type, int $position, string $remoteUrl, string $mimeType, ?string $altText, ?int $width, ?int $height, ?string $blurhash, ?string $previewUrl = null): self
     {
         $media = new self($post, $type, $position, '', $mimeType, 0, $altText);
         $media->remoteUrl = $remoteUrl;
+        // Vignette fournie par l'instance d'origine (adresse absolue), quand elle en publie une.
+        if (null !== $previewUrl) {
+            $media->derivatives = [self::DERIVATIVE_POSTER => $previewUrl];
+        }
         $media->width = $width;
         $media->height = $height;
         $media->blurhash = $blurhash;

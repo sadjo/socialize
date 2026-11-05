@@ -231,7 +231,7 @@ final class FederationTest extends AppWebTestCase
         self::assertSame(31, $posts->count([]), 'Ni partages, ni réponses, ni messages sans photo.');
 
         $this->client->request('GET', '/@alice@remote.test');
-        self::assertSelectorExists('a[href^="/p/"]');
+        self::assertSelectorExists('a.gt[href*="/publications?depuis="]');
     }
 
     public function testHistoryIsLimitedToTheLatestFiftyPosts(): void

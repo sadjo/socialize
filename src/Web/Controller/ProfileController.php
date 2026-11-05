@@ -13,6 +13,7 @@ use App\Core\Domain\Story\Highlight;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
 use App\Core\Infrastructure\Doctrine\HighlightRepository;
+use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\RemoteAccounts;
 use App\Federation\Infrastructure\FederationException;
@@ -26,6 +27,8 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ProfileController extends AbstractController
 {
     private const int PAGE_SIZE = 24;
+    private const int FEED_PAGE_SIZE = 10;
+    private const int FEED_NEWER = 20;
     /** « camille » ou « leo@pixelfed.social ». */
     private const string ACCT = '[A-Za-z0-9_](?:[A-Za-z0-9_.\-]{0,98}[A-Za-z0-9_])?(?:@[a-z0-9\-]+(?:\.[a-z0-9\-]+)+)?';
 
@@ -67,6 +70,46 @@ final class ProfileController extends AbstractController
         }
 
         return $this->render('profile/show.html.twig', $parameters);
+    }
+
+    /**
+     * Fil des publications d'un profil, ouvert sur l'une d'elles : les plus récentes au-dessus,
+     * les plus anciennes en dessous (chargées au fil du défilement).
+     */
+    #[Route('/@{username}/publications', name: 'app_profile_feed', requirements: ['username' => self::ACCT], methods: ['GET'])]
+    public function feed(string $username, Request $request, PostRepository $posts, PostAccess $access, LikeRepository $likes): Response
+    {
+        $account = $this->account($username);
+        $viewer = $this->currentAccount->get();
+        $visible = $access->visibleFor($account, $viewer);
+        $common = ['account' => $account, 'route' => 'app_profile_feed', 'route_params' => ['username' => $account->getAcct()]];
+
+        // Suite du fil (publications plus anciennes), chargée dans un cadre Turbo.
+        if ($request->query->has('apres')) {
+            $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres')), self::FEED_PAGE_SIZE);
+
+            return $this->render('feed/_page.html.twig', $common + ['page' => $page, 'liked' => $likes->likedAmong($viewer, $page->posts)]);
+        }
+
+        $post = $posts->findByPublicId($request->query->getString('depuis'));
+        if (!$post instanceof \App\Core\Domain\Post\Post || !$post->getAccount()->getId()->equals($account->getId()) || !\in_array($post->getVisibility(), $visible, true)) {
+            return $this->redirectToRoute('app_profile', ['username' => $account->getAcct()]);
+        }
+
+        $newer = $posts->profileNewerThan($account, $visible, Cursor::after($post), self::FEED_NEWER + 1);
+        $hasMoreNewer = \count($newer) > self::FEED_NEWER;
+        if ($hasMoreNewer) {
+            array_shift($newer);
+        }
+        $older = $posts->profileTimeline($account, $visible, Cursor::after($post), self::FEED_PAGE_SIZE);
+
+        return $this->render('profile/feed.html.twig', $common + [
+            'post' => $post,
+            'newer' => $newer,
+            'has_more_newer' => $hasMoreNewer,
+            'page' => $older,
+            'liked' => $likes->likedAmong($viewer, [...$newer, $post, ...$older->posts]),
+        ]);
     }
 
     #[Route('/@{username}/suivre', name: 'app_profile_follow', requirements: ['username' => self::ACCT], methods: ['POST'])]

@@ -233,7 +233,7 @@ final readonly class InboxProcessor
             $this->date(Json::string($note, 'published')),
         );
         foreach ($attachments as $position => $a) {
-            MediaAttachment::remote($post, $a['type'], $position, $a['url'], $a['mediaType'], $a['name'], $a['width'], $a['height'], $a['blurhash']);
+            MediaAttachment::remote($post, $a['type'], $position, $a['url'], $a['mediaType'], $a['name'], $a['width'], $a['height'], $a['blurhash'], $a['preview']);
         }
         $this->em->persist($post);
         $this->em->flush();
@@ -377,7 +377,7 @@ final readonly class InboxProcessor
     /**
      * @param array<string, mixed> $note
      *
-     * @return list<array{type: MediaType, url: string, mediaType: string, name: ?string, width: ?int, height: ?int, blurhash: ?string}>
+     * @return list<array{type: MediaType, url: string, mediaType: string, name: ?string, width: ?int, height: ?int, blurhash: ?string, preview: ?string}>
      */
     private function attachments(array $note): array
     {
@@ -396,6 +396,8 @@ final readonly class InboxProcessor
             if (null === $url || null === $kind || !str_starts_with($url, 'https://')) {
                 continue;
             }
+            $icon = $a['icon'] ?? null; // vignette : adresse, ou objet Image avec une « url »
+            $preview = \is_string($icon) ? $icon : (\is_array($icon) && !array_is_list($icon) ? Json::id(Json::keyed($icon), 'url') : null);
             $out[] = [
                 'type' => $kind,
                 'url' => $url,
@@ -404,6 +406,7 @@ final readonly class InboxProcessor
                 'width' => \is_int($a['width'] ?? null) ? $a['width'] : null,
                 'height' => \is_int($a['height'] ?? null) ? $a['height'] : null,
                 'blurhash' => Json::string($a, 'blurhash'),
+                'preview' => null !== $preview && str_starts_with($preview, 'https://') ? $preview : null,
             ];
         }
 
