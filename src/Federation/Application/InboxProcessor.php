@@ -19,6 +19,7 @@ use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Infrastructure\FederationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Uid\Uuid;
@@ -28,6 +29,7 @@ use Symfony\Component\Uid\Uuid;
  * réponses, modifications et suppressions. Les activités inconnues sont ignorées.
  */
 #[AsMessageHandler]
+#[WithMonologChannel('federation')]
 final readonly class InboxProcessor
 {
     public function __construct(

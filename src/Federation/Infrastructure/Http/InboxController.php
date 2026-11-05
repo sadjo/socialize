@@ -11,6 +11,7 @@ use App\Federation\Application\RemoteAccounts;
 use App\Federation\Infrastructure\FederationException;
 use App\Federation\Infrastructure\HttpSignature;
 use App\Federation\Infrastructure\SignatureException;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,6 +24,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * Boîtes de réception : vérifie la signature HTTP et l'auteur de l'activité, puis la confie à Messenger.
  */
 #[AsController]
+#[WithMonologChannel('federation')]
 final readonly class InboxController
 {
     private const int MAX_BYTES = 1_000_000;
@@ -71,6 +73,7 @@ final readonly class InboxController
             return $this->error('L’activité n’a pas été signée par son auteur.', Response::HTTP_UNAUTHORIZED);
         }
 
+        $this->logger->info('Activité reçue', ['type' => $type, 'actor' => $signer->getApUri(), 'id' => Json::string($activity, 'id')]);
         $this->bus->dispatch(new ProcessInboxActivity($body, $signer->getId()->toRfc4122()));
 
         return new Response(status: Response::HTTP_ACCEPTED);
@@ -97,7 +100,7 @@ final readonly class InboxController
 
     private function error(string $message, int $status): JsonResponse
     {
-        $this->logger->info('Activité refusée', ['reason' => $message, 'status' => $status]);
+        $this->logger->warning('Activité reçue refusée', ['reason' => $message, 'status' => $status]);
 
         return new JsonResponse(['error' => $message], $status);
     }
