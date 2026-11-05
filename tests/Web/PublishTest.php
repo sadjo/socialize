@@ -98,7 +98,7 @@ final class PublishTest extends AppWebTestCase
 
         $crawler = $this->client->request('GET', '/publier');
         $values = $crawler->selectButton('Publier')->form()->getPhpValues();
-        $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->mp4()]]]);
+        $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->mp4(sound: false)]]]);
         self::assertResponseRedirects();
 
         $post = $this->onlyPost();
@@ -122,6 +122,10 @@ final class PublishTest extends AppWebTestCase
         self::assertEqualsWithDelta(2.0, $video->getDuration() ?? 0, 0.3);
         self::assertTrue($this->storage('derivatives')->fileExists((string) $video->getDerivative(MediaAttachment::DERIVATIVE_VIDEO)));
         self::assertTrue($this->storage('derivatives')->fileExists((string) $video->getDerivative(MediaAttachment::DERIVATIVE_POSTER)));
+        $copy = sys_get_temp_dir().'/'.uniqid('socialize-', true).'.mp4';
+        file_put_contents($copy, $this->storage('derivatives')->read((string) $video->getDerivative(MediaAttachment::DERIVATIVE_VIDEO)));
+        self::assertTrue(self::getContainer()->get(\App\Media\Infrastructure\FfmpegVideoProcessor::class)->hasAudio($copy), 'Une vidéo sans son reçoit une piste muette.');
+        unlink($copy);
 
         $this->client->request('GET', '/p/'.$this->onlyPost()->getPublicId());
         self::assertSelectorExists('video source[type="video/mp4"]');
