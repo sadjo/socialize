@@ -115,6 +115,34 @@ final class ProfileController extends AbstractController
         ]);
     }
 
+    /**
+     * Archives de la titulaire ou du titulaire du profil : publications archivées, visibles par elle ou lui seul.
+     */
+    #[Route('/@{username}/archives', name: 'app_profile_archives', requirements: ['username' => self::ACCT], methods: ['GET'])]
+    public function archives(string $username, Request $request, PostRepository $posts): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        $account = $this->account($username);
+        if (!$account->getId()->equals($this->currentAccount->require()->getId())) {
+            throw new NotFoundHttpException('Ces archives ne sont visibles que par leur titulaire.');
+        }
+
+        $parameters = [
+            'account' => $account,
+            'is_owner' => true,
+            'page' => $posts->archiveOf($account, Cursor::fromString($request->query->getString('apres') ?: null), self::PAGE_SIZE),
+            'archived_count' => $posts->countArchived($account),
+            'grid_route' => 'app_profile_archives',
+            'open_post' => true,
+        ];
+
+        if ($request->query->has('apres')) {
+            return $this->render('profile/_grid_page.html.twig', $parameters);
+        }
+
+        return $this->render('profile/archives.html.twig', $parameters);
+    }
+
     #[Route('/@{username}/abonnes', name: 'app_profile_followers', requirements: ['username' => self::ACCT], methods: ['GET'])]
     public function followers(string $username, Request $request, FollowRepository $follows, NetworkAccess $network): Response
     {

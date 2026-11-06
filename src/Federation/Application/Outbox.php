@@ -10,9 +10,11 @@ use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
 use App\Core\Domain\Event\CommentDeleting;
 use App\Core\Domain\Event\FollowerRemoved;
+use App\Core\Domain\Event\PostArchived;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostPublished;
+use App\Core\Domain\Event\PostUnarchived;
 use App\Core\Domain\Event\PostUnliked;
 use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Event\ProfileUpdated;
@@ -42,7 +44,7 @@ final readonly class Outbox
     {
         $post = $event->post;
         $author = $post->getAccount();
-        if (!$author->isLocal() || Visibility::Private === $post->getVisibility()) {
+        if (!$post->isFederable()) {
             return;
         }
         $note = $this->serializer->note($post);
@@ -66,7 +68,8 @@ final readonly class Outbox
     {
         $post = $event->post;
         $author = $post->getAccount();
-        if (!$author->isLocal()) {
+        // Une publication archivée a déjà quitté le fédivers : elle y revient au désarchivage.
+        if (!$author->isLocal() || $post->isArchived()) {
             return;
         }
         $wasFederated = Visibility::Private !== $event->previousVisibility;
@@ -103,10 +106,31 @@ final readonly class Outbox
     public function onPostDeleting(PostDeleting $event): void
     {
         $post = $event->post;
+        if (!$post->isFederable()) {
+            return;
+        }
+        $this->sendDelete($post, $post->getVisibility());
+    }
+
+    /**
+     * Archivage : la publication quitte le fédivers ; son prochain envoi aura un nouvel identifiant.
+     */
+    #[AsEventListener]
+    public function onPostArchived(PostArchived $event): void
+    {
+        $post = $event->post;
         if (!$post->getAccount()->isLocal() || Visibility::Private === $post->getVisibility()) {
             return;
         }
         $this->sendDelete($post, $post->getVisibility());
+        $post->retireFromFediverse();
+        $this->em->flush();
+    }
+
+    #[AsEventListener]
+    public function onPostUnarchived(PostUnarchived $event): void
+    {
+        $this->onPostPublished(new PostPublished($event->post));
     }
 
     private function sendDelete(\App\Core\Domain\Post\Post $post, Visibility $visibility): void
@@ -260,7 +284,7 @@ final readonly class Outbox
         $author = $comment->getAccount();
         $post = $comment->getPost();
         $postAuthor = $post->getAccount();
-        if (!$author->isLocal() || Visibility::Private === $post->getVisibility()) {
+        if (!$author->isLocal() || Visibility::Private === $post->getVisibility() || $post->isArchived()) {
             return null;
         }
 

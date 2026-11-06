@@ -16,6 +16,7 @@
             <div class="pmeta">
                 <div class="pname"><a href="{{ path('app_profile', {username: author.acct}) }}"><b>{{ author.username }}</b></a>
                     {% if not author.local %}<span class="fed">{{ ui.icon('globe', 'xs') }}{{ author.domain }}</span>{% endif %}
+                    {% if post.archived %}<span class="chip imp" title="Visible uniquement par vous, dans vos archives">{{ ui.icon('album', 'xs') }}Archivée</span>{% endif %}
                     <span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon(post.visibility.value == 'public' ? 'globe' : 'lock', 'xs') }}{{ post.visibility.label }}</span></div>
                 {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
             </div>

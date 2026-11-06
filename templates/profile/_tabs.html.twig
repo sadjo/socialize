@@ -1,0 +1,8 @@
+{# Onglets du profil. Variables : account, is_owner, current ('posts' ou 'archives') #}
+{% import '_macros.html.twig' as ui %}
+<nav class="ptabs" aria-label="Contenu du profil">
+    <a href="{{ path('app_profile', {username: account.acct}) }}" class="{{ current == 'posts' ? 'on' }}"{{ current == 'posts' ? ' aria-current="page"' }}>{{ ui.icon('grid', 'xs') }}Publications</a>
+    {% if is_owner %}
+        <a href="{{ path('app_profile_archives', {username: account.acct}) }}" class="{{ current == 'archives' ? 'on' }}"{{ current == 'archives' ? ' aria-current="page"' }} title="Visible uniquement par vous">{{ ui.icon('album', 'xs') }}Archives</a>
+    {% endif %}
+</nav>

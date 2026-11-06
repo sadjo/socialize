@@ -112,6 +112,7 @@ final class PostRepository extends ServiceEntityRepository
             ->join('p.account', 'a')
             ->where('p.account = :account')
             ->andWhere('p.visibility IN (:visible)')
+            ->andWhere('p.archivedAt IS NULL')
             ->andWhere('p.publishedAt > :cursorDate OR (p.publishedAt = :cursorDate AND p.id > :cursorId)')
             ->setParameter('account', $account->getId(), UuidType::NAME)
             ->setParameter('visible', $visible)
@@ -135,8 +136,33 @@ final class PostRepository extends ServiceEntityRepository
             ->select('COUNT(p.id)')
             ->where('p.account = :account')
             ->andWhere('p.visibility IN (:visible)')
+            ->andWhere('p.archivedAt IS NULL')
             ->setParameter('account', $account->getId(), UuidType::NAME)
             ->setParameter('visible', $visible)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Publications archivées d'un compte, de la plus récente à la plus ancienne.
+     */
+    public function archiveOf(Account $account, ?Cursor $cursor, int $limit): TimelinePage
+    {
+        $qb = $this->base()
+            ->where('p.account = :account')
+            ->andWhere('p.archivedAt IS NOT NULL')
+            ->setParameter('account', $account->getId(), UuidType::NAME);
+
+        return $this->page($qb, $cursor, $limit, archived: true);
+    }
+
+    public function countArchived(Account $account): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.account = :account')
+            ->andWhere('p.archivedAt IS NOT NULL')
+            ->setParameter('account', $account->getId(), UuidType::NAME)
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -150,8 +176,14 @@ final class PostRepository extends ServiceEntityRepository
             ->addOrderBy('p.id', 'DESC');
     }
 
-    private function page(QueryBuilder $qb, ?Cursor $cursor, int $limit): TimelinePage
+    /**
+     * Les fils ne montrent jamais les publications archivées, sauf la page des archives.
+     */
+    private function page(QueryBuilder $qb, ?Cursor $cursor, int $limit, bool $archived = false): TimelinePage
     {
+        if (!$archived) {
+            $qb->andWhere('p.archivedAt IS NULL');
+        }
         if ($cursor instanceof Cursor) {
             $qb->andWhere('p.publishedAt < :cursorDate OR (p.publishedAt = :cursorDate AND p.id < :cursorId)')
                 ->setParameter('cursorDate', $cursor->publishedAt)

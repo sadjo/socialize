@@ -15,6 +15,10 @@
         {% if post.ownedBy(me) %}
             {% if not post.isFederated() %}
                 <a role="menuitem" href="{{ path('app_post_edit', {id: post.publicId}) }}">{{ ui.icon('sliders', 'sm') }}Modifier</a>
+                <form method="post" action="{{ path(post.archived ? 'app_post_unarchive' : 'app_post_archive', {id: post.publicId}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('archive-' ~ post.publicId) }}">
+                    <button role="menuitem">{{ ui.icon('album', 'sm') }}{{ post.archived ? 'Désarchiver' : 'Archiver' }}</button>
+                </form>
             {% endif %}
             <form method="post" action="{{ path('app_post_delete', {id: post.publicId}) }}" data-turbo-confirm="Supprimer cette publication et ses médias ? Cette action est définitive.">
                 <input type="hidden" name="_token" value="{{ csrf_token('delete-' ~ post.publicId) }}">

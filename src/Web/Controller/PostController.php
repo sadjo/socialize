@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Web\Controller;
 
 use App\Core\Application\Post\PostAccess;
+use App\Core\Application\Post\PostArchiver;
 use App\Core\Application\Social\SocialActions;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
@@ -196,6 +197,31 @@ final class PostController extends AbstractController
         return $this->render('post/edit.html.twig', ['post' => $post, 'form' => $form, 'existing' => $existing]);
     }
 
+    #[Route('/p/{id}/archiver', name: 'app_post_archive', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
+    public function archive(string $id, Request $request, PostArchiver $archiver): \Symfony\Component\HttpFoundation\RedirectResponse
+    {
+        $post = $this->ownPost($id, $request, 'archive-'.$id);
+        try {
+            $archiver->archive($post);
+        } catch (\DomainException $e) {
+            throw $this->createAccessDeniedException($e->getMessage(), $e);
+        }
+        $this->addFlash('success', 'Publication archivée : elle n’est plus visible que par vous, dans vos archives.');
+
+        // Depuis la page de la publication, on y reste ; depuis un fil, on y revient.
+        return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_post_show', ['id' => $id]), Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/p/{id}/desarchiver', name: 'app_post_unarchive', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
+    public function unarchive(string $id, Request $request, PostArchiver $archiver): \Symfony\Component\HttpFoundation\RedirectResponse
+    {
+        $post = $this->ownPost($id, $request, 'archive-'.$id);
+        $archiver->unarchive($post);
+        $this->addFlash('success', 'Publication sortie des archives : elle retrouve sa visibilité « '.$post->getVisibility()->label().' ».');
+
+        return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_post_show', ['id' => $id]), Response::HTTP_SEE_OTHER);
+    }
+
     #[Route('/p/{id}/supprimer', name: 'app_post_delete', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
     public function delete(string $id, Request $request, PostComposer $composer): \Symfony\Component\HttpFoundation\RedirectResponse
     {
@@ -231,6 +257,18 @@ final class PostController extends AbstractController
         if (!$post instanceof Post || !$this->access->canView($post, $this->currentAccount->get())) {
             throw new NotFoundHttpException('Cette publication n’existe pas ou n’est pas visible.');
         }
+
+        return $post;
+    }
+
+    private function ownPost(string $id, Request $request, string $tokenId): Post
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        $post = $this->visiblePost($id);
+        if (!$post->isOwnedBy($this->currentAccount->get())) {
+            throw $this->createAccessDeniedException('Seule l’autrice ou l’auteur peut archiver cette publication.');
+        }
+        $this->checkToken($request, $tokenId);
 
         return $post;
     }

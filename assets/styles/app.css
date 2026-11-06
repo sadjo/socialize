@@ -528,7 +528,9 @@ button[disabled]{opacity:.5;cursor:not-allowed}
 .prof-h .ring.has-story{cursor:pointer}
 .story-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .story-tile{display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
-.story-tile .th{aspect-ratio:9/16}
+.story-tile .th{aspect-ratio:9/16;display:block;position:relative;overflow:hidden}
+.story-tile .th:hover img{transform:scale(1.04)}
+.story-tile .th .gi{position:absolute;top:8px;right:8px;color:var(--on-media);filter:drop-shadow(0 1px 3px oklch(0 0 0 / .6))}
 .story-tile form{display:flex;flex-direction:column;gap:6px;margin:0}
 .story-tile .inp{min-height:34px;padding:6px 10px;font-size:.82rem}
 .story-tile .row{flex-wrap:wrap;gap:6px}

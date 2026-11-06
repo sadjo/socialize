@@ -90,6 +90,34 @@ final class StoryTest extends AppWebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testAnArchivedStoryOpensInTheViewerForItsOwnerOnly(): void
+    {
+        self::mockTime('2026-11-10 10:00:00');
+        $camille = $this->register('camille');
+        $first = $this->publish($camille->getAccount(), 'Première');
+        self::mockTime('2026-11-11 10:00:00');
+        $second = $this->publish($camille->getAccount(), 'Seconde');
+        self::mockTime('2026-11-13 10:30:00');
+
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/stories/mes-stories');
+        self::assertSelectorCount(2, '.story-tile a.th[href^="/stories/archives/"]');
+        $this->client->click($crawler->filter('a.th[href="/stories/archives/'.$second->getPublicId().'"]')->link());
+        self::assertResponseIsSuccessful();
+
+        $data = $this->viewerData($this->client->getCrawler()->filter('[data-story-viewer-data-value]')->attr('data-story-viewer-data-value'));
+        $grid = $crawler->filter('.story-tile a.th')->each(static fn ($link): string => basename((string) $link->attr('href')));
+        self::assertSame($grid, array_column($data['groups'][0]['stories'], 'id'), 'Même ordre que la grille des archives.');
+        self::assertSame(['Seconde', 'Première'], array_column($data['groups'][0]['stories'], 'text'));
+        self::assertSame(0, $data['groups'][0]['start'], 'La visionneuse s’ouvre sur la story choisie.');
+        self::assertSame('Archives', $data['highlight']);
+        self::assertSame('/stories/mes-stories', $data['closeUrl']);
+
+        $this->login($this->register('hugo'));
+        $this->client->request('GET', '/stories/archives/'.$first->getPublicId());
+        self::assertResponseStatusCodeSame(404, 'Les archives ne sont visibles que par leur titulaire.');
+    }
+
     public function testPublishStoriesFromTheFormIntoANewHighlight(): void
     {
         $this->login($this->register('camille'));
@@ -148,13 +176,13 @@ final class StoryTest extends AppWebTestCase
     }
 
     /**
-     * @return array{groups: list<array{username: string, stories: list<array{text: ?string, src: string, seenUrl: string}>}>, viewToken: string}
+     * @return array{groups: list<array{username: string, start: int, stories: list<array{id: string, text: ?string, src: string, seenUrl: string}>}>, viewToken: string, highlight: ?string, closeUrl: string}
      */
     private function viewerData(?string $json): array
     {
         self::assertNotNull($json);
 
-        /** @var array{groups: list<array{username: string, stories: list<array{text: ?string, src: string, seenUrl: string}>}>, viewToken: string} $data */
+        /** @var array{groups: list<array{username: string, start: int, stories: list<array{id: string, text: ?string, src: string, seenUrl: string}>}>, viewToken: string, highlight: ?string, closeUrl: string} $data */
         $data = json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
 
         return $data;

@@ -71,7 +71,7 @@
     {% endif %}
 
     <div>
-        <div class="ptabs" role="tablist"><button role="tab" aria-selected="true" class="on">{{ ui.icon('grid', 'xs') }}Publications</button></div>
+        {{ include('profile/_tabs.html.twig', {current: 'posts'}) }}
         {% if page.empty %}
             <div class="empty">
                 {{ ui.icon('image') }}
