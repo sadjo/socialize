@@ -20,6 +20,35 @@ final class CommentRepository extends ServiceEntityRepository
         parent::__construct($registry, Comment::class);
     }
 
+    public function findByPublicId(string $publicId): ?Comment
+    {
+        $id = \App\Core\Domain\PublicId::decode($publicId);
+
+        return $id instanceof \Symfony\Component\Uid\Uuid ? $this->find($id) : null;
+    }
+
+    /**
+     * Derniers commentaires d'une publication, du plus ancien au plus récent (aperçu dans le fil).
+     *
+     * @return list<Comment>
+     */
+    public function latestFor(Post $post, int $limit): array
+    {
+        /** @var list<Comment> $comments */
+        $comments = $this->createQueryBuilder('c')
+            ->addSelect('a')
+            ->join('c.account', 'a')
+            ->where('c.post = :post')
+            ->setParameter('post', $post->getId(), UuidType::NAME)
+            ->orderBy('c.createdAt', 'DESC')
+            ->addOrderBy('c.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return array_reverse($comments);
+    }
+
     /**
      * @return list<Comment>
      */

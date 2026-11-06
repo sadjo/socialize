@@ -11,13 +11,18 @@
             </div>
             {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
         </div>
-        <a class="ib" href="{{ path('app_post_show', {id: post.publicId}) }}" aria-label="Ouvrir la publication">{{ ui.icon('more') }}</a>
+        {{ include('post/_menu.html.twig', {in_feed: true}) }}
     </header>
     {{ include('post/_media.html.twig') }}
     {{ include('post/_actions.html.twig') }}
     <div class="pbody">
         {% if post.caption %}<div><b>{{ author.username }}</b> {{ post.caption|rich_text }}</div>{% endif %}
-        {% if post.commentsCount %}<a class="meta" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}">Voir {{ post.commentsCount > 1 ? 'les ' ~ post.commentsCount ~ ' commentaires' : 'le commentaire' }}</a>{% endif %}
+        {% set preview = post.commentsCount ? recent_comments(post, 2) : [] %}
+        {% if post.commentsCount > preview|length %}<a class="meta" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}">Voir les {{ post.commentsCount }} commentaires</a>{% endif %}
+        <div class="cprev" id="post-{{ post.publicId }}-comments">
+            {% for comment in preview %}{{ include('comment/_comment.html.twig', {compact: true}) }}{% endfor %}
+        </div>
         <a class="ago" href="{{ path('app_post_show', {id: post.publicId}) }}"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time>{% if not author.local %} · via @{{ author.acct }}{% endif %}</a>
     </div>
+    {% if app.user %}{{ include('comment/_form.html.twig') }}{% endif %}
 </article>

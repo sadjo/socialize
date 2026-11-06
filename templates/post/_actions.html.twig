@@ -12,8 +12,13 @@
         {% else %}
             <a class="act" href="{{ path('app_login') }}" aria-label="Connectez-vous pour aimer">{{ ui.icon('heart') }}</a>
         {% endif %}
-        <a class="act" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}" aria-label="Commenter">{{ ui.icon('comment') }}</a>
-        <button type="button" class="act" data-controller="copy" data-copy-text-value="{{ url('app_post_show', {id: post.publicId}) }}" data-action="copy#copy" aria-label="Copier le lien">{{ ui.icon('send') }}</button>
+        {% if app.user %}
+            {# L'étiquette du champ de commentaire : un clic place le curseur dans le champ. #}
+            <label class="act" for="post-{{ post.publicId }}-comment" aria-label="Commenter">{{ ui.icon('comment') }}</label>
+        {% else %}
+            <a class="act" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}" aria-label="Voir les commentaires">{{ ui.icon('comment') }}</a>
+        {% endif %}
+        {{ include('post/_share_button.html.twig', {class: 'act', label: false}) }}
         <span class="sp"></span>
     </div>
     <div class="pbody" style="padding-bottom:0">

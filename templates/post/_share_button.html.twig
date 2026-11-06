@@ -1,0 +1,11 @@
+{# Bouton « Partager » : ouvre la feuille de partage. Variables : post, class, label #}
+{% import '_macros.html.twig' as ui %}
+{% set cover = post.cover %}
+{% set image = cover and cover.ready ? media_url(cover, cover.video ? 'video' : 'large') : null %}
+<button type="button" class="{{ class }}"{% if label %} role="menuitem"{% else %} aria-label="Partager"{% endif %}
+        data-controller="share-trigger"
+        data-share-trigger-url-value="{{ url('app_post_show', {id: post.publicId}) }}"
+        data-share-trigger-title-value="{{ post.account.displayName }} sur Socialize"
+        data-share-trigger-text-value="{{ post.caption|slice(0, 200) }}"
+        {% if image %}data-share-trigger-media-value="{{ image starts with 'http' ? image : absolute_url(image) }}" data-share-trigger-video-value="{{ cover.video ? 'true' : 'false' }}"{% endif %}
+        data-action="share-trigger#open{% if label %} menu#close{% endif %}">{{ ui.icon('send', label ? 'sm' : '') }}{% if label %}Partager…{% endif %}</button>

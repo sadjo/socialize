@@ -18,7 +18,6 @@ use App\Media\Application\MediaProcessingException;
 use App\Media\Application\MediaUrls;
 use App\Media\Application\PostComposer;
 use App\Media\Application\PostEditor;
-use App\Web\Form\CommentType;
 use App\Web\Form\EditPostType;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -62,7 +61,6 @@ final class PostController extends AbstractController
             'post' => $post,
             'comments' => $comments->forPost($post),
             'liked' => $likes->likedAmong($this->currentAccount->get(), [$post]),
-            'comment_form' => $this->createForm(CommentType::class, options: ['action' => $this->generateUrl('app_post_comment', ['id' => $id])]),
         ]);
     }
 
@@ -87,22 +85,59 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/commentaires', name: 'app_post_comment', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
-    public function comment(string $id, Request $request, SocialActions $social): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function comment(string $id, Request $request, SocialActions $social, LikeRepository $likes): Response
     {
         $this->denyAccessUnlessGranted('ROLE_USER');
         $post = $this->visiblePost($id);
+        $this->checkToken($request, 'comment-'.$id);
 
-        $form = $this->createForm(CommentType::class);
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{content: string} $data */
-            $data = $form->getData();
-            $social->comment($this->currentAccount->require(), $post, $data['content']);
-        } else {
-            $this->addFlash('error', 'Le commentaire n’a pas été publié : écrivez entre 1 et 1 000 caractères.');
+        $comment = null;
+        $error = null;
+        try {
+            $comment = $social->comment($this->currentAccount->require(), $post, $request->request->getString('content'));
+        } catch (\DomainException $e) {
+            $error = $e->getMessage();
+        }
+
+        // Depuis le fil ou la page de la publication : le commentaire apparaît sans recharger la page.
+        if (TurboBundle::STREAM_FORMAT === $request->getPreferredFormat()) {
+            $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+
+            return $this->render('comment/added.stream.html.twig', [
+                'post' => $post,
+                'comment' => $comment,
+                'error' => $error,
+                'compact' => !str_contains((string) $request->headers->get('referer'), '/p/'.$id),
+                'liked' => $likes->likedAmong($this->currentAccount->get(), [$post]),
+            ]);
+        }
+        if (null !== $error) {
+            $this->addFlash('error', $error);
         }
 
         return $this->redirectToRoute('app_post_show', ['id' => $id, '_fragment' => 'commentaires'], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/c/{id}/supprimer', name: 'app_comment_delete', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
+    public function deleteComment(string $id, Request $request, SocialActions $social, CommentRepository $comments, LikeRepository $likes): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        $comment = $comments->findByPublicId($id) ?? throw new NotFoundHttpException('Ce commentaire n’existe pas.');
+        $post = $this->visiblePost($comment->getPost()->getPublicId());
+        if (!$comment->isDeletableBy($this->currentAccount->get())) {
+            throw $this->createAccessDeniedException('Seul l’auteur du commentaire ou de la publication peut le supprimer.');
+        }
+        $this->checkToken($request, 'delete-comment-'.$id);
+
+        $social->deleteComment($comment);
+
+        if (TurboBundle::STREAM_FORMAT === $request->getPreferredFormat()) {
+            $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+
+            return $this->render('comment/deleted.stream.html.twig', ['post' => $post, 'comment_id' => $id, 'liked' => $likes->likedAmong($this->currentAccount->get(), [$post])]);
+        }
+
+        return $this->redirectToRoute('app_post_show', ['id' => $post->getPublicId(), '_fragment' => 'commentaires'], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/p/{id}/modifier', name: 'app_post_edit', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET', 'POST'])]
@@ -173,6 +208,12 @@ final class PostController extends AbstractController
         $username = $post->getAccount()->getUsername();
         $composer->delete($post);
         $this->addFlash('success', 'Publication supprimée.');
+
+        // Depuis un fil, on y reste ; depuis la page de la publication, retour au profil.
+        $referer = (string) $request->headers->get('referer');
+        if ('' !== $referer && !str_contains($referer, '/p/'.$id) && str_starts_with($referer, $request->getSchemeAndHttpHost().'/')) {
+            return $this->redirect($referer, Response::HTTP_SEE_OTHER);
+        }
 
         return $this->redirectToRoute('app_profile', ['username' => $username], Response::HTTP_SEE_OTHER);
     }

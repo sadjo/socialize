@@ -1,0 +1,13 @@
+{# Réponse Turbo Stream après l'envoi d'un commentaire. Variables : post, comment, liked, compact #}
+{% if comment %}
+    <turbo-stream action="append" target="post-{{ post.publicId }}-comments">
+        <template>{{ include('comment/_comment.html.twig') }}</template>
+    </turbo-stream>
+    <turbo-stream action="remove" target="post-{{ post.publicId }}-no-comments"></turbo-stream>
+    <turbo-stream action="replace" target="post-{{ post.publicId }}-actions">
+        <template>{{ include('post/_actions.html.twig') }}</template>
+    </turbo-stream>
+{% endif %}
+<turbo-stream action="replace" target="post-{{ post.publicId }}-comment-form">
+    <template>{{ include('comment/_form.html.twig') }}</template>
+</turbo-stream>

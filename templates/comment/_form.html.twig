@@ -1,0 +1,8 @@
+{# Champ « Ajouter un commentaire », remplacé (vidé) par Turbo Stream après envoi. Variables : post, error #}
+<form class="addc" id="post-{{ post.publicId }}-comment-form" method="post" action="{{ path('app_post_comment', {id: post.publicId}) }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('comment-' ~ post.publicId) }}">
+    <label class="sr-only" for="post-{{ post.publicId }}-comment">Commentaire</label>
+    <input class="inp" id="post-{{ post.publicId }}-comment" name="content" placeholder="Ajouter un commentaire…" autocomplete="off" maxlength="1000" required>
+    <button class="lnk">Publier</button>
+    {% if error|default(null) %}<p class="err small" role="alert">{{ error }}</p>{% endif %}
+</form>

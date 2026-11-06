@@ -53,6 +53,17 @@
     </main>
 </div>
 
+<dialog class="share-sheet" data-controller="share" data-action="socialize:share@window->share#open click->share#backdrop" aria-labelledby="share-title">
+    <div class="sheet">
+        <header><b id="share-title">Partager</b><button type="button" class="ib" data-action="share#close" aria-label="Fermer">{{ ui.icon('x') }}</button></header>
+        <button type="button" class="opt" data-share-target="native" data-action="share#native" hidden>{{ ui.icon('send') }}<span>Partager via…<small>Applications de votre appareil</small></span></button>
+        <a class="opt" data-share-target="mail" href="mailto:">{{ ui.icon('send') }}<span>E-mail</span></a>
+        <button type="button" class="opt" data-action="share#copy">{{ ui.icon('link') }}<span>Copier le lien</span></button>
+        <a class="opt" data-share-target="facebook" href="https://www.facebook.com/" target="_blank" rel="noopener" data-action="share#close">{{ ui.icon('globe') }}<span>Facebook</span></a>
+        <button type="button" class="opt" data-action="share#instagram">{{ ui.icon('image') }}<span>Instagram<small>Envoie la photo ou la vidéo à l’application, sinon copie le lien</small></span></button>
+    </div>
+</dialog>
+
 <nav class="tabbar" aria-label="Navigation mobile">
     <a href="{{ path('app_home') }}" class="{{ current_route == 'app_home' ? 'on' }}" aria-label="Accueil">{{ ui.icon('home') }}</a>
     <a href="{{ path('app_feed_local') }}" class="{{ current_route == 'app_feed_local' ? 'on' }}" aria-label="Fil local">{{ ui.icon('compass') }}</a>

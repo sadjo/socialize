@@ -8,6 +8,7 @@ use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
+use App\Core\Domain\Event\CommentDeleting;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostUnliked;
 use App\Core\Domain\Post\Post;
@@ -106,6 +107,7 @@ final readonly class SocialActions
 
     public function deleteComment(Comment $comment): void
     {
+        $this->events->dispatch(new CommentDeleting($comment));
         $comment->getPost()->decrementComments();
         $this->em->remove($comment);
         $this->em->flush();

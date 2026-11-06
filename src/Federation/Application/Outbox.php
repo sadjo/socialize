@@ -8,6 +8,7 @@ use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
+use App\Core\Domain\Event\CommentDeleting;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostPublished;
@@ -193,13 +194,12 @@ final readonly class Outbox
     {
         $comment = $event->comment;
         $author = $comment->getAccount();
-        $postAuthor = $comment->getPost()->getAccount();
-        // Seules les réponses à une publication distante partent dans le fédivers pour l'instant.
-        if (!$author->isLocal() || $postAuthor->isLocal()) {
+        $inboxes = $this->commentInboxes($comment);
+        if (null === $inboxes) {
             return;
         }
         $note = $this->serializer->commentNote($comment);
-        $this->deliver($author, [$postAuthor->getInboxUrl(), ...$this->followerInboxes($author)], [
+        $this->deliver($author, $inboxes, [
             'id' => $this->urls->comment($comment).'/activity',
             'type' => 'Create',
             'actor' => $this->urls->actor($author),
@@ -208,6 +208,48 @@ final readonly class Outbox
             'cc' => $note['cc'],
             'object' => $note,
         ]);
+    }
+
+    #[AsEventListener]
+    public function onCommentDeleting(CommentDeleting $event): void
+    {
+        $comment = $event->comment;
+        $author = $comment->getAccount();
+        $inboxes = $this->commentInboxes($comment);
+        if (null === $inboxes) {
+            return;
+        }
+        $note = $this->serializer->commentNote($comment);
+        $this->deliver($author, $inboxes, [
+            'id' => $this->urls->comment($comment).'#delete',
+            'type' => 'Delete',
+            'actor' => $this->urls->actor($author),
+            'to' => $note['to'],
+            'cc' => $note['cc'],
+            'object' => ['id' => $this->urls->comment($comment), 'type' => 'Tombstone'],
+        ]);
+    }
+
+    /**
+     * Instances à prévenir pour le commentaire d'un compte local : l'auteur de la publication s'il est distant,
+     * les abonnés distants du commentateur et ceux de l'auteur local de la publication.
+     * Null si le commentaire ne quitte pas l'instance (commentaire distant, publication privée).
+     *
+     * @return list<string>|null
+     */
+    private function commentInboxes(\App\Core\Domain\Social\Comment $comment): ?array
+    {
+        $author = $comment->getAccount();
+        $post = $comment->getPost();
+        $postAuthor = $post->getAccount();
+        if (!$author->isLocal() || Visibility::Private === $post->getVisibility()) {
+            return null;
+        }
+
+        return array_values(array_filter([
+            ...$this->followerInboxes($author),
+            ...($postAuthor->isLocal() ? $this->followerInboxes($postAuthor) : [$postAuthor->getDeliveryInbox()]),
+        ]));
     }
 
     #[AsEventListener]
