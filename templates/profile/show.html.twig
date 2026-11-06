@@ -40,8 +40,13 @@
             </div>
             <div class="stats num">
                 <span><b>{{ stats.posts|format_number(locale: 'fr') }}</b> publication{{ stats.posts > 1 ? 's' }}</span>
-                <span><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</span>
-                <span><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</span>
+                {% if can_view_network %}
+                    <a href="{{ path('app_profile_followers', {username: account.acct}) }}"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</a>
+                    <a href="{{ path('app_profile_following', {username: account.acct}) }}"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</a>
+                {% else %}
+                    <span title="Liste réservée aux abonnés"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</span>
+                    <span title="Liste réservée aux abonnés"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</span>
+                {% endif %}
             </div>
             <div class="bio"><b>{{ account.displayName }}</b>{% if account.bio %}<br>{{ account.bio|rich_text }}{% endif %}</div>
             <span class="handle">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>

@@ -95,6 +95,25 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas dans le fédivers.');
     }
 
+    public function testRemovingARemoteFollowerRejectsItsFollow(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/1', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+
+        $crawler = $this->client->request('GET', '/@camille/abonnes');
+        self::assertSelectorTextContains('.netlist', 'Alice Martin');
+        $this->client->submit($crawler->selectButton('Retirer')->form());
+        self::assertResponseRedirects();
+
+        $reject = $this->fediverse()->delivered('Reject');
+        self::assertCount(1, $reject);
+        self::assertSame('http://localhost/users/camille', $reject[0]['actor']);
+        self::assertSame(FakeFediverse::ALICE.'#follows/1', $this->dig($reject, 0, 'object', 'id'));
+        self::assertSame(FakeFediverse::ALICE, $this->dig($reject, 0, 'object', 'actor'));
+        self::assertSame(FakeFediverse::ALICE.'/inbox', $this->dig($this->fediverse()->deliveries, \count($this->fediverse()->deliveries) - 1, 'url'));
+        self::assertFalse(self::getContainer()->get(FollowRepository::class)->isFollowing($this->alice(), $this->reloadAccount($camille->getAccount())));
+    }
+
     public function testEditingAPostIsFederated(): void
     {
         $camille = $this->register('camille')->getAccount();

@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Core\Infrastructure\Doctrine;
 
+use App\Core\Application\Social\FollowPage;
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\PublicId;
 use App\Core\Domain\Social\Follow;
 use App\Core\Domain\Social\FollowState;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * @extends ServiceEntityRepository<Follow>
@@ -73,5 +77,58 @@ final class FollowRepository extends ServiceEntityRepository
     public function countFollowing(Account $account): int
     {
         return $this->count(['follower' => $account, 'state' => FollowState::Accepted]);
+    }
+
+    /**
+     * Abonnés acceptés d'un compte, du plus récent au plus ancien.
+     */
+    public function followersPage(Account $account, ?string $after, int $limit): FollowPage
+    {
+        return $this->page('following', 'follower', $account, $after, $limit);
+    }
+
+    /**
+     * Comptes suivis (abonnements acceptés), du plus récent au plus ancien.
+     */
+    public function followingPage(Account $account, ?string $after, int $limit): FollowPage
+    {
+        return $this->page('follower', 'following', $account, $after, $limit);
+    }
+
+    /**
+     * Les identifiants UUID v7 suivent l'ordre de création : ils servent de curseur.
+     *
+     * @param 'follower'|'following' $side
+     * @param 'follower'|'following' $other
+     */
+    private function page(string $side, string $other, Account $account, ?string $after, int $limit): FollowPage
+    {
+        $qb = $this->createQueryBuilder('f')
+            ->addSelect('a')
+            ->join('f.'.$other, 'a')
+            ->where('f.'.$side.' = :account')
+            ->andWhere('f.state = :state')
+            ->setParameter('account', $account->getId(), UuidType::NAME)
+            ->setParameter('state', FollowState::Accepted)
+            ->orderBy('f.id', 'DESC')
+            ->setMaxResults($limit + 1);
+
+        $cursor = null !== $after ? PublicId::decode($after) : null;
+        if ($cursor instanceof Uuid) {
+            $qb->andWhere('f.id < :cursor')->setParameter('cursor', $cursor, UuidType::NAME);
+        }
+
+        /** @var list<Follow> $follows */
+        $follows = $qb->getQuery()->getResult();
+        $next = null;
+        if (\count($follows) > $limit) {
+            array_pop($follows);
+            $next = $follows[\count($follows) - 1]->getId()->toBase58();
+        }
+
+        return new FollowPage(
+            array_map(static fn (Follow $follow): Account => 'follower' === $other ? $follow->getFollower() : $follow->getFollowing(), $follows),
+            $next,
+        );
     }
 }

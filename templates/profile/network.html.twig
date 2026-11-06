@@ -1,0 +1,35 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}{{ list == 'followers' ? 'Abonnés' : 'Abonnements' }} de {{ account.displayName }} · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h">
+        <a href="{{ path('app_profile', {username: account.acct}) }}" aria-label="Retour au profil de {{ account.displayName }}">{{ ui.avatar(account, 48) }}</a>
+        <div class="grow"><h1>{{ account.displayName }}</h1><p>{{ handle(account, local_domain) }}</p></div>
+    </div>
+    <nav class="ptabs" aria-label="Listes du compte">
+        <a href="{{ path('app_profile_followers', {username: account.acct}) }}" class="{{ list == 'followers' ? 'on' }}"{{ list == 'followers' ? ' aria-current="page"' }}><span class="num">{{ stats.followers|format_number(locale: 'fr') }}</span> abonné{{ stats.followers > 1 ? 's' }}</a>
+        <a href="{{ path('app_profile_following', {username: account.acct}) }}" class="{{ list == 'following' ? 'on' }}"{{ list == 'following' ? ' aria-current="page"' }}><span class="num">{{ stats.following|format_number(locale: 'fr') }}</span> abonnement{{ stats.following > 1 ? 's' }}</a>
+    </nav>
+    {% if not account.local %}
+        <p class="small">Compte de <b>{{ account.domain }}</b> : seuls les comptes connus de cette instance sont listés.</p>
+    {% endif %}
+
+    {% if not allowed %}
+        <div class="empty">
+            {{ ui.icon('lock') }}
+            <b>Liste masquée</b>
+            <span>{{ account.displayName }} réserve ses abonnés et abonnements à ses propres abonnés.</span>
+        </div>
+    {% elseif page.empty %}
+        <div class="empty">
+            {{ ui.icon('user') }}
+            <b>{{ list == 'followers' ? 'Aucun abonné pour l’instant' : 'Aucun abonnement pour l’instant' }}</b>
+        </div>
+    {% else %}
+        <div class="netlist">{{ include('profile/_network_page.html.twig') }}</div>
+    {% endif %}
+</div>
+{% endblock %}

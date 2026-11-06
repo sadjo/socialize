@@ -27,13 +27,15 @@ final class SettingsController extends AbstractController
         $form = $this->createForm(ProfileSettingsType::class, [
             'displayName' => $account->getDisplayName(),
             'bio' => $account->getBio(),
+            'hideNetwork' => $account->isNetworkHidden(),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{displayName: string, bio: ?string} $data */
+            /** @var array{displayName: string, bio: ?string, hideNetwork: bool} $data */
             $data = $form->getData();
             $account->updateProfile($data['displayName'], $data['bio']);
+            $account->hideNetwork($data['hideNetwork']);
 
             try {
                 $avatar = $form->get('avatar')->getData();

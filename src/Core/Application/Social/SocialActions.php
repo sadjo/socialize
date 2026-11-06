@@ -9,6 +9,7 @@ use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
 use App\Core\Domain\Event\CommentDeleting;
+use App\Core\Domain\Event\FollowerRemoved;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostUnliked;
 use App\Core\Domain\Post\Post;
@@ -54,6 +55,20 @@ final readonly class SocialActions
             $this->em->remove($follow);
             $this->em->flush();
             $this->events->dispatch(new AccountUnfollowed($follower, $following, $apUri));
+        }
+    }
+
+    /**
+     * Le compte retire l'un de ses abonnés (ou refuse une demande en attente).
+     */
+    public function removeFollower(Account $account, Account $follower): void
+    {
+        $follow = $this->follows->findBetween($follower, $account);
+        if ($follow instanceof Follow) {
+            $apUri = $follow->getApUri();
+            $this->em->remove($follow);
+            $this->em->flush();
+            $this->events->dispatch(new FollowerRemoved($account, $follower, $apUri));
         }
     }
 

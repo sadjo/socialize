@@ -65,6 +65,10 @@ class Account
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $fetchedAt = null;
 
+    /** Listes des abonnés et abonnements réservées au titulaire et à ses abonnés. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $networkHidden = false;
+
     public function __construct(
         #[ORM\Column(length: 100)]
         private string $username,
@@ -123,6 +127,16 @@ class Account
         $this->displayName = trim($displayName);
         $bio = null !== $bio ? trim($bio) : null;
         $this->bio = '' === $bio ? null : $bio;
+    }
+
+    public function isNetworkHidden(): bool
+    {
+        return $this->networkHidden;
+    }
+
+    public function hideNetwork(bool $hidden): void
+    {
+        $this->networkHidden = $hidden;
     }
 
     public function changeAvatar(?string $avatarPath): void

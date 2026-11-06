@@ -6,6 +6,7 @@ namespace App\Web\Controller;
 
 use App\Core\Application\Feed\Cursor;
 use App\Core\Application\Post\PostAccess;
+use App\Core\Application\Social\NetworkAccess;
 use App\Core\Application\Social\SocialActions;
 use App\Core\Application\Story\StoryFeed;
 use App\Core\Domain\Account\Account;
@@ -29,6 +30,7 @@ final class ProfileController extends AbstractController
     private const int PAGE_SIZE = 24;
     private const int FEED_PAGE_SIZE = 10;
     private const int FEED_NEWER = 20;
+    private const int NETWORK_PAGE_SIZE = 30;
     /** « camille » ou « leo@pixelfed.social ». */
     private const string ACCT = '[A-Za-z0-9_](?:[A-Za-z0-9_.\-]{0,98}[A-Za-z0-9_])?(?:@[a-z0-9\-]+(?:\.[a-z0-9\-]+)+)?';
 
@@ -40,7 +42,7 @@ final class ProfileController extends AbstractController
     }
 
     #[Route('/@{username}', name: 'app_profile', requirements: ['username' => self::ACCT], methods: ['GET'])]
-    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access, StoryFeed $stories, HighlightRepository $highlights): Response
+    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access, StoryFeed $stories, HighlightRepository $highlights, NetworkAccess $network): Response
     {
         $account = $this->account($username, resolve: true);
         $viewer = $this->currentAccount->get();
@@ -52,6 +54,7 @@ final class ProfileController extends AbstractController
             'page' => $page,
             'is_owner' => $viewer instanceof Account && $viewer->getId()->equals($account->getId()),
             'is_following' => $follows->isFollowing($viewer, $account),
+            'can_view_network' => $network->canView($account, $viewer),
             'follow_pending' => $viewer instanceof Account && ($f = $follows->findBetween($viewer, $account)) instanceof \App\Core\Domain\Social\Follow && !$f->isAccepted(),
             'story_group' => $stories->groupOf($account, $viewer),
             'highlights' => array_values(array_filter(
@@ -110,6 +113,71 @@ final class ProfileController extends AbstractController
             'page' => $older,
             'liked' => $likes->likedAmong($viewer, [...$newer, $post, ...$older->posts]),
         ]);
+    }
+
+    #[Route('/@{username}/abonnes', name: 'app_profile_followers', requirements: ['username' => self::ACCT], methods: ['GET'])]
+    public function followers(string $username, Request $request, FollowRepository $follows, NetworkAccess $network): Response
+    {
+        return $this->network($username, $request, $follows, $network, 'followers');
+    }
+
+    #[Route('/@{username}/abonnements', name: 'app_profile_following', requirements: ['username' => self::ACCT], methods: ['GET'])]
+    public function following(string $username, Request $request, FollowRepository $follows, NetworkAccess $network): Response
+    {
+        return $this->network($username, $request, $follows, $network, 'following');
+    }
+
+    /**
+     * Retrait d'un abonné : {username} est l'abonné, retiré des abonnés du compte connecté.
+     */
+    #[Route('/@{username}/retirer-des-abonnes', name: 'app_profile_remove_follower', requirements: ['username' => self::ACCT], methods: ['POST'])]
+    public function removeFollower(string $username, Request $request, SocialActions $social): \Symfony\Component\HttpFoundation\RedirectResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        $follower = $this->account($username);
+        if (!$this->isCsrfTokenValid('remove-follower-'.$follower->getAcct(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
+        }
+
+        $viewer = $this->currentAccount->require();
+        $social->removeFollower($viewer, $follower);
+
+        return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_profile_followers', ['username' => $viewer->getAcct()]), Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * @param 'followers'|'following' $list
+     */
+    private function network(string $username, Request $request, FollowRepository $follows, NetworkAccess $network, string $list): Response
+    {
+        $account = $this->account($username);
+        $viewer = $this->currentAccount->get();
+        $after = $request->query->getString('apres') ?: null;
+        $allowed = $network->canView($account, $viewer);
+        $page = match (true) {
+            !$allowed => new \App\Core\Application\Social\FollowPage([], null),
+            'followers' === $list => $follows->followersPage($account, $after, self::NETWORK_PAGE_SIZE),
+            default => $follows->followingPage($account, $after, self::NETWORK_PAGE_SIZE),
+        };
+
+        $parameters = [
+            'account' => $account,
+            'list' => $list,
+            'route' => 'followers' === $list ? 'app_profile_followers' : 'app_profile_following',
+            'page' => $page,
+            'allowed' => $allowed,
+            'is_owner' => $viewer instanceof Account && $viewer->getId()->equals($account->getId()),
+            'stats' => [
+                'followers' => $follows->countFollowers($account),
+                'following' => $follows->countFollowing($account),
+            ],
+        ];
+
+        if (null !== $after) {
+            return $this->render('profile/_network_page.html.twig', $parameters);
+        }
+
+        return $this->render('profile/network.html.twig', $parameters);
     }
 
     #[Route('/@{username}/suivre', name: 'app_profile_follow', requirements: ['username' => self::ACCT], methods: ['POST'])]

@@ -6,6 +6,7 @@ namespace App\Web\Form;
 
 use App\Media\Application\MediaRules;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -13,7 +14,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * @extends AbstractType<array{displayName: string, bio: ?string, avatar: mixed}>
+ * @extends AbstractType<array{displayName: string, bio: ?string, hideNetwork: bool, avatar: mixed}>
  */
 final class ProfileSettingsType extends AbstractType
 {
@@ -30,6 +31,10 @@ final class ProfileSettingsType extends AbstractType
                 'required' => false,
                 'attr' => ['rows' => 4, 'maxlength' => 500],
                 'constraints' => [new Assert\Length(max: 500)],
+            ])
+            ->add('hideNetwork', CheckboxType::class, [
+                'label' => 'Réserver mes listes d’abonnés et d’abonnements à mes abonnés',
+                'required' => false,
             ])
             ->add('avatar', FileType::class, [
                 'label' => 'Photo de profil',

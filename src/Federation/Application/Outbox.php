@@ -9,6 +9,7 @@ use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
 use App\Core\Domain\Event\CommentDeleting;
+use App\Core\Domain\Event\FollowerRemoved;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostPublished;
@@ -147,6 +148,23 @@ final readonly class Outbox
             'type' => 'Undo',
             'actor' => $this->urls->actor($event->follower),
             'object' => $this->followActivity($event->followApUri ?? $this->urls->activity($event->follower, 'follow'), $event->follower, $event->following),
+        ]);
+    }
+
+    /**
+     * Abonné distant retiré : son instance reçoit un Reject de son abonnement (comme avec Mastodon).
+     */
+    #[AsEventListener]
+    public function onFollowerRemoved(FollowerRemoved $event): void
+    {
+        if (!$event->account->isLocal() || $event->follower->isLocal()) {
+            return;
+        }
+        $this->deliver($event->account, [$event->follower->getInboxUrl()], [
+            'id' => $this->urls->activity($event->account, 'reject'),
+            'type' => 'Reject',
+            'actor' => $this->urls->actor($event->account),
+            'object' => $this->followActivity($event->followApUri ?? $this->urls->activity($event->follower, 'follow'), $event->follower, $event->account),
         ]);
     }
 
