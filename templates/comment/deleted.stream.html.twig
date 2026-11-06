@@ -1,0 +1,5 @@
+{# Réponse Turbo Stream après la suppression d'un commentaire. Variables : post, comment_id, liked #}
+<turbo-stream action="remove" target="comment-{{ comment_id }}"></turbo-stream>
+<turbo-stream action="replace" target="post-{{ post.publicId }}-actions">
+    <template>{{ include('post/_actions.html.twig') }}</template>
+</turbo-stream>

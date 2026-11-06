@@ -120,6 +120,30 @@ final class StoryController extends AbstractController
         return $this->viewer([$group], 0, $this->generateUrl('app_profile', ['username' => $username]), $highlight);
     }
 
+    /**
+     * Stories archivées (expirées), visibles par leur seul compte : la visionneuse s'ouvre sur celle choisie
+     * et passe aux autres dans l'ordre de la page « Mes stories ».
+     */
+    #[Route('/stories/archives/{id}', name: 'app_story_archive', requirements: ['id' => self::ID], methods: ['GET'])]
+    public function archive(string $id): Response
+    {
+        $account = $this->currentAccount->require();
+        $story = $this->stories->findByPublicId($id);
+        if (!$story instanceof Story || !$story->isOwnedBy($account)) {
+            throw new NotFoundHttpException('Cette story n’existe pas.');
+        }
+        // Même ordre que la grille des archives (la plus récente d'abord) : « suivante » est la vignette d'après.
+        $stories = $this->stories->archiveOf($account, $this->clock->now());
+        if (!\in_array($story, $stories, true)) {
+            $stories = [$story];
+        }
+
+        return $this->render('story/viewer.html.twig', [
+            'data' => $this->viewerData->build([new StoryGroup($account, $stories)], 0, $this->generateUrl('app_story_manage'), $account, startStory: $id, label: 'Archives'),
+            'title' => 'Archives',
+        ]);
+    }
+
     #[Route('/stories/{id}/vue', name: 'app_story_seen', requirements: ['id' => self::ID], methods: ['POST'])]
     public function seen(string $id, Request $request): Response
     {

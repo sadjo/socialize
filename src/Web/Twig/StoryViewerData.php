@@ -27,10 +27,12 @@ final readonly class StoryViewerData
 
     /**
      * @param list<StoryGroup> $groups
+     * @param string|null      $startStory story par laquelle commencer (sinon la première pas encore vue)
+     * @param string|null      $label      mention affichée à côté de la date (« Archives »…)
      *
      * @return array<string, mixed>
      */
-    public function build(array $groups, int $start, string $closeUrl, ?Account $viewer, ?Highlight $highlight = null): array
+    public function build(array $groups, int $start, string $closeUrl, ?Account $viewer, ?Highlight $highlight = null, ?string $startStory = null, ?string $label = null): array
     {
         $viewToken = $viewer instanceof Account ? $this->csrf->getToken('story-view')->getValue() : null;
 
@@ -69,7 +71,9 @@ final readonly class StoryViewerData
                 'avatar' => null !== $account->getAvatarPath() ? $this->urls->path($account->getAvatarPath()) : null,
                 'profileUrl' => $this->router->generate('app_profile', ['username' => $account->getUsername()]),
                 'own' => $own,
-                'start' => $group->firstUnseenIndex(),
+                'start' => null !== $startStory && \in_array($startStory, array_column($stories, 'id'), true)
+                    ? (int) array_search($startStory, array_column($stories, 'id'), true)
+                    : $group->firstUnseenIndex(),
                 'stories' => $stories,
             ];
         }
@@ -80,7 +84,7 @@ final readonly class StoryViewerData
             'closeUrl' => $closeUrl,
             'manageUrl' => $viewer instanceof Account ? $this->router->generate('app_story_manage') : null,
             'viewToken' => $viewToken,
-            'highlight' => $highlight?->getTitle(),
+            'highlight' => $highlight?->getTitle() ?? $label,
         ];
     }
 }

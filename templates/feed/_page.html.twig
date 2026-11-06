@@ -1,6 +1,7 @@
 {# Une page du fil, et le cadre Turbo qui chargera la suivante. #}
 {% set frame_id = 'feed-page-' ~ (app.request.query.get('apres') ?? 'first')|replace({'.': '-'}) %}
-<turbo-frame id="{{ frame_id }}">
+{# target="_top" : les liens des publications ouvrent une nouvelle page, pas le contenu dans le cadre. #}
+<turbo-frame id="{{ frame_id }}" target="_top">
     {% for post in page.posts %}
         {{ include('post/_card.html.twig') }}
     {% endfor %}

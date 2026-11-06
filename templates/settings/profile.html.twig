@@ -13,6 +13,7 @@
             <div class="row">{{ ui.avatar(account, 72) }}<div class="grow">{{ form_row(form.avatar) }}</div></div>
             {{ form_row(form.displayName) }}
             {{ form_row(form.bio) }}
+            <label class="chk">{{ form_widget(form.hideNetwork) }}<span>{{ form.hideNetwork.vars.label }}<br><small>Les autres visiteurs verront seulement le nombre d’abonnés et d’abonnements.</small></span></label>
             <div><button class="btn pri">Enregistrer</button></div>
         {{ form_end(form) }}
     </section>

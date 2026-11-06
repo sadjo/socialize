@@ -56,6 +56,10 @@ class Post
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    /** Date d'archivage : une publication archivée n'est visible que par son auteur. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
     #[ORM\Column]
     private int $likesCount = 0;
 
@@ -234,6 +238,40 @@ class Post
         $this->contentWarning = self::nullIfBlank($contentWarning);
         $this->location = self::nullIfBlank($location);
         $this->updatedAt = $now;
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archivedAt instanceof \DateTimeImmutable;
+    }
+
+    public function getArchivedAt(): ?\DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
+
+    /**
+     * Range la publication dans les archives de son auteur, sans changer sa visibilité.
+     */
+    public function archive(\DateTimeImmutable $now): void
+    {
+        if ($this->isFederated()) {
+            throw new \DomainException('Une publication reçue du fédivers ne s’archive pas ici.');
+        }
+        $this->archivedAt ??= $now;
+    }
+
+    public function unarchive(): void
+    {
+        $this->archivedAt = null;
+    }
+
+    /**
+     * La publication part-elle dans le fédivers ? (ni privée ni archivée, et rédigée ici).
+     */
+    public function isFederable(): bool
+    {
+        return $this->account->isLocal() && !$this->isArchived() && Visibility::Private !== $this->visibility;
     }
 
     public function getApRevision(): int

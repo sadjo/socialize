@@ -95,6 +95,25 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas dans le fédivers.');
     }
 
+    public function testRemovingARemoteFollowerRejectsItsFollow(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/1', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+
+        $crawler = $this->client->request('GET', '/@camille/abonnes');
+        self::assertSelectorTextContains('.netlist', 'Alice Martin');
+        $this->client->submit($crawler->selectButton('Retirer')->form());
+        self::assertResponseRedirects();
+
+        $reject = $this->fediverse()->delivered('Reject');
+        self::assertCount(1, $reject);
+        self::assertSame('http://localhost/users/camille', $reject[0]['actor']);
+        self::assertSame(FakeFediverse::ALICE.'#follows/1', $this->dig($reject, 0, 'object', 'id'));
+        self::assertSame(FakeFediverse::ALICE, $this->dig($reject, 0, 'object', 'actor'));
+        self::assertSame(FakeFediverse::ALICE.'/inbox', $this->dig($this->fediverse()->deliveries, \count($this->fediverse()->deliveries) - 1, 'url'));
+        self::assertFalse(self::getContainer()->get(FollowRepository::class)->isFollowing($this->alice(), $this->reloadAccount($camille->getAccount())));
+    }
+
     public function testEditingAPostIsFederated(): void
     {
         $camille = $this->register('camille')->getAccount();
@@ -128,6 +147,41 @@ final class FederationTest extends AppWebTestCase
         self::assertResponseStatusCodeSame(404, 'L’ancien identifiant reste supprimé.');
         $this->client->request('GET', '/p/'.$post->getPublicId().'/v2');
         self::assertResponseIsSuccessful('Un navigateur affiche la publication.');
+    }
+
+    public function testArchivingRemovesAPostFromTheFediverseUntilItIsUnarchived(): void
+    {
+        $camille = $this->register('camille');
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/3', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $post = $this->publish($this->reloadAccount($camille->getAccount()), 'À archiver', Visibility::Public);
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        self::assertCount(1, $this->fediverse()->delivered('Create'));
+
+        $archiver = self::getContainer()->get(\App\Core\Application\Post\PostArchiver::class);
+        $archiver->archive($post);
+        self::assertSame($noteId, self::dig($this->fediverse()->delivered('Delete'), 0, 'object', 'id'));
+
+        $this->client->request('GET', '/users/camille/outbox?page=1', server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertCount(0, $this->list($this->json(), 'orderedItems'), 'La boîte d’envoi ne montre pas les archives.');
+        $this->client->request('GET', '/p/'.$post->getPublicId().'/v2', server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertResponseStatusCodeSame(404);
+
+        // Modifier ou commenter une publication archivée ne la renvoie pas dans le fédivers.
+        $post = self::getContainer()->get(PostRepository::class)->findByPublicId($post->getPublicId());
+        self::assertInstanceOf(Post::class, $post);
+        $order = array_values(array_map(\App\Media\Application\PostEditor::token(...), $post->getMedia()->toArray()));
+        self::getContainer()->get(\App\Media\Application\PostEditor::class)->edit($post, 'Modifiée', Visibility::Public, null, null, $order);
+        self::getContainer()->get(\App\Core\Application\Social\SocialActions::class)->comment($post->getAccount(), $post, 'Note pour moi');
+        // (les requêtes HTTP ci-dessus ont redémarré le noyau : les envois sont comptés à partir de là)
+        self::assertCount(0, $this->fediverse()->delivered('Update'));
+        self::assertCount(0, $this->fediverse()->delivered('Create'));
+
+        $post = self::getContainer()->get(PostRepository::class)->findByPublicId($post->getPublicId());
+        self::assertInstanceOf(Post::class, $post);
+        self::getContainer()->get(\App\Core\Application\Post\PostArchiver::class)->unarchive($post);
+        $create = $this->fediverse()->delivered('Create');
+        self::assertCount(1, $create);
+        self::assertSame($noteId.'/v2', self::dig($create, 0, 'object', 'id'), 'La publication revient sous un nouvel identifiant.');
     }
 
     public function testUnsignedOrForgedActivitiesAreRejected(): void
@@ -192,7 +246,7 @@ final class FederationTest extends AppWebTestCase
         self::assertSame('https://remote.test/notes/1', $like[0]['object']);
 
         $this->client->request('GET', '/p/'.$post->getPublicId());
-        $this->client->submitForm('Publier', ['comment[content]' => 'Magnifique !']);
+        $this->client->submitForm('Publier', ['content' => 'Magnifique !']);
         $reply = $this->fediverse()->delivered('Create');
         self::assertSame('https://remote.test/notes/1', $this->dig($reply, 0, 'object', 'inReplyTo'));
 
@@ -200,6 +254,31 @@ final class FederationTest extends AppWebTestCase
         $this->inbox('/inbox', ['id' => 'https://remote.test/notes/1#delete', 'type' => 'Delete', 'actor' => FakeFediverse::ALICE, 'object' => ['id' => 'https://remote.test/notes/1', 'type' => 'Tombstone']]);
         self::getContainer()->get('doctrine')->getManager()->clear();
         self::assertNull(self::getContainer()->get(PostRepository::class)->findOneBy(['apUri' => 'https://remote.test/notes/1']));
+    }
+
+    public function testCommentsOnLocalPostsAreFederatedAndTheirDeletionToo(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/9', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $post = $this->publish($this->reloadAccount($camille), 'Coucher de soleil', Visibility::Public);
+        $hugo = $this->register('hugo')->getAccount();
+        $social = self::getContainer()->get(\App\Core\Application\Social\SocialActions::class);
+
+        $comment = $social->comment($hugo, $post, 'Quelles couleurs !');
+        $create = array_values(array_filter($this->fediverse()->delivered('Create'), static fn (array $a): bool => \is_array($a['object'] ?? null) && 'http://localhost/c/'.$comment->getPublicId() === ($a['object']['id'] ?? null)));
+        self::assertCount(1, $create, 'Les abonnés distants de l’autrice voient la réponse.');
+        self::assertSame('http://localhost/p/'.$post->getPublicId(), self::dig($create, 0, 'object', 'inReplyTo'));
+        self::assertSame(['https://www.w3.org/ns/activitystreams#Public'], self::dig($create, 0, 'object', 'to'));
+
+        $social->deleteComment($comment);
+        $delete = $this->fediverse()->delivered('Delete');
+        self::assertSame('http://localhost/c/'.$comment->getPublicId(), self::dig($delete, 0, 'object', 'id'));
+
+        $private = $this->publish($this->reloadAccount($camille), 'Pour moi', Visibility::Private);
+        $private = self::getContainer()->get(PostRepository::class)->find($private->getId());
+        self::assertInstanceOf(Post::class, $private);
+        $social->comment($private->getAccount(), $private, 'Note perso');
+        self::assertCount(2, $this->fediverse()->delivered('Create'), 'Rien ne sort pour une publication privée (seule la publication publique et le commentaire sont partis).');
     }
 
     public function testFollowingARemoteAccountImportsItsRecentHistory(): void

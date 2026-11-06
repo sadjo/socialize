@@ -1,0 +1,22 @@
+{# Un commentaire. Variables : comment, compact (aperçu dans le fil : sans avatar ni date) #}
+{% import '_macros.html.twig' as ui %}
+{% set me = app.user ? app.user.account : null %}
+{% set who = comment.account %}
+<div class="cmt{{ compact|default(false) ? ' compact' }}" id="comment-{{ comment.publicId }}">
+    {% if not compact|default(false) %}<a href="{{ path('app_profile', {username: who.acct}) }}" aria-hidden="true" tabindex="-1">{{ ui.avatar(who, 32) }}</a>{% endif %}
+    <div class="t">
+        <a href="{{ path('app_profile', {username: who.acct}) }}"><b>{{ who.username }}</b></a>{% if not who.local and not compact|default(false) %} <span class="small">@{{ who.domain }}</span>{% endif %}
+        {{ comment.content|rich_text }}
+        {% if not compact|default(false) %}
+            <small>
+                <time datetime="{{ comment.createdAt|date('c') }}">{{ comment.createdAt|ago }}</time>
+                {% if comment.isDeletableBy(me) %}
+                    <form method="post" action="{{ path('app_comment_delete', {id: comment.publicId}) }}" data-turbo-confirm="Supprimer ce commentaire ?">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete-comment-' ~ comment.publicId) }}">
+                        <button class="lnk del">Supprimer</button>
+                    </form>
+                {% endif %}
+            </small>
+        {% endif %}
+    </div>
+</div>

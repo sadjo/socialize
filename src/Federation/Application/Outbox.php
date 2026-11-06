@@ -8,9 +8,13 @@ use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
+use App\Core\Domain\Event\CommentDeleting;
+use App\Core\Domain\Event\FollowerRemoved;
+use App\Core\Domain\Event\PostArchived;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostPublished;
+use App\Core\Domain\Event\PostUnarchived;
 use App\Core\Domain\Event\PostUnliked;
 use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Event\ProfileUpdated;
@@ -40,7 +44,7 @@ final readonly class Outbox
     {
         $post = $event->post;
         $author = $post->getAccount();
-        if (!$author->isLocal() || Visibility::Private === $post->getVisibility()) {
+        if (!$post->isFederable()) {
             return;
         }
         $note = $this->serializer->note($post);
@@ -64,7 +68,8 @@ final readonly class Outbox
     {
         $post = $event->post;
         $author = $post->getAccount();
-        if (!$author->isLocal()) {
+        // Une publication archivée a déjà quitté le fédivers : elle y revient au désarchivage.
+        if (!$author->isLocal() || $post->isArchived()) {
             return;
         }
         $wasFederated = Visibility::Private !== $event->previousVisibility;
@@ -101,10 +106,31 @@ final readonly class Outbox
     public function onPostDeleting(PostDeleting $event): void
     {
         $post = $event->post;
+        if (!$post->isFederable()) {
+            return;
+        }
+        $this->sendDelete($post, $post->getVisibility());
+    }
+
+    /**
+     * Archivage : la publication quitte le fédivers ; son prochain envoi aura un nouvel identifiant.
+     */
+    #[AsEventListener]
+    public function onPostArchived(PostArchived $event): void
+    {
+        $post = $event->post;
         if (!$post->getAccount()->isLocal() || Visibility::Private === $post->getVisibility()) {
             return;
         }
         $this->sendDelete($post, $post->getVisibility());
+        $post->retireFromFediverse();
+        $this->em->flush();
+    }
+
+    #[AsEventListener]
+    public function onPostUnarchived(PostUnarchived $event): void
+    {
+        $this->onPostPublished(new PostPublished($event->post));
     }
 
     private function sendDelete(\App\Core\Domain\Post\Post $post, Visibility $visibility): void
@@ -146,6 +172,23 @@ final readonly class Outbox
             'type' => 'Undo',
             'actor' => $this->urls->actor($event->follower),
             'object' => $this->followActivity($event->followApUri ?? $this->urls->activity($event->follower, 'follow'), $event->follower, $event->following),
+        ]);
+    }
+
+    /**
+     * Abonné distant retiré : son instance reçoit un Reject de son abonnement (comme avec Mastodon).
+     */
+    #[AsEventListener]
+    public function onFollowerRemoved(FollowerRemoved $event): void
+    {
+        if (!$event->account->isLocal() || $event->follower->isLocal()) {
+            return;
+        }
+        $this->deliver($event->account, [$event->follower->getInboxUrl()], [
+            'id' => $this->urls->activity($event->account, 'reject'),
+            'type' => 'Reject',
+            'actor' => $this->urls->actor($event->account),
+            'object' => $this->followActivity($event->followApUri ?? $this->urls->activity($event->follower, 'follow'), $event->follower, $event->account),
         ]);
     }
 
@@ -193,13 +236,12 @@ final readonly class Outbox
     {
         $comment = $event->comment;
         $author = $comment->getAccount();
-        $postAuthor = $comment->getPost()->getAccount();
-        // Seules les réponses à une publication distante partent dans le fédivers pour l'instant.
-        if (!$author->isLocal() || $postAuthor->isLocal()) {
+        $inboxes = $this->commentInboxes($comment);
+        if (null === $inboxes) {
             return;
         }
         $note = $this->serializer->commentNote($comment);
-        $this->deliver($author, [$postAuthor->getInboxUrl(), ...$this->followerInboxes($author)], [
+        $this->deliver($author, $inboxes, [
             'id' => $this->urls->comment($comment).'/activity',
             'type' => 'Create',
             'actor' => $this->urls->actor($author),
@@ -208,6 +250,48 @@ final readonly class Outbox
             'cc' => $note['cc'],
             'object' => $note,
         ]);
+    }
+
+    #[AsEventListener]
+    public function onCommentDeleting(CommentDeleting $event): void
+    {
+        $comment = $event->comment;
+        $author = $comment->getAccount();
+        $inboxes = $this->commentInboxes($comment);
+        if (null === $inboxes) {
+            return;
+        }
+        $note = $this->serializer->commentNote($comment);
+        $this->deliver($author, $inboxes, [
+            'id' => $this->urls->comment($comment).'#delete',
+            'type' => 'Delete',
+            'actor' => $this->urls->actor($author),
+            'to' => $note['to'],
+            'cc' => $note['cc'],
+            'object' => ['id' => $this->urls->comment($comment), 'type' => 'Tombstone'],
+        ]);
+    }
+
+    /**
+     * Instances à prévenir pour le commentaire d'un compte local : l'auteur de la publication s'il est distant,
+     * les abonnés distants du commentateur et ceux de l'auteur local de la publication.
+     * Null si le commentaire ne quitte pas l'instance (commentaire distant, publication privée).
+     *
+     * @return list<string>|null
+     */
+    private function commentInboxes(\App\Core\Domain\Social\Comment $comment): ?array
+    {
+        $author = $comment->getAccount();
+        $post = $comment->getPost();
+        $postAuthor = $post->getAccount();
+        if (!$author->isLocal() || Visibility::Private === $post->getVisibility() || $post->isArchived()) {
+            return null;
+        }
+
+        return array_values(array_filter([
+            ...$this->followerInboxes($author),
+            ...($postAuthor->isLocal() ? $this->followerInboxes($postAuthor) : [$postAuthor->getDeliveryInbox()]),
+        ]));
     }
 
     #[AsEventListener]

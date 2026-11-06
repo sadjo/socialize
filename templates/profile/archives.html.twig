@@ -1,0 +1,28 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Archives · Socialize{% endblock %}
+
+{% block content %}
+<div class="prof">
+    <div class="page-h">
+        <a href="{{ path('app_profile', {username: account.acct}) }}" aria-label="Retour à mon profil">{{ ui.avatar(account, 48) }}</a>
+        <div class="grow">
+            <h1>Archives</h1>
+            <p>{{ archived_count|format_number(locale: 'fr') }} publication{{ archived_count > 1 ? 's' }} archivée{{ archived_count > 1 ? 's' }}, visibles uniquement par vous. Désarchivez-en une depuis son menu « … » : elle retrouve sa visibilité d’origine. Les stories expirées sont dans <a class="lnk" href="{{ path('app_story_manage') }}">Mes stories</a>.</p>
+        </div>
+    </div>
+    <div>
+        {{ include('profile/_tabs.html.twig', {current: 'archives'}) }}
+        {% if page.empty %}
+            <div class="empty">
+                {{ ui.icon('album') }}
+                <b>Aucune publication archivée</b>
+                <span>Archivez une publication depuis son menu « … » pour la retirer de votre profil sans la supprimer.</span>
+            </div>
+        {% else %}
+            <div class="grid3">{{ include('profile/_grid_page.html.twig') }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

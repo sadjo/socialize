@@ -80,12 +80,74 @@ final class SocialTest extends AppWebTestCase
         $this->login($this->register('hugo'));
 
         $this->client->request('GET', '/p/'.$post->getPublicId());
-        $this->client->submitForm('Publier', ['comment[content]' => 'Superbe lumière !']);
+        $this->client->submitForm('Publier', ['content' => 'Superbe lumière !']);
         self::assertResponseRedirects('/p/'.$post->getPublicId().'#commentaires');
 
         $this->client->followRedirect();
         self::assertSelectorTextContains('.cmts', 'Superbe lumière !');
         self::assertSame(1, $this->reload($post)->getCommentsCount());
+
+        // Depuis le fil : le commentaire s'ajoute sans recharger la page (Turbo Stream).
+        $crawler = $this->client->request('GET', '/local');
+        self::assertSelectorTextContains('article.post .cprev', 'Superbe lumière !');
+        $form = $crawler->filter('article.post form.addc')->form(['content' => 'Et quel cadrage']);
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html', 'HTTP_REFERER' => 'http://localhost/local']);
+        self::assertResponseIsSuccessful();
+        $stream = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('action="append" target="post-'.$post->getPublicId().'-comments"', $stream);
+        self::assertStringContainsString('Et quel cadrage', $stream);
+        self::assertStringContainsString('action="replace" target="post-'.$post->getPublicId().'-comment-form"', $stream);
+        self::assertSame(2, $this->reload($post)->getCommentsCount());
+    }
+
+    public function testCommentsCanBeDeletedByTheirAuthorOrThePostAuthor(): void
+    {
+        $camille = $this->register('camille');
+        $post = $this->publish($camille->getAccount(), 'À commenter', Visibility::Public);
+        $social = self::getContainer()->get(\App\Core\Application\Social\SocialActions::class);
+        $hugo = $this->register('hugo');
+        $byHugo = $social->comment($hugo->getAccount(), $post, 'De Hugo');
+        $byInes = $social->comment($this->register('ines')->getAccount(), $post, 'D’Inès');
+
+        // Un tiers ne voit pas le bouton et ne peut pas supprimer.
+        $this->login($this->register('jules'));
+        $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertSelectorNotExists('#comment-'.$byHugo->getPublicId().' form');
+        $this->client->request('POST', '/c/'.$byHugo->getPublicId().'/supprimer', ['_token' => 'x']);
+        self::assertResponseStatusCodeSame(403);
+
+        // L'auteur du commentaire.
+        $this->login($hugo);
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        $this->client->submit($crawler->filter('#comment-'.$byHugo->getPublicId().' form')->form());
+        self::assertResponseRedirects();
+        self::assertSelectorNotExists('#comment-'.$byInes->getPublicId().' form');
+
+        // L'autrice de la publication, depuis Turbo.
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        $form = $crawler->filter('#comment-'.$byInes->getPublicId().' form')->form();
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
+        self::assertStringContainsString('action="remove" target="comment-'.$byInes->getPublicId().'"', (string) $this->client->getResponse()->getContent());
+        self::assertSame(0, $this->reload($post)->getCommentsCount());
+    }
+
+    public function testPostMenuOffersSharingAndOwnerActions(): void
+    {
+        $camille = $this->register('camille');
+        $post = $this->publish($camille->getAccount(), 'Menu', Visibility::Public);
+
+        $this->client->request('GET', '/local');
+        self::assertSelectorExists('article.post .pmenu [data-controller="share-trigger"]');
+        self::assertSelectorExists('article.post .acts [data-controller="share-trigger"][data-share-trigger-url-value="http://localhost/p/'.$post->getPublicId().'"]');
+        self::assertSelectorNotExists('article.post .pmenu a[href$="/modifier"]');
+
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/local');
+        self::assertSelectorExists('article.post .pmenu a[href="/p/'.$post->getPublicId().'/modifier"]');
+        $form = $crawler->filter('article.post .pmenu form[action$="/supprimer"]')->form();
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), server: ['HTTP_REFERER' => 'http://localhost/local']);
+        self::assertResponseRedirects('http://localhost/local', message: 'Supprimée depuis le fil : on reste sur le fil.');
     }
 
     public function testDeletingAPostAlsoDeletesItsLikesAndComments(): void

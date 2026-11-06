@@ -38,6 +38,7 @@ export default class extends Controller {
         const token = ++this.token;
         const story = this.story;
         cancelAnimationFrame(this.raf);
+        this.stopVideo();
         this.elapsed = 0;
         this.renderChrome();
 
@@ -59,8 +60,15 @@ export default class extends Controller {
             video.preload = 'auto';
             video.poster = story.poster || '';
             video.src = story.src;
-            video.addEventListener('ended', () => this.next());
-            const start = () => { swap(video); if (!this.paused) video.play().catch(() => {}); };
+            // Seule la story affichée peut passer à la suivante : une vidéo quittée avant la fin
+            // de son chargement ne doit ni démarrer ni déclencher « suivante » (sauts dans l'ordre).
+            const current = () => token === this.token;
+            video.addEventListener('ended', () => { if (current()) this.next(); });
+            const start = () => {
+                if (!current()) return;
+                swap(video);
+                if (!this.paused && video.paused) video.play().catch(() => {});
+            };
             video.addEventListener('loadeddata', start, { once: true });
             video.addEventListener('error', start, { once: true });
             video.load();
@@ -202,10 +210,25 @@ export default class extends Controller {
 
     close() {
         cancelAnimationFrame(this.raf);
+        this.stopVideo();
         window.location.href = this.dataValue.closeUrl;
     }
 
-    markSeen(story) {
+    /*
+     * Arrête la vidéo de la story quittée. Affichée, elle reste à l'écran (en pause) jusqu'à
+     * l'arrivée de la suivante, sans scintillement ; jamais affichée, son chargement est abandonné.
+     */
+    stopVideo() {
+        if (!this.video) return;
+        this.video.pause();
+        if (!this.video.isConnected) {
+            this.video.removeAttribute('src');
+            this.video.load();
+        }
+        this.video = null;
+    }
+
+        markSeen(story) {
         if (!story.seenUrl || story.seen || this.seen.has(story.id)) return;
         this.seen.add(story.id);
         story.seen = true;

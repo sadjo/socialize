@@ -53,6 +53,14 @@ class Comment
         return $comment;
     }
 
+    /**
+     * Un commentaire peut être supprimé par son auteur ou par l'auteur de la publication.
+     */
+    public function isDeletableBy(?Account $account): bool
+    {
+        return $account instanceof Account && ($account->getId()->equals($this->account->getId()) || $this->post->isOwnedBy($account));
+    }
+
     public function getApUri(): ?string
     {
         return $this->apUri;

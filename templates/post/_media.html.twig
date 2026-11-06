@@ -10,7 +10,7 @@
                     {% set poster = media_url(media, 'poster') %}
                     <div class="player muted" data-controller="video">
                         <video playsinline muted loop preload="{{ poster ? 'none' : 'metadata' }}"{% if poster %} poster="{{ poster }}"{% endif %} data-video-target="video"
-                               data-action="click->video#showControls volumechange->video#volumeChanged"{% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
+                               data-action="click->video#open"{% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
                             <source src="{{ media_url(media, 'video') }}{{ poster ? '' : '#t=0.1' }}" type="{{ media.mimeType starts with 'video/' ? media.mimeType : 'video/mp4' }}">
                         </video>
                         <button type="button" class="snd" data-video-target="sound" data-action="video#toggleSound" aria-label="Activer le son" aria-pressed="false">

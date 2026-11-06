@@ -1,0 +1,24 @@
+{% import '_macros.html.twig' as ui %}
+{% set frame_id = 'network-page-' ~ (app.request.query.get('apres') ?? 'first') %}
+<turbo-frame id="{{ frame_id }}" target="_top">
+    {% for other in page.accounts %}
+        <div class="found">
+            <a href="{{ path('app_profile', {username: other.acct}) }}">{{ ui.avatar(other, 44) }}</a>
+            <a class="t" href="{{ path('app_profile', {username: other.acct}) }}"><b>{{ other.displayName }}</b><br><small>{{ handle(other, local_domain) }}</small></a>
+            {% if is_owner and list == 'followers' %}
+                <form method="post" action="{{ path('app_profile_remove_follower', {username: other.acct}) }}" data-turbo-confirm="Retirer {{ other.displayName }} de vos abonnés ? Ce compte ne sera pas prévenu.">
+                    <input type="hidden" name="_token" value="{{ csrf_token('remove-follower-' ~ other.acct) }}">
+                    <button class="btn sm">Retirer</button>
+                </form>
+            {% elseif is_owner and list == 'following' %}
+                <form method="post" action="{{ path('app_profile_unfollow', {username: other.acct}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ other.acct) }}">
+                    <button class="btn sm done">Ne plus suivre</button>
+                </form>
+            {% endif %}
+        </div>
+    {% endfor %}
+    {% if page.next %}
+        <turbo-frame id="network-page-{{ page.next }}" src="{{ path(route, {username: account.acct, apres: page.next}) }}" loading="lazy" target="_top"></turbo-frame>
+    {% endif %}
+</turbo-frame>

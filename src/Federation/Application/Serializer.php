@@ -145,6 +145,7 @@ final readonly class Serializer
         $post = $comment->getPost();
         $author = $comment->getAccount();
         $postAuthor = $post->getAccount();
+        [$to, $cc] = $this->addressing($post->getVisibility(), $author);
 
         return [
             'id' => $this->urls->comment($comment),
@@ -153,8 +154,9 @@ final readonly class Serializer
             'inReplyTo' => $this->urls->note($post),
             'published' => $comment->getCreatedAt()->format(\DATE_ATOM),
             'url' => $this->urls->comment($comment),
-            'to' => [ApUrls::PUBLIC],
-            'cc' => array_values(array_unique([$this->urls->followers($author), $this->urls->actor($postAuthor)])),
+            // Même audience que la publication commentée, et son auteur en copie.
+            'to' => $to,
+            'cc' => array_values(array_unique([...$cc, $this->urls->actor($postAuthor)])),
             'content' => $this->html($comment->getContent()),
             'tag' => array_merge($this->tags($comment->getContent()), $postAuthor->isLocal() ? [] : [[
                 'type' => 'Mention',

@@ -1,9 +1,11 @@
 {% import '_macros.html.twig' as ui %}
+{# Variables : account, page ; grid_route (page suivante) et open_post (lien direct vers la publication) en option #}
+{% set grid_route = grid_route|default('app_profile') %}
 {% set frame_id = 'grid-page-' ~ (app.request.query.get('apres') ?? 'first')|replace({'.': '-'}) %}
-<turbo-frame id="{{ frame_id }}" target="_top" style="display:contents">
+<turbo-frame id="{{ frame_id }}" target="_top">
     {% for post in page.posts %}
         {% set cover = post.cover %}
-        <a class="gt" href="{{ path('app_profile_feed', {username: account.acct, depuis: post.publicId, _fragment: 'post-' ~ post.publicId}) }}" aria-label="Ouvrir la publication{{ post.caption ? ' : ' ~ post.caption|slice(0, 80) }}">
+        <a class="gt" href="{{ open_post|default(false) ? path('app_post_show', {id: post.publicId}) : path('app_profile_feed', {username: account.acct, depuis: post.publicId, _fragment: 'post-' ~ post.publicId}) }}" aria-label="Ouvrir la publication{{ post.caption ? ' : ' ~ post.caption|slice(0, 80) }}">
             {% set thumb = cover and cover.ready ? media_url(cover, 'thumb') : null %}
             {% if thumb %}
                 <img src="{{ thumb }}" alt="{{ cover.altText }}" loading="lazy" decoding="async">
@@ -19,6 +21,6 @@
     {% endfor %}
     {% if page.next %}
         {% set next = page.next.toString %}
-        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path('app_profile', {username: account.acct, apres: next}) }}" loading="lazy" target="_top" style="display:contents"></turbo-frame>
+        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path(grid_route, {username: account.acct, apres: next}) }}" loading="lazy" target="_top"></turbo-frame>
     {% endif %}
 </turbo-frame>

@@ -7,9 +7,11 @@
     {% import '_macros.html.twig' as ui %}
     {% set media = story.media %}
     <article class="story-tile" id="story-{{ story.publicId }}">
-        <div class="th">
+        {% set url = active ? path('app_account_stories', {username: story.account.username}) : path('app_story_archive', {id: story.publicId}) %}
+        <a class="th" href="{{ url }}" aria-label="Voir la story du {{ story.createdAt|format_datetime('long', 'short', locale: 'fr') }}">
             {% if media and media.ready %}<img src="{{ media_url(media, 'thumb') }}" alt="">{% else %}<span class="processing skel">{{ ui.icon('reel') }}</span>{% endif %}
-        </div>
+            {% if media and media.video %}<span class="gi">{{ ui.icon('reel', 'sm') }}</span>{% endif %}
+        </a>
         <small>{{ story.createdAt|ago }}{{ active ? ' · en cours' : '' }} · {{ story.viewsCount }} vue{{ story.viewsCount > 1 ? 's' }}</small>
         {% if story.highlight %}
             <span class="chip on">{{ ui.icon('sparkle', 'xs') }}{{ story.highlight.title }}</span>

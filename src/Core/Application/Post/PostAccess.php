@@ -21,11 +21,16 @@ final readonly class PostAccess
 
     public function canView(Post $post, ?Account $viewer): bool
     {
+        if ($post->isArchived()) {
+            return $post->isOwnedBy($viewer);
+        }
+
         return \in_array($post->getVisibility(), $this->visibleFor($post->getAccount(), $viewer), true);
     }
 
     /**
-     * Niveaux de visibilité qu'un visiteur peut voir sur le profil d'un compte.
+     * Niveaux de visibilité qu'un visiteur peut voir sur le profil d'un compte
+     * (les publications archivées en sont toujours exclues).
      *
      * @return list<Visibility>
      */

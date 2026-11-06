@@ -32,7 +32,7 @@ class Highlight
 
     /** @var Collection<int, Story> */
     #[ORM\OneToMany(targetEntity: Story::class, mappedBy: 'highlight')]
-    #[ORM\OrderBy(['createdAt' => 'ASC'])]
+    #[ORM\OrderBy(['createdAt' => 'ASC', 'id' => 'ASC'])]
     private Collection $stories;
 
     public function __construct(
