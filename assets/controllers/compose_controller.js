@@ -141,9 +141,11 @@ export default class extends Controller {
 
         const frame = document.createElement('div');
         frame.className = 'th';
-        const media = document.createElement(item.video ? 'video' : 'img');
-        media.src = item.src;
-        if (item.video) { media.muted = true; media.playsInline = true; media.preload = 'metadata'; } else { media.alt = ''; }
+        // Média déjà publié : sa vignette (une image, même pour une vidéo) ; nouveau fichier : aperçu local.
+        const asVideo = item.video && item.kind !== 'existing';
+        const media = document.createElement(asVideo ? 'video' : 'img');
+        if (item.src) media.src = item.src; // vidéo encore en préparation : pas encore de vignette
+        if (asVideo) { media.muted = true; media.playsInline = true; media.preload = 'metadata'; } else { media.alt = ''; }
         media.draggable = false;
         const badge = document.createElement('span');
         badge.className = 'order-badge num';

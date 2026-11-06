@@ -8,7 +8,7 @@
             <a role="menuitem" href="{{ path('app_post_show', {id: post.publicId}) }}">{{ ui.icon('image', 'sm') }}Ouvrir la publication</a>
         {% endif %}
         {{ include('post/_share_button.html.twig', {class: '', label: true}) }}
-        <button type="button" role="menuitem" data-controller="copy" data-copy-text-value="{{ url('app_post_show', {id: post.publicId}) }}" data-action="copy#copy menu#close">{{ ui.icon('link', 'sm') }}Copier le lien</button>
+        <button type="button" role="menuitem" data-controller="copy" data-copy-text-value="{{ url('app_post_show', {id: post.publicId}) }}" data-copy-toast-value="Lien copié !" data-action="copy#copy menu#close">{{ ui.icon('link', 'sm') }}Copier le lien</button>
         {% if not post.account.local and post.url %}
             <a role="menuitem" href="{{ post.url }}" target="_blank" rel="noopener nofollow">{{ ui.icon('globe', 'sm') }}Voir sur {{ post.account.domain }}</a>
         {% endif %}

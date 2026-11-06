@@ -41,7 +41,7 @@ export default class extends Controller {
     async copy() {
         await this.copyLink();
         this.close();
-        toast('Lien copié');
+        toast('Lien copié !');
     }
 
     // Instagram ne propose pas de lien de partage pour le web : on transmet le média lui-même
