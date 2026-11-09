@@ -24,10 +24,13 @@
                 <option value="">Toutes les photos et vidéos</option>
                 {% for album in immich_albums %}<option value="{{ album.id }}">{{ album.name }} ({{ album.count }})</option>{% endfor %}
             </select>
-            <label class="imm-date"><span class="small">Aller au</span>
-                <input type="date" class="inp sm" max="{{ 'now'|date('Y-m-d') }}" data-compose-target="date" data-action="change->compose#filterLibrary" aria-label="Aller directement à une date">
-            </label>
-            <button type="button" class="btn sm ghost" data-action="compose#resetLibrary" title="Revenir aux plus récentes">Plus récentes</button>
+            {# Aller à une date : seulement pour toute la photothèque, pas dans un album. #}
+            <span class="row imm-date" data-compose-target="dateFilter">
+                <label class="row"><span class="small">Aller au</span>
+                    <input type="date" class="inp sm" max="{{ 'now'|date('Y-m-d') }}" data-compose-target="date" data-action="change->compose#filterLibrary" aria-label="Aller directement à une date">
+                </label>
+                <button type="button" class="btn sm ghost" data-action="compose#resetLibrary" title="Revenir aux plus récentes">Plus récentes</button>
+            </span>
         </div>
         <div class="imm-scroll">
             <turbo-frame id="immich-library" src="{{ path('app_immich_library') }}" loading="lazy" data-compose-target="library"><p class="small">Chargement de la photothèque…</p></turbo-frame>

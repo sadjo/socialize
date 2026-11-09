@@ -416,6 +416,7 @@ pre.code{margin:0;padding:14px 16px;border-radius:14px;background:var(--bg);bord
 .imm-filters{gap:8px}
 .imm-filters select{min-width:0;flex:1 1 180px}
 .imm-date{display:flex;align-items:center;gap:6px}
+.imm-date[hidden]{display:none}
 .imm-scroll{max-height:440px;overflow-y:auto;border-radius:14px;padding-right:4px}
 .imm-scroll turbo-frame{display:block}
 .imm-day{font-size:.8rem;font-weight:700;color:var(--muted);margin:12px 0 6px;text-transform:none}

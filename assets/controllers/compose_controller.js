@@ -9,7 +9,7 @@ import { Controller } from '@hotwired/stimulus';
  * Le champ fichier est reconstruit à chaque changement, dans l'ordre choisi.
  */
 export default class extends Controller {
-    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'immichSource', 'library', 'album', 'date'];
+    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'immichSource', 'library', 'album', 'date', 'dateFilter'];
     static values = {
         max: { type: Number, default: 20 },
         altName: { type: String, default: '' },
@@ -58,12 +58,18 @@ export default class extends Controller {
         if (this.hasImmichSourceTarget) this.immichSourceTarget.hidden = source !== 'immich';
     }
 
-    /* Photothèque Immich filtrée par album et/ou ouverte à une date (médias pris ce jour-là ou avant). */
+    /*
+     * Photothèque Immich : un album (affiché en entier), ou toute la photothèque, ouverte à une date
+     * (médias pris ce jour-là ou avant). La date n'est proposée que sans album.
+     */
     filterLibrary() {
         if (!this.hasLibraryTarget || !this.hasImmichSourceTarget) return;
+        const album = this.hasAlbumTarget ? this.albumTarget.value : '';
+        if (this.hasDateFilterTarget) this.dateFilterTarget.hidden = album !== '';
+        if (album !== '' && this.hasDateTarget) this.dateTarget.value = '';
         const params = new URLSearchParams();
-        if (this.hasAlbumTarget && this.albumTarget.value) params.set('album', this.albumTarget.value);
-        if (this.hasDateTarget && this.dateTarget.value) params.set('date', this.dateTarget.value);
+        if (album !== '') params.set('album', album);
+        else if (this.hasDateTarget && this.dateTarget.value) params.set('date', this.dateTarget.value);
         const query = params.toString();
         this.libraryTarget.src = this.immichSourceTarget.dataset.libraryUrl + (query ? `?${query}` : '');
         this.libraryTarget.closest('.imm-scroll')?.scrollTo({ top: 0 });
