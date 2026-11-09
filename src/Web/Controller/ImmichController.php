@@ -90,9 +90,12 @@ final class ImmichController extends AbstractController
         $album = $request->query->getString('album');
         $album = preg_match('/^[0-9a-f-]{36}$/i', $album) ? $album : null;
         $page = max(1, $request->query->getInt('page', 1));
+        // « Aller au » jour choisi : les médias pris ce jour-là ou avant, du plus récent au plus ancien.
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $request->query->getString('date')) ?: null;
+        $date = $date instanceof \DateTimeImmutable && $date->format('Y-m-d') === $request->query->getString('date') ? $date : null;
 
         try {
-            $result = $this->client->library($server, $key, $page, $album);
+            $result = $this->client->library($server, $key, $page, $album, $date?->modify('+1 day'));
             $error = null;
         } catch (ImmichException $e) {
             $result = ['assets' => [], 'next' => null];
@@ -109,6 +112,7 @@ final class ImmichController extends AbstractController
             'page' => $page,
             'next' => $result['next'],
             'album' => $album,
+            'date' => $date,
             'error' => $error,
         ]);
     }

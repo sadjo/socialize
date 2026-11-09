@@ -76,6 +76,7 @@ final class ImmichTest extends AppWebTestCase
         $this->client->request('GET', '/publier');
         self::assertSelectorExists('.src-tabs button[data-compose-source-param="immich"]');
         self::assertSelectorTextContains('#immich-album', 'Normandie (2)');
+        self::assertSelectorExists('.imm-source input[type="date"][data-action*="filterLibrary"]');
 
         $this->client->request('GET', '/immich/phototheque', server: ['HTTP_TURBO_FRAME' => 'immich-library']);
         self::assertSelectorExists('turbo-frame#immich-library:not([src])');
@@ -86,6 +87,18 @@ final class ImmichTest extends AppWebTestCase
 
         $this->client->request('GET', '/immich/phototheque?album='.FakeImmich::ALBUM_NORMANDIE);
         self::assertSelectorCount(2, '.imm-tile');
+
+        // Aller au 8 novembre : les médias pris ce jour-là et avant, pas ceux du 9.
+        $this->client->request('GET', '/immich/phototheque?date=2026-11-08');
+        self::assertSelectorCount(2, '.imm-tile');
+        self::assertSelectorTextContains('.imm-day', 'Dimanche 8 novembre 2026');
+        self::assertSelectorNotExists('.imm-tile[data-compose-id-param="'.FakeImmich::PHOTO_HONFLEUR.'"]');
+        $this->client->request('GET', '/immich/phototheque?date=2026-11-08&album='.FakeImmich::ALBUM_NORMANDIE);
+        self::assertSelectorCount(1, '.imm-tile');
+        $this->client->request('GET', '/immich/phototheque?date=2026-01-01');
+        self::assertSelectorTextContains('turbo-frame', 'jusqu’au 1 janvier 2026');
+        $this->client->request('GET', '/immich/phototheque?date=pas-une-date');
+        self::assertSelectorCount(3, '.imm-tile', 'Une date invalide est ignorée.');
 
         $this->client->request('GET', '/immich/apercu/'.FakeImmich::PHOTO_ETRETAT);
         self::assertResponseIsSuccessful();

@@ -413,6 +413,9 @@ pre.code{margin:0;padding:14px 16px;border-radius:14px;background:var(--bg);bord
 .src-tabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;height:36px;border-radius:10px;font-weight:600;font-size:.88rem;color:var(--muted)}
 .src-tabs button.on{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px oklch(0 0 0 / .12)}
 .imm-source{display:flex;flex-direction:column;gap:10px}
+.imm-filters{gap:8px}
+.imm-filters select{min-width:0;flex:1 1 180px}
+.imm-date{display:flex;align-items:center;gap:6px}
 .imm-scroll{max-height:440px;overflow-y:auto;border-radius:14px;padding-right:4px}
 .imm-scroll turbo-frame{display:block}
 .imm-day{font-size:.8rem;font-weight:700;color:var(--muted);margin:12px 0 6px;text-transform:none}

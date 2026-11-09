@@ -50,15 +50,19 @@ final readonly class ImmichClient
     }
 
     /**
-     * Photothèque, de la plus récente à la plus ancienne, éventuellement limitée à un album.
+     * Photothèque, de la plus récente à la plus ancienne, éventuellement limitée à un album
+     * et aux médias pris avant une date (pour aller directement à un jour).
      *
      * @return array{assets: list<ImmichAsset>, next: ?int}
      */
-    public function library(string $server, string $key, int $page, ?string $albumId = null): array
+    public function library(string $server, string $key, int $page, ?string $albumId = null, ?\DateTimeImmutable $takenBefore = null): array
     {
         $query = ['page' => max(1, $page), 'size' => self::PAGE_SIZE, 'order' => 'desc', 'withExif' => true];
         if (null !== $albumId) {
             $query['albumIds'] = [$albumId];
+        }
+        if ($takenBefore instanceof \DateTimeImmutable) {
+            $query['takenBefore'] = $takenBefore->format(\DATE_ATOM);
         }
         $result = $this->json('POST', $server, $key, '/search/metadata', ['json' => $query]);
         $assets = \is_array($result['assets'] ?? null) ? $result['assets'] : [];

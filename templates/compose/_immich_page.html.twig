@@ -1,4 +1,4 @@
-{# Une page de la photothèque Immich (source Immich de la création). Variables : days, page, next, album, error.
+{# Une page de la photothèque Immich (source Immich de la création). Variables : days, page, next, album, date, error.
    La première page remplace le cadre « immich-library » ; les suivantes se chargent au défilement. #}
 {% import '_macros.html.twig' as ui %}
 <turbo-frame id="{{ page == 1 ? 'immich-library' : 'immich-page-' ~ page }}">
@@ -21,9 +21,9 @@
             {% endfor %}
         </div>
     {% else %}
-        {% if page == 1 and not error %}<p class="small">Aucune photo ni vidéo {{ album ? 'dans cet album' : 'dans votre photothèque Immich' }}.</p>{% endif %}
+        {% if page == 1 and not error %}<p class="small">Aucune photo ni vidéo {{ album ? 'dans cet album' : 'dans votre photothèque Immich' }}{{ date ? ' jusqu’au ' ~ date|format_date('long', locale: 'fr') }}.</p>{% endif %}
     {% endfor %}
     {% if next %}
-        <turbo-frame id="immich-page-{{ next }}" src="{{ path('app_immich_library', {page: next, album: album}) }}" loading="lazy"></turbo-frame>
+        <turbo-frame id="immich-page-{{ next }}" src="{{ path('app_immich_library', {page: next, album: album, date: date ? date|date('Y-m-d') : null}) }}" loading="lazy"></turbo-frame>
     {% endif %}
 </turbo-frame>

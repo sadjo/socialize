@@ -124,6 +124,10 @@ final class FakeImmich
         if ([] !== $albumIds) {
             $ids = array_values(array_filter($ids, static fn (string $id): bool => array_any($albumIds, static fn (mixed $album): bool => \is_string($album) && \in_array($id, self::$albums[$album]['assets'] ?? [], true))));
         }
+        if (\is_string($query['takenBefore'] ?? null)) {
+            $before = new \DateTimeImmutable($query['takenBefore']);
+            $ids = array_values(array_filter($ids, static fn (string $id): bool => \is_string($taken = self::assets()[$id]['localDateTime']) && new \DateTimeImmutable($taken) < $before));
+        }
         $page = is_numeric($query['page'] ?? null) ? (int) $query['page'] : 1;
         $items = 1 === $page ? array_map(static fn (string $id): array => self::assets()[$id], $ids) : [];
 

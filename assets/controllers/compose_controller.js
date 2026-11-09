@@ -9,7 +9,7 @@ import { Controller } from '@hotwired/stimulus';
  * Le champ fichier est reconstruit à chaque changement, dans l'ordre choisi.
  */
 export default class extends Controller {
-    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'immichSource', 'library'];
+    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'immichSource', 'library', 'album', 'date'];
     static values = {
         max: { type: Number, default: 20 },
         altName: { type: String, default: '' },
@@ -58,8 +58,20 @@ export default class extends Controller {
         if (this.hasImmichSourceTarget) this.immichSourceTarget.hidden = source !== 'immich';
     }
 
-    album(event) {
-        if (this.hasLibraryTarget) this.libraryTarget.src = event.currentTarget.value;
+    /* Photothèque Immich filtrée par album et/ou ouverte à une date (médias pris ce jour-là ou avant). */
+    filterLibrary() {
+        if (!this.hasLibraryTarget || !this.hasImmichSourceTarget) return;
+        const params = new URLSearchParams();
+        if (this.hasAlbumTarget && this.albumTarget.value) params.set('album', this.albumTarget.value);
+        if (this.hasDateTarget && this.dateTarget.value) params.set('date', this.dateTarget.value);
+        const query = params.toString();
+        this.libraryTarget.src = this.immichSourceTarget.dataset.libraryUrl + (query ? `?${query}` : '');
+        this.libraryTarget.closest('.imm-scroll')?.scrollTo({ top: 0 });
+    }
+
+    resetLibrary() {
+        if (this.hasDateTarget) this.dateTarget.value = '';
+        this.filterLibrary();
     }
 
     /* Une vignette Immich ajoute le média à la sélection, ou l'en retire si elle y est déjà. */
