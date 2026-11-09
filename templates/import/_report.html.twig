@@ -1,0 +1,57 @@
+{# Détail d'un import fini : chaque élément et ce qu'il est devenu. Variables : import, elements, targets #}
+{% import '_macros.html.twig' as ui %}
+{% macro row(item, target) %}
+    {% import '_macros.html.twig' as ui %}
+    {% set is_post = item.kind.isPost %}
+    {% set media = target ? (is_post ? target.cover : target.media) : null %}
+    {% set label = item.takenAt|format_date('long', locale: 'fr') %}
+    <div class="found import-item">
+        <span class="thumb">
+            {% if media and media.ready %}<img src="{{ media_url(media, 'thumb') }}" alt="" loading="lazy" width="64" height="64">{% else %}{{ ui.icon(item.hasVideo ? 'reel' : 'image') }}{% endif %}
+        </span>
+        <div class="t">
+            <b>{{ label }}</b>
+            {% if item.kind.value == 'archived_post' %}<span class="chip imp">{{ ui.icon('album', 'xs') }}{{ item.kind.label }}</span>{% endif %}
+            <br><small>
+                {%- if item.status.value == 'imported' and target -%}
+                    {{ is_post ? (target.archived ? 'Archivée' : target.visibility.label) : 'Archives des stories' }}
+                {%- elseif item.status.value == 'imported' -%}
+                    Supprimée depuis l’import
+                {%- elseif item.status.value == 'skipped' -%}
+                    Non importée
+                {%- elseif item.status.value == 'duplicate' -%}
+                    Déjà importée
+                {%- else -%}
+                    Échec : {{ item.message }}
+                {%- endif -%}
+                {{ item.caption ? ' · ' ~ (item.caption|length > 80 ? item.caption|slice(0, 79) ~ '…' : item.caption) }}
+            </small>
+        </div>
+        {% if item.status.value == 'imported' and target %}
+            <a class="btn sm" href="{{ is_post ? path('app_post_show', {id: target.publicId}) : path('app_story_archive', {id: target.publicId}) }}">{{ is_post ? 'Voir la publication' : 'Voir la story' }}</a>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% set posts = elements|filter(i => i.kind.isPost) %}
+{% set stories = elements|filter(i => not i.kind.isPost) %}
+<section class="card stack" id="detail">
+    <h2>Publications ({{ posts|length|format_number(locale: 'fr') }})</h2>
+    {% for item in posts %}
+        {{ _self.row(item, item.targetId ? targets[item.targetId.toRfc4122]|default(null) : null) }}
+    {% else %}
+        <p class="small">Aucune publication dans cette archive.</p>
+    {% endfor %}
+</section>
+{% if stories is not empty %}
+    <section class="card stack">
+        <details>
+            <summary class="lnk">Stories ({{ stories|length|format_number(locale: 'fr') }})</summary>
+            <div class="stack" style="margin-top:12px">
+                {% for item in stories %}
+                    {{ _self.row(item, item.targetId ? targets[item.targetId.toRfc4122]|default(null) : null) }}
+                {% endfor %}
+            </div>
+        </details>
+    </section>
+{% endif %}

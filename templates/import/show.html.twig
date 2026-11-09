@@ -1,0 +1,152 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Import Instagram · Socialize{% endblock %}
+
+{% set status = import.status.value %}
+{% set counts = import.counts %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Import Instagram</h1><p>{{ import.parts|map(p => p.name)|join(', ') }} · {{ (import.size / 1048576)|round|format_number(locale: 'fr') }} Mo</p></div></div>
+    {{ include('import/_steps.html.twig', {step: {uploading: 1, analyzing: 2, ready: 3, importing: 4, completed: 4, failed: 4}[status]}) }}
+
+    {% if status == 'failed' %}
+        <section class="card stack">
+            <h2>L’import n’a pas abouti</h2>
+            <ul class="form-errors"><li>{{ import.error }}</li></ul>
+            <p class="small">Les publications déjà importées restent sur votre profil. Relancer avec la même archive ne crée aucun doublon.</p>
+            <div class="navbtns"><span></span>{% if videos.processing == 0 %}<a class="btn pri" href="{{ path('app_import') }}">Fermer l’import</a>{% else %}<span class="small">L’import pourra être fermé une fois les vidéos converties.</span>{% endif %}</div>
+        </section>
+        {% if elements is not empty %}{{ include('import/_report.html.twig') }}{% endif %}
+    {% elseif status in ['analyzing', 'importing'] %}
+        <section class="card stack">
+            <h2>{{ status == 'analyzing' ? 'Analyse en cours' : 'Import en cours…' }}</h2>
+            {{ include('import/_progress.html.twig') }}
+        </section>
+    {% elseif status == 'completed' %}
+        <section class="card stack">
+            <h2>{{ videos.processing > 0 ? 'Import terminé, vidéos en cours de traitement' : 'Import terminé' }}</h2>
+            <div class="kpis">
+                <div class="kpi"><b class="num">{{ progress.imported|format_number(locale: 'fr') }}</b><small>importés</small></div>
+                <div class="kpi"><b class="num">{{ progress.skipped|format_number(locale: 'fr') }}</b><small>non importés (vos choix)</small></div>
+                <div class="kpi"><b class="num">{{ progress.duplicate|format_number(locale: 'fr') }}</b><small>déjà présents</small></div>
+                <div class="kpi"><b class="num">{{ progress.failed|format_number(locale: 'fr') }}</b><small>en échec</small></div>
+            </div>
+            {{ include('import/_progress.html.twig') }}
+            <div class="navbtns">
+                <span class="row wrap">
+                    <a class="btn" href="{{ path('app_profile_archives', {username: import.account.acct}) }}">{{ ui.icon('album', 'sm') }}Mes archives</a>
+                    <a class="btn" href="{{ path('app_profile', {username: import.account.acct}) }}">Voir mon profil</a>
+                </span>
+                {% if videos.processing == 0 %}
+                    <a class="btn pri" href="{{ path('app_import') }}">Fermer l’import{{ ui.icon('check', 'sm') }}</a>
+                {% else %}
+                    <span class="small">L’import pourra être fermé une fois les vidéos converties.</span>
+                {% endif %}
+            </div>
+        </section>
+        {{ include('import/_report.html.twig') }}
+    {% elseif status == 'ready' %}
+        <section class="card stack">
+            <h2>Contenu détecté</h2>
+            <p class="small">Analyse de l’archive terminée. Rien n’est encore importé.</p>
+            <div class="kpis">
+                <div class="kpi"><b class="num">{{ counts.posts|default(0)|format_number(locale: 'fr') }}</b><small>publications</small></div>
+                <div class="kpi"><b class="num">{{ counts.archived|default(0)|format_number(locale: 'fr') }}</b><small>archivées</small></div>
+                <div class="kpi"><b class="num">{{ counts.stories|default(0)|format_number(locale: 'fr') }}</b><small>stories</small></div>
+                <div class="kpi"><b class="num">{{ counts.media|default(0)|format_number(locale: 'fr') }}</b><small>photos et vidéos</small></div>
+            </div>
+            <details>
+                <summary class="lnk">Correspondance des champs</summary>
+                <table class="map">
+                    {% for field, target in {
+                        'creation_timestamp': 'Date d’origine de la publication',
+                        'title': 'Légende, hashtags et mentions',
+                        'media[].uri': 'Photos et vidéos, dans l’ordre du carrousel',
+                        'exif_data': 'EXIF de l’original : appareil, objectif, exposition',
+                        'posts.json · Latitude / Longitude': 'Position, gardée dans l’EXIF de l’original (jamais publique)',
+                        'archived_posts.json': 'Archives de votre profil',
+                        'stories.json': 'Stories, rangées dans vos archives',
+                        '(élément complet)': 'JSON d’origine conservé'
+                    } %}
+                        <tr><td>{{ field }}</td><td>→</td><td>{{ target }}</td></tr>
+                    {% endfor %}
+                </table>
+            </details>
+            {% for warning in import.warnings %}
+                <div class="note">{{ ui.icon('sparkle', 'sm') }}<span>{{ warning }}</span></div>
+            {% endfor %}
+            <div class="note">{{ ui.icon('comment', 'sm') }}<span>Instagram n’exporte pas les commentaires reçus ni les J’aime : ils ne peuvent pas être importés.</span></div>
+        </section>
+
+        {{ form_start(form, {attr: {class: 'stack'}}) }}
+            {{ form_errors(form) }}
+            <section class="card stack">
+                <h2>{{ form.placement.vars.label }}</h2>
+                <p class="small">{{ form.placement.vars.help }}</p>
+                <fieldset class="field">
+                    <legend class="sr-only">{{ form.placement.vars.label }}</legend>
+                    {% for choice in form.placement %}
+                        <label class="chk">{{ form_widget(choice) }}<span>{{ choice.vars.label }}</span></label>
+                    {% endfor %}
+                </fieldset>
+            </section>
+
+            {% if posts is not empty %}
+                <section class="card stack" id="publications">
+                    <div class="card-h">
+                        <h2 class="grow">Visibilité de chaque publication</h2>
+                        <p>Laissez « Visibilité de l’import » ou choisissez une visibilité propre à la publication. Les publications archivées sur Instagram sont proposées dans vos archives.</p>
+                    </div>
+                    {% for item in posts %}
+                        {% set label = item.takenAt|format_date('long', locale: 'fr') %}
+                        <div class="found import-item">
+                            <span class="thumb">
+                                {% if item.mediaUris|filter(u => u matches '/\\.(jpe?g|png|webp|heic|gif)$/i') is empty %}
+                                    {{ ui.icon('reel') }}
+                                {% else %}
+                                    <img src="{{ path('app_import_preview', {id: import.publicId, item: item.publicId}) }}" alt="" loading="lazy" width="64" height="64">
+                                {% endif %}
+                            </span>
+                            <div class="t">
+                                <b>{{ label }}</b>
+                                {% if item.kind.value == 'archived_post' %}<span class="chip imp">{{ ui.icon('album', 'xs') }}{{ item.kind.label }}</span>{% endif %}
+                                <br><small>{{ item.mediaUris|length }} média{{ item.mediaUris|length > 1 ? 's' }}{{ item.caption ? ' · ' ~ (item.caption|length > 90 ? item.caption|slice(0, 89) ~ '…' : item.caption) }}</small>
+                            </div>
+                            {% if item.status.value == 'pending' %}
+                                <select class="inp sm" name="choix[{{ item.publicId }}]" aria-label="Visibilité de la publication du {{ label }}">
+                                    <option value=""{{ item.choice is null ? ' selected' }}>Visibilité de l’import</option>
+                                    {% for placement in placements %}<option value="{{ placement.value }}"{{ item.choice is same as(placement) ? ' selected' }}>{{ placement.label }}</option>{% endfor %}
+                                </select>
+                            {% else %}
+                                <small>{{ item.message }}</small>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </section>
+            {% endif %}
+
+            <section class="card stack">
+                <h2>Autres options</h2>
+                <label class="chk">{{ form_widget(form.keepOriginalDates) }}<span>{{ form.keepOriginalDates.vars.label }}<br><small>Les publications apparaissent à leur date Instagram sur votre profil.</small></span></label>
+                <label class="chk">{{ form_widget(form.importStories) }}<span>{{ form.importStories.vars.label }}<br><small>Elles ont expiré depuis longtemps : elles restent visibles par vous seul.</small></span></label>
+                <div class="note">{{ ui.icon('shield', 'sm') }}<span>Les copies publiques des photos ne contiennent ni EXIF ni position ; l’original garde tout. Relancer un import ne crée jamais de doublon.</span></div>
+                <div class="navbtns"><span></span><button class="btn pri">Lancer l’import{{ ui.icon('right', 'sm') }}</button></div>
+            </section>
+        {{ form_end(form) }}
+    {% else %}
+        <section class="card stack">
+            <h2>Envoi interrompu</h2>
+            <p class="small">Reprenez l’envoi depuis la page <a class="lnk" href="{{ path('app_import') }}">Import Instagram</a>.</p>
+        </section>
+    {% endif %}
+
+    {% if status in ['uploading', 'ready', 'analyzing'] %}
+        <form method="post" action="{{ path('app_import_cancel', {id: import.publicId}) }}" data-turbo-confirm="Abandonner cet import ? L’archive reçue sera supprimée du serveur.">
+            <input type="hidden" name="_token" value="{{ csrf_token('import-cancel-' ~ import.publicId) }}">
+            <button class="btn sm">Abandonner l’import</button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

@@ -24,6 +24,7 @@
             {% for comment in preview %}{{ include('comment/_comment.html.twig', {compact: true}) }}{% endfor %}
         </div>
         <a class="ago" href="{{ path('app_post_show', {id: post.publicId}) }}"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time>{% if not author.local %} · via @{{ author.acct }}{% endif %}</a>
+        {% if post.isImported() and post.originalCreatedAt %}<div class="meta">{{ ui.icon('download', 'xs') }} Publié à l’origine sur Instagram le {{ post.originalCreatedAt|format_date('long', locale: 'fr') }}</div>{% endif %}
     </div>
     {% if app.user %}{{ include('comment/_form.html.twig') }}{% endif %}
 </article>

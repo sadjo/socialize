@@ -60,6 +60,13 @@ class Post
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $archivedAt = null;
 
+    /**
+     * Annoncer la publication au fédivers quand elle est prête. Faux pour un import discret :
+     * elle reste consultable par ActivityPub, mais n'est pas envoyée aux abonnés.
+     */
+    #[ORM\Column(options: ['default' => true])]
+    private bool $announce = true;
+
     #[ORM\Column]
     private int $likesCount = 0;
 
@@ -111,6 +118,37 @@ class Post
         $post->source = PostSource::Federated;
 
         return $post;
+    }
+
+    /**
+     * Publication importée (archive Instagram) : date d'origine conservée, publiée à cette date
+     * ou maintenant, et annoncée au fédivers seulement si demandé.
+     */
+    public static function imported(
+        Account $author,
+        string $caption,
+        Visibility $visibility,
+        \DateTimeImmutable $originalCreatedAt,
+        \DateTimeImmutable $publishedAt,
+        bool $announce,
+    ): self {
+        $post = new self($author, mb_substr(trim($caption), 0, self::MAX_CAPTION_LENGTH), $visibility);
+        $post->source = PostSource::InstagramImport;
+        $post->originalCreatedAt = $originalCreatedAt;
+        $post->publishedAt = $publishedAt;
+        $post->announce = $announce;
+
+        return $post;
+    }
+
+    public function isImported(): bool
+    {
+        return PostSource::InstagramImport === $this->source;
+    }
+
+    public function shouldAnnounce(): bool
+    {
+        return $this->announce;
     }
 
     public function updateFederated(string $caption, ?string $contentWarning): void
