@@ -4,10 +4,10 @@ Réseau photo et vidéo auto-hébergé, compatible avec le fédivers (Mastodon, 
 Socialize permet d'importer une archive Instagram sans perte, de choisir ses médias dans [Immich](https://immich.app)
 et de publier aussi sur Instagram et Facebook selon des règles réglables.
 
-> **État : jalon 5.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
-> stories, archives, fédération ActivityPub (Mastodon, Pixelfed) et import d'une archive Instagram :
-> publications, carrousels, vidéos, publications archivées et stories, avec leurs dates et leurs métadonnées.
-> Jalons suivants : Immich, API/MCP, crosspost.
+> **État : jalon 6.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
+> stories, archives, fédération ActivityPub (Mastodon, Pixelfed), import d'une archive Instagram et publication
+> depuis Immich : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
+> Jalons suivants : personnes reconnues par Immich (mentions), API/MCP, crosspost.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
 - Stack : PHP 8.5, Symfony 8.1, FrankenPHP (mode worker), Doctrine ORM, Symfony Messenger, Twig + Symfony UX.

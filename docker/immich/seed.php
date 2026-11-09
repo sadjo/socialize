@@ -42,7 +42,7 @@ function call(HttpClientInterface $http, string $method, string $url, array $opt
         if ($allowFailure) {
             return ['_status' => $status];
         }
-        fwrite(\STDERR, \sprintf("Échec %s %s (%d) : %s\n", $method, $url, $status, $response->getContent(false)));
+        fwrite(\STDERR, sprintf("Échec %s %s (%d) : %s\n", $method, $url, $status, $response->getContent(false)));
         exit(1);
     }
     $body = $response->getContent(false);
@@ -54,7 +54,7 @@ function call(HttpClientInterface $http, string $method, string $url, array $opt
 call($http, 'POST', "$base/auth/admin-sign-up", ['json' => ['email' => ADMIN_EMAIL, 'password' => ADMIN_PASSWORD, 'name' => 'Camille Test']], allowFailure: true);
 $login = call($http, 'POST', "$base/auth/login", ['json' => ['email' => ADMIN_EMAIL, 'password' => ADMIN_PASSWORD]]);
 $auth = ['headers' => ['Authorization' => 'Bearer '.$login['accessToken']]];
-echo "Connecté à Immich en tant que ".ADMIN_EMAIL."\n";
+echo 'Connecté à Immich en tant que '.ADMIN_EMAIL."\n";
 
 // Pas de conteneur machine learning dans l'Immich de test : on évite les tâches qui l'appellent.
 $config = call($http, 'GET', "$base/system-config", $auth);
@@ -110,11 +110,11 @@ $xmp = static function (string $date, float $lat, float $lng, ?string $make, ?st
         $abs = abs($value);
         $deg = (int) floor($abs);
 
-        return \sprintf('%d,%.4f%s', $deg, ($abs - $deg) * 60, $value >= 0 ? $pos : $neg);
+        return sprintf('%d,%.4f%s', $deg, ($abs - $deg) * 60, $value >= 0 ? $pos : $neg);
     };
     $iso = new DateTimeImmutable($date, new DateTimeZone('Europe/Paris'))->format('Y-m-d\TH:i:sP');
     [$brand, $model] = null !== $make ? (explode(' ', $make, 2) + [1 => $make]) : [null, null];
-    $camera = null !== $make ? \sprintf('<tiff:Make>%s</tiff:Make><tiff:Model>%s</tiff:Model><aux:Lens>%s</aux:Lens>', htmlspecialchars($brand), htmlspecialchars($model), htmlspecialchars((string) $lens)) : '';
+    $camera = null !== $make ? sprintf('<tiff:Make>%s</tiff:Make><tiff:Model>%s</tiff:Model><aux:Lens>%s</aux:Lens>', htmlspecialchars($brand), htmlspecialchars($model), htmlspecialchars((string) $lens)) : '';
 
     return <<<XMP
         <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -130,7 +130,7 @@ $xmp = static function (string $date, float $lat, float $lng, ?string $make, ?st
 };
 
 $upload = static function (string $path, string $filename, string $date, string $sidecar) use ($http, $base, $auth, &$created, &$duplicates): string {
-    $at = new DateTimeImmutable($date, new DateTimeZone('Europe/Paris'))->format(DATE_ATOM);
+    $at = new DateTimeImmutable($date, new DateTimeZone('Europe/Paris'))->format(\DATE_ATOM);
     $form = new FormDataPart([
         'assetData' => DataPart::fromPath($path, $filename),
         'sidecarData' => new DataPart($sidecar, pathinfo($filename, \PATHINFO_FILENAME).'.xmp', 'application/rdf+xml'),
@@ -151,12 +151,12 @@ foreach ($photos as $i => [$date, $place, $lat, $lng, $make, $lens, $description
     $x = $xyz->extract_band(0)->linear([255 / 1600], [0]);
     $y = $xyz->extract_band(1)->linear([255 / 1200], [0]);
     $rgb = $x->linear([0.6], [intdiv($hue, 2) % 120])->bandjoin([$y->linear([0.5], [60]), $x->add($y)->linear([0.3], [(360 - $hue) % 160])])->cast('uchar')->copy(['interpretation' => 'srgb']);
-    $text = Image::text(\sprintf("%s\n%s", $place, $description), ['dpi' => 220, 'width' => 1400, 'align' => 'centre']);
+    $text = Image::text(sprintf("%s\n%s", $place, $description), ['dpi' => 220, 'width' => 1400, 'align' => 'centre']);
     $label = $text->newFromImage([255, 255, 255])->bandjoin($text)->copy(['interpretation' => 'srgb']);
     $photo = $rgb->composite2($label, 'over', ['x' => 100, 'y' => 1200 - $text->height - 90]);
-    $file = \sprintf('%s/photo-%02d.jpg', $dir, $i + 1);
+    $file = sprintf('%s/photo-%02d.jpg', $dir, $i + 1);
     $photo->writeToFile($file, ['Q' => 88]);
-    $id = $upload($file, \sprintf('IMG_%04d.jpg', 4200 + $i), $date, $xmp($date, $lat, $lng, $make, $lens, $description));
+    $id = $upload($file, sprintf('IMG_%04d.jpg', 4200 + $i), $date, $xmp($date, $lat, $lng, $make, $lens, $description));
     if (null !== $album) {
         $albums[$album][] = $id;
     }
@@ -164,15 +164,15 @@ foreach ($photos as $i => [$date, $place, $lat, $lng, $make, $lens, $description
 
 // Vidéos : quelques secondes d'image de test, avec du son.
 foreach ($videos as $i => [$date, $place, $lat, $lng, $description, $album, $source]) {
-    $file = \sprintf('%s/video-%d.mp4', $dir, $i + 1);
+    $file = sprintf('%s/video-%d.mp4', $dir, $i + 1);
     if (!is_file($file)) {
-        exec(\sprintf('ffmpeg -v error -y -f lavfi -i %s=size=1280x720:rate=25 -f lavfi -i sine=frequency=%d -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest %s', escapeshellarg($source), 330 + 110 * $i, escapeshellarg($file)), $output, $code);
+        exec(sprintf('ffmpeg -v error -y -f lavfi -i %s=size=1280x720:rate=25 -f lavfi -i sine=frequency=%d -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest %s', escapeshellarg($source), 330 + 110 * $i, escapeshellarg($file)), $output, $code);
         if (0 !== $code) {
             fwrite(\STDERR, "ffmpeg a échoué pour la vidéo $file\n");
             exit(1);
         }
     }
-    $albums[$album][] = $upload($file, \sprintf('VID_%04d.mp4', 7300 + $i), $date, $xmp($date, $lat, $lng, null, null, $description));
+    $albums[$album][] = $upload($file, sprintf('VID_%04d.mp4', 7300 + $i), $date, $xmp($date, $lat, $lng, null, null, $description));
 }
 
 // 4. Albums (repris s'ils existent déjà).
@@ -183,8 +183,8 @@ foreach ($albums as $name => $ids) {
 }
 
 $url = preg_replace('#/api$#', '', $base);
-echo \sprintf("Médias : %d envoyés, %d déjà présents. Albums : %s.\n", $created, $duplicates, implode(', ', array_keys($albums)));
-echo "\nImmich de test prêt : http://localhost:2283 (".ADMIN_EMAIL." / ".ADMIN_PASSWORD.")\n";
+echo sprintf("Médias : %d envoyés, %d déjà présents. Albums : %s.\n", $created, $duplicates, implode(', ', array_keys($albums)));
+echo "\nImmich de test prêt : http://localhost:2283 (".ADMIN_EMAIL.' / '.ADMIN_PASSWORD.")\n";
 echo "Pour Socialize (Réglages › Immich) :\n";
 echo "  Adresse du serveur : $url\n";
 echo "  Clé API            : {$apiKey['secret']}\n";

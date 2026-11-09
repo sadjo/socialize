@@ -11,6 +11,7 @@ use App\Media\Application\MediaRules;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -31,14 +32,21 @@ final class ComposeStoryType extends AbstractType
         }
 
         $builder
+            // Ordre des médias : « n-<i> » pour le i-ème fichier de l'appareil, « i-<id> » pour un média Immich.
+            ->add('order', HiddenType::class, [
+                'required' => false,
+                'attr' => ['data-compose-target' => 'order'],
+                'constraints' => [new Assert\Length(max: 2000)],
+            ])
             ->add('media', FileType::class, [
                 'label' => 'Photos et vidéos',
                 'multiple' => true,
+                'required' => false,
                 // Champ masqué : on clique sur la zone de dépôt, qui est son label.
                 'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input', 'class' => 'sr-only'],
                 'help' => \sprintf('Chaque fichier devient une story, dans l’ordre choisi (%d au plus).', Story::MAX_PER_UPLOAD),
                 'constraints' => [
-                    new Assert\Count(min: 1, max: Story::MAX_PER_UPLOAD, minMessage: 'Ajoutez au moins une photo ou une vidéo.', maxMessage: 'Vous pouvez publier {{ limit }} stories à la fois au plus.'),
+                    new Assert\Count(max: Story::MAX_PER_UPLOAD, maxMessage: 'Vous pouvez publier {{ limit }} stories à la fois au plus.'),
                     new Assert\All([new Assert\File(maxSize: MediaRules::MAX_VIDEO_SIZE, mimeTypes: MediaRules::acceptedMimeTypes(), mimeTypesMessage: 'Ce format n’est pas accepté.')]),
                 ],
             ])

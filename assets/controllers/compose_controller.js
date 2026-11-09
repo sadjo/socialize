@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 /*
- * Sélection des médias d'une publication ou d'une story.
+ * Sélection des médias d'une publication ou d'une story, depuis l'appareil ou la photothèque Immich.
  * - Chaque nouvelle sélection s'ajoute aux médias déjà choisis.
  * - Les médias se retirent (✕) et se réordonnent (glisser-déposer, ou ◀ ▶ au clavier et sur mobile).
  * - En modification, les médias existants sont dans la liste ; l'ordre final part dans un champ caché
@@ -9,7 +9,7 @@ import { Controller } from '@hotwired/stimulus';
  * Le champ fichier est reconstruit à chaque changement, dans l'ordre choisi.
  */
 export default class extends Controller {
-    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty'];
+    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'immichSource', 'library'];
     static values = {
         max: { type: Number, default: 20 },
         altName: { type: String, default: '' },
@@ -40,8 +40,54 @@ export default class extends Controller {
             this.submitTarget.textContent = 'Envoi en cours…';
         });
 
+        // Nouvelles vignettes Immich (page suivante, autre album) : leur état coché suit la sélection.
+        this.element.addEventListener('turbo:frame-load', () => this.markTiles());
+
         this.count();
         this.render();
+    }
+
+    /* Onglets « Appareil » et « Immich ». */
+    source({ params: { source } }) {
+        this.sourceTabTargets.forEach((tab) => {
+            const on = tab.dataset.composeSourceParam === source;
+            tab.classList.toggle('on', on);
+            tab.setAttribute('aria-selected', String(on));
+        });
+        if (this.hasDeviceSourceTarget) this.deviceSourceTarget.hidden = source !== 'device';
+        if (this.hasImmichSourceTarget) this.immichSourceTarget.hidden = source !== 'immich';
+    }
+
+    album(event) {
+        if (this.hasLibraryTarget) this.libraryTarget.src = event.currentTarget.value;
+    }
+
+    /* Une vignette Immich ajoute le média à la sélection, ou l'en retire si elle y est déjà. */
+    toggleImmich({ params: { id, src, video, description, place } }) {
+        const token = `i-${id}`;
+        const index = this.items.findIndex((item) => item.token === token);
+        if (index >= 0) {
+            this.items.splice(index, 1);
+        } else if (this.items.length >= this.maxValue) {
+            this.warn(`Vous pouvez ajouter ${this.maxValue} médias au plus.`);
+            return;
+        } else {
+            this.items.push({ kind: 'immich', token, src, video: Boolean(video), alt: '' });
+            // Légende et lieu préremplis depuis Immich, seulement s'ils sont encore vides.
+            if (description && this.hasCaptionTarget && this.captionTarget.value.trim() === '') {
+                this.captionTarget.value = description;
+                this.count();
+            }
+            if (place && this.hasLocationTarget && this.locationTarget.value.trim() === '') this.locationTarget.value = place;
+        }
+        this.render();
+    }
+
+    markTiles() {
+        const selected = new Set(this.items.map((item) => item.token));
+        this.element.querySelectorAll('[data-compose-id-param]').forEach((tile) => {
+            tile.setAttribute('aria-pressed', String(selected.has(`i-${tile.dataset.composeIdParam}`)));
+        });
     }
 
     disconnect() {
@@ -130,6 +176,7 @@ export default class extends Controller {
         const count = this.items.length;
         this.previewsTarget.replaceChildren(...this.items.map((item, index) => this.preview(item, index, count)));
         if (this.hasEmptyTarget) this.emptyTarget.hidden = count > 0;
+        this.markTiles();
     }
 
     preview(item, index, count) {
@@ -141,8 +188,8 @@ export default class extends Controller {
 
         const frame = document.createElement('div');
         frame.className = 'th';
-        // Média déjà publié : sa vignette (une image, même pour une vidéo) ; nouveau fichier : aperçu local.
-        const asVideo = item.video && item.kind !== 'existing';
+        // Média déjà publié ou Immich : sa vignette (une image, même pour une vidéo) ; nouveau fichier : aperçu local.
+        const asVideo = item.video && item.kind === 'new';
         const media = document.createElement(asVideo ? 'video' : 'img');
         if (item.src) media.src = item.src; // vidéo encore en préparation : pas encore de vignette
         if (asVideo) { media.muted = true; media.playsInline = true; media.preload = 'metadata'; } else { media.alt = ''; }
@@ -151,6 +198,12 @@ export default class extends Controller {
         badge.className = 'order-badge num';
         badge.textContent = String(index + 1);
         frame.append(media, badge);
+        if (item.kind === 'immich') {
+            const source = document.createElement('span');
+            source.className = 'src-badge';
+            source.textContent = item.video ? 'Immich · vidéo' : 'Immich';
+            frame.appendChild(source);
+        }
         node.appendChild(frame);
 
         if (this.altNameValue) {

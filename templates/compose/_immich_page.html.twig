@@ -1,0 +1,29 @@
+{# Une page de la photothèque Immich (source Immich de la création). Variables : days, page, next, album, error.
+   La première page remplace le cadre « immich-library » ; les suivantes se chargent au défilement. #}
+{% import '_macros.html.twig' as ui %}
+<turbo-frame id="{{ page == 1 ? 'immich-library' : 'immich-page-' ~ page }}">
+    {% if error %}<p class="field-errors">{{ error }}</p>{% endif %}
+    {% for day, assets in days %}
+        {% set place = assets|map(a => a.place)|filter(p => p)|first %}
+        <h3 class="imm-day">{{ day|format_date('full', locale: 'fr')|capitalize }}{{ place ? ' · ' ~ place }}</h3>
+        <div class="imm-grid">
+            {% for asset in assets %}
+                {% set thumb = path('app_immich_thumbnail', {asset: asset.id}) %}
+                <button type="button" class="imm-tile" aria-pressed="false"
+                        aria-label="{{ asset.video ? 'Vidéo' : 'Photo' }} du {{ asset.takenAt|format_datetime('long', 'short', locale: 'fr') }}{{ asset.description ? ' : ' ~ asset.description }}"
+                        data-action="compose#toggleImmich"
+                        data-compose-id-param="{{ asset.id }}" data-compose-src-param="{{ thumb }}" data-compose-video-param="{{ asset.video ? 'true' : 'false' }}"
+                        data-compose-description-param="{{ asset.description }}" data-compose-place-param="{{ asset.place }}">
+                    <img src="{{ thumb }}" alt="" loading="lazy" decoding="async">
+                    {% if asset.video %}<span class="gi">{{ ui.icon('reel', 'xs') }}{{ asset.durationLabel }}</span>{% endif %}
+                    <span class="sel" aria-hidden="true">{{ ui.icon('check', 'xs') }}</span>
+                </button>
+            {% endfor %}
+        </div>
+    {% else %}
+        {% if page == 1 and not error %}<p class="small">Aucune photo ni vidéo {{ album ? 'dans cet album' : 'dans votre photothèque Immich' }}.</p>{% endif %}
+    {% endfor %}
+    {% if next %}
+        <turbo-frame id="immich-page-{{ next }}" src="{{ path('app_immich_library', {page: next, album: album}) }}" loading="lazy"></turbo-frame>
+    {% endif %}
+</turbo-frame>

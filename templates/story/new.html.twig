@@ -10,13 +10,9 @@
         {{ form_errors(form) }}
         <div class="compose-grid">
             <section class="card picker">
-                <label class="drop" for="{{ form.media.vars.id }}" data-compose-target="drop">
-                    {{ ui.icon('image', 'big') }}
-                    <b>Choisissez des photos ou des vidéos</b>
-                    <span class="small">{{ form.media.vars.help }} Format vertical conseillé (9:16).</span>
-                    <span class="btn pri">Choisir sur l’appareil</span>
-                </label>
+                {{ include('compose/_sources.html.twig', {drop_label: 'Choisissez des photos ou des vidéos', drop_hint: form.media.vars.help ~ ' Format vertical conseillé (9:16).'}) }}
                 {{ form_widget(form.media) }}
+                {{ form_widget(form.order) }}
                 {{ form_errors(form.media) }}
                 <p class="small">Les stories sont lues dans l’ordre des aperçus : faites-les glisser, ou utilisez ◀ ▶.</p>
                 <div class="previews" data-compose-target="previews" aria-live="polite"></div>

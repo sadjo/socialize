@@ -1,0 +1,31 @@
+{# Sources des médias : l'appareil (zone de dépôt) et, si le compte est connecté, la photothèque Immich.
+   Variables : form (champ media), immich (connexion ou null), immich_albums, drop_label, drop_hint #}
+{% import '_macros.html.twig' as ui %}
+{% if immich %}
+    <div class="src-tabs" role="tablist" aria-label="Source des médias">
+        <button type="button" role="tab" class="on" aria-selected="true" data-compose-target="sourceTab" data-action="compose#source" data-compose-source-param="device">{{ ui.icon('upload', 'xs') }}Appareil</button>
+        <button type="button" role="tab" aria-selected="false" data-compose-target="sourceTab" data-action="compose#source" data-compose-source-param="immich">{{ ui.icon('album', 'xs') }}Immich</button>
+    </div>
+{% endif %}
+<div data-compose-target="deviceSource">
+    <label class="drop" for="{{ form.media.vars.id }}" data-compose-target="drop">
+        {{ ui.icon('image', 'big') }}
+        <b>{{ drop_label }}</b>
+        <span class="small">{{ drop_hint }}</span>
+        <span class="btn pri">Choisir sur l’appareil</span>
+    </label>
+</div>
+{% if immich %}
+    <div class="imm-source" data-compose-target="immichSource" hidden>
+        <div class="row wrap">
+            <label for="immich-album" class="small grow">Photothèque Immich · touchez une photo pour l’ajouter ou la retirer</label>
+            <select id="immich-album" class="inp sm" data-action="change->compose#album">
+                <option value="{{ path('app_immich_library') }}">Toutes les photos et vidéos</option>
+                {% for album in immich_albums %}<option value="{{ path('app_immich_library', {album: album.id}) }}">{{ album.name }} ({{ album.count }})</option>{% endfor %}
+            </select>
+        </div>
+        <div class="imm-scroll">
+            <turbo-frame id="immich-library" src="{{ path('app_immich_library') }}" loading="lazy" data-compose-target="library"><p class="small">Chargement de la photothèque…</p></turbo-frame>
+        </div>
+    </div>
+{% endif %}

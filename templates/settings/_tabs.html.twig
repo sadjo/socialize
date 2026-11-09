@@ -1,0 +1,6 @@
+{# Onglets des réglages. Variable : current ('profile' ou 'immich') #}
+{% import '_macros.html.twig' as ui %}
+<nav class="ptabs" aria-label="Réglages">
+    <a href="{{ path('app_settings') }}" class="{{ current == 'profile' ? 'on' }}"{{ current == 'profile' ? ' aria-current="page"' }}>{{ ui.icon('user', 'xs') }}Profil</a>
+    <a href="{{ path('app_settings_immich') }}" class="{{ current == 'immich' ? 'on' }}"{{ current == 'immich' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Immich</a>
+</nav>
