@@ -100,7 +100,8 @@ final readonly class MediaIngestor
             $derivatives[MediaAttachment::DERIVATIVE_THUMB] = $this->derivativePath($media, 'thumb', 'webp');
             $this->derivativesStorage->write($derivatives[MediaAttachment::DERIVATIVE_THUMB], $poster->files[MediaAttachment::DERIVATIVE_THUMB]);
 
-            $media->markReady($info['width'], $info['height'], $derivatives, [], $poster->blurhash, $info['duration']);
+            // L'EXIF déjà connu (archive importée) est gardé : une vidéo transcodée n'en a pas.
+            $media->markReady($info['width'], $info['height'], $derivatives, $media->getExif(), $poster->blurhash, $info['duration']);
         } finally {
             $this->filesystem->remove($dir);
         }

@@ -19,6 +19,8 @@ framework:
             App\Federation\Application\DeliverActivity: async
             App\Federation\Application\ProcessInboxActivity: async
             App\Federation\Application\BackfillAccount: async
+            App\Import\Instagram\Application\AnalyzeInstagramArchive: async
+            App\Import\Instagram\Application\ImportInstagramBatch: async
 
 when@test:
     framework:
@@ -31,3 +33,5 @@ when@test:
                 App\Federation\Application\DeliverActivity: sync
                 App\Federation\Application\ProcessInboxActivity: sync
                 App\Federation\Application\BackfillAccount: sync
+                App\Import\Instagram\Application\AnalyzeInstagramArchive: sync
+                App\Import\Instagram\Application\ImportInstagramBatch: sync

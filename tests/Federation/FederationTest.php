@@ -184,6 +184,33 @@ final class FederationTest extends AppWebTestCase
         self::assertSame($noteId.'/v2', self::dig($create, 0, 'object', 'id'), 'La publication revient sous un nouvel identifiant.');
     }
 
+    public function testImportedPostsAreAnnouncedOnlyWhenAsked(): void
+    {
+        $archive = \App\Tests\Import\InstagramArchive::build(fn (): \Symfony\Component\HttpFoundation\File\UploadedFile => $this->jpeg(200, 250));
+        try {
+            // Import discret (par défaut) pour camille, import annoncé pour hugo : Alice suit les deux.
+            foreach ([['camille', \App\Import\Instagram\Domain\Placement::PublicQuiet, 0], ['hugo', \App\Import\Instagram\Domain\Placement::Public, 3]] as [$username, $placement, $announced]) {
+                $account = $this->register($username)->getAccount();
+                $this->inbox('/users/'.$username.'/inbox', ['id' => FakeFediverse::ALICE.'#follows/'.$username, 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/'.$username]);
+
+                $container = self::getContainer();
+                $import = $container->get(\App\Import\Instagram\Application\ArchiveUploads::class)->fromFiles($this->reloadAccount($account), [$archive]);
+                $reader = new \App\Import\Instagram\Infrastructure\ArchiveReader([$archive]);
+                $container->get(\App\Import\Instagram\Application\ArchiveAnalyzer::class)->analyze($import, $reader);
+                $reader->close();
+                $container->get(\App\Import\Instagram\Application\ArchiveImporter::class)->launch($import, $placement, true, true);
+
+                $creates = $this->fediverse()->delivered('Create');
+                self::assertCount($announced, $creates, $placement->label());
+                if ($announced > 0) {
+                    self::assertSame('2019-06-14T12:00:00+00:00', self::dig($creates, $announced - 1, 'object', 'published'), 'Le fédivers reçoit la date d’origine.');
+                }
+            }
+        } finally {
+            @unlink($archive);
+        }
+    }
+
     public function testUnsignedOrForgedActivitiesAreRejected(): void
     {
         $this->register('camille');

@@ -1,0 +1,6 @@
+{# Barre des étapes. Variable : step (1 à 4) #}
+<div class="steps" aria-label="Étapes de l’import">
+    {% for label in ['Archive', 'Analyse', 'Choix', 'Import'] %}
+        <span class="step{{ loop.index == step ? ' on' : (loop.index < step ? ' done') }}"{{ loop.index == step ? ' aria-current="step"' }}>Étape {{ loop.index }} · {{ label }}</span>
+    {% endfor %}
+</div>

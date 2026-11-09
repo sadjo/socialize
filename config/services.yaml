@@ -3,6 +3,9 @@
 parameters:
     app.name: 'Socialize'
     app.storage_dir: '%env(resolve:STORAGE_DIR)%'
+    # Archives Instagram reçues (supprimées à la fin de l'import) et taille maximale d'une archive (20 Go).
+    app.import_dir: '%app.storage_dir%/imports'
+    app.import_max_size: 21474836480
     # Domaine des adresses du fédivers (@nom@domaine), déduit de DEFAULT_URI.
     app.local_domain: '%env(key:host:url:DEFAULT_URI)%'
 
@@ -18,12 +21,17 @@ services:
         exclude:
             - '../src/Kernel.php'
             - '../src/*/Domain/'
+            - '../src/*/*/Domain/'
+            # Ouvert pour un import précis, pas un service.
+            - '../src/Import/Instagram/Infrastructure/ArchiveReader.php'
 
     # Client HTTP des échanges avec les autres instances (remplacé dans les tests).
     federation.http_client:
         alias: http_client
 
 when@test:
+    parameters:
+        app.import_dir: '%kernel.project_dir%/var/test-storage/imports'
     services:
         # Fausse instance du fédivers pour les tests (voir tests/Federation), limitée au client de la fédération.
         App\Tests\Federation\FakeFediverse:

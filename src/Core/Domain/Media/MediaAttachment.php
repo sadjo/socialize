@@ -249,6 +249,18 @@ class MediaAttachment
         return $this->createdAt;
     }
 
+    /**
+     * Complète l'EXIF de l'original (par exemple avec celui d'une archive Instagram, qui vide les fichiers).
+     * Les valeurs déjà lues dans le fichier sont gardées.
+     *
+     * @param array<string, string> $exif
+     */
+    public function addExif(array $exif): void
+    {
+        $this->exif += $exif;
+        ksort($this->exif);
+    }
+
     public function getFailureReason(): ?string
     {
         return $this->failureReason;

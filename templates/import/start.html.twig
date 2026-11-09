@@ -1,0 +1,44 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Import Instagram · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Import Instagram</h1><p>Récupérez votre historique : publications, carrousels, vidéos, publications archivées et stories, avec leurs dates et leurs métadonnées.</p></div></div>
+    {{ include('import/_steps.html.twig', {step: 1}) }}
+
+    <section class="card stack">
+        <h2>Déposez votre archive Instagram</h2>
+        <p class="small">Dans Instagram : <b>Paramètres › Espace comptes › Vos informations et autorisations › Exporter vos informations</b>. Choisissez le format <b>JSON</b> et la qualité <b>élevée</b> pour récupérer les fichiers d’origine.</p>
+        {% if resume %}
+            <div class="note">{{ ui.icon('upload', 'sm') }}<span>Envoi interrompu de <b>{{ resume.parts|map(p => p.name)|join(', ') }}</b> : {{ (resume.received / 1048576)|round|format_number(locale: 'fr') }} Mo reçus sur {{ (resume.size / 1048576)|round|format_number(locale: 'fr') }} Mo. Choisissez à nouveau {{ resume.parts|length > 1 ? 'les mêmes fichiers' : 'le même fichier' }} pour reprendre là où il s’est arrêté.</span></div>
+        {% endif %}
+        {{ include('import/_dropzone.html.twig') }}
+        {% if resume %}
+            <form method="post" action="{{ path('app_import_cancel', {id: resume.publicId}) }}" data-turbo-confirm="Abandonner cet envoi ? Les morceaux déjà reçus seront supprimés.">
+                <input type="hidden" name="_token" value="{{ csrf_token('import-cancel-' ~ resume.publicId) }}">
+                <button class="btn sm">Abandonner cet envoi</button>
+            </form>
+        {% endif %}
+        <div class="note">{{ ui.icon('shield', 'sm') }}<span>L’archive est traitée sur votre serveur et n’est jamais envoyée ailleurs. Seuls les publications et les stories sont lus : vos messages privés et le reste de l’archive sont ignorés. L’archive est supprimée à la fin de l’import ; le JSON d’origine de chaque élément est conservé.</span></div>
+    </section>
+
+    {% if finished is not empty %}
+        <section class="card stack">
+            <h2>Historique des imports</h2>
+            {% for past in finished %}
+                {% set c = past.counts %}
+                <a class="zip" href="{{ path('app_import_show', {id: past.publicId}) }}">
+                    <span class="ico">{{ ui.icon(past.status.value == 'completed' ? 'check' : 'flag') }}</span>
+                    <span class="grow">
+                        <b>{{ past.status.value == 'completed' ? 'Import' : 'Import en échec' }} du {{ (past.finishedAt ?? past.createdAt)|format_datetime('long', 'short', locale: 'fr') }}</b><br>
+                        <small>{{ past.parts|map(p => p.name)|join(', ') }}{% if c.imported is defined %} · {{ c.imported|format_number(locale: 'fr') }} importé{{ c.imported > 1 ? 's' }}{% if c.skipped %}, {{ c.skipped }} non importé{{ c.skipped > 1 ? 's' }}{% endif %}{% if c.duplicate %}, {{ c.duplicate }} déjà présent{{ c.duplicate > 1 ? 's' }}{% endif %}{% if c.failed %}, {{ c.failed }} en échec{% endif %}{% endif %}</small>
+                    </span>
+                    <span class="btn sm">Détails</span>
+                </a>
+            {% endfor %}
+        </section>
+    {% endif %}
+</div>
+{% endblock %}

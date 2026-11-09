@@ -1,0 +1,14 @@
+{# Zone de dépôt de l'archive, envoyée par morceaux (contrôleur chunked-upload). #}
+{% import '_macros.html.twig' as ui %}
+<div data-controller="chunked-upload" data-chunked-upload-begin-url-value="{{ path('app_import_begin') }}" data-chunked-upload-token-value="{{ csrf_token('import-upload') }}">
+    <label class="drop" for="import-file" data-chunked-upload-target="zone" data-action="dragover->chunked-upload#dragover dragleave->chunked-upload#dragleave drop->chunked-upload#drop">
+        {{ ui.icon('zip', 'big') }}
+        <b>Glissez le fichier .zip ici ou cliquez pour parcourir</b>
+        <small>Jusqu’à 20 Go · une archive en plusieurs parties : choisissez tous ses fichiers .zip ensemble</small>
+        <input type="file" id="import-file" class="sr-only" accept=".zip,application/zip" multiple data-chunked-upload-target="input" data-action="change->chunked-upload#choose">
+    </label>
+    <div class="stack" data-chunked-upload-target="progress" hidden>
+        <div class="prog" role="progressbar" aria-label="Envoi de l’archive" aria-valuemin="0" aria-valuemax="100" data-chunked-upload-target="bar"><span style="width:0%"></span></div>
+        <p class="small" data-chunked-upload-target="status" aria-live="polite"></p>
+    </div>
+</div>

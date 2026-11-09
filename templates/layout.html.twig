@@ -25,6 +25,7 @@
             <a class="nav{{ current_route == 'app_compose' ? ' on' }}" href="{{ path('app_compose') }}">{{ ui.icon('plus') }}<span class="lbl">Créer</span></a>
             <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.username}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>
             <div class="sep"></div>
+            <a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>
             <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
         {% else %}
             <div class="sep"></div>

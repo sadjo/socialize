@@ -1,0 +1,40 @@
+{# Progression de l'analyse, de l'import et du traitement des vidéos, rechargée par le contrôleur poll.
+   Tout est recalculé depuis la base : recharger la page donne l'état exact. Variables : import, progress, videos #}
+{% set status = import.status.value %}
+{% set total = progress|reduce((sum, n) => sum + n, 0) %}
+{% set done = total - progress.pending %}
+{% set percent = total == 0 ? 0 : (done * 100 / total)|round(0, 'floor') %}
+{% set videos = videos|default({total: 0, processing: 0}) %}
+{% set videos_done = videos.total - videos.processing %}
+{% set videos_percent = videos.total == 0 ? 0 : (videos_done * 100 / videos.total)|round(0, 'floor') %}
+{% set running = status in ['analyzing', 'importing'] or (status == 'completed' and videos.processing > 0) %}
+{# Le cadre n'est rechargé que pendant le travail ; à la fin, le contrôleur recharge la page.
+   La réponse du rechargement (in_frame) ne porte pas de src : Turbo refuse un cadre qui se désigne
+   lui-même et le viderait. L'élément de la page garde son src et son contrôleur. #}
+<turbo-frame id="import-progress"{% if running and not in_frame|default(false) %} src="{{ path('app_import_progress', {id: import.publicId}) }}" data-controller="poll"{% endif %}>
+    {% if running %}
+        <div class="stack">
+            {% if status == 'analyzing' %}
+                <p><b>Analyse de l’archive…</b> Rien n’est encore importé.</p>
+                <div class="prog" role="progressbar" aria-label="Analyse de l’archive"><span class="skel" style="width:100%"></span></div>
+            {% else %}
+                <div class="row"><b>Publications et stories</b><span class="grow"></span><b class="num">{{ percent }} %</b></div>
+                <div class="prog" role="progressbar" aria-label="Import des publications et des stories" aria-valuenow="{{ percent }}" aria-valuemin="0" aria-valuemax="100"><span style="width:{{ percent }}%"></span></div>
+                <p class="small num">{{ done|format_number(locale: 'fr') }} élément{{ done > 1 ? 's' }} importé{{ done > 1 ? 's' }} sur {{ total|format_number(locale: 'fr') }}{{ status == 'completed' ? ' · terminé' }}</p>
+                {% if videos.total > 0 %}
+                    <div class="row"><b>Vidéos</b><span class="grow"></span><b class="num">{{ videos_percent }} %</b></div>
+                    <div class="prog" role="progressbar" aria-label="Traitement des vidéos" aria-valuenow="{{ videos_percent }}" aria-valuemin="0" aria-valuemax="100"><span style="width:{{ videos_percent }}%"></span></div>
+                    <p class="small num">{{ videos_done|format_number(locale: 'fr') }} vidéo{{ videos_done > 1 ? 's' }} prête{{ videos_done > 1 ? 's' }} sur {{ videos.total|format_number(locale: 'fr') }} (conversion pour la lecture sur le web)</p>
+                {% endif %}
+            {% endif %}
+            <p class="small">Vous pouvez quitter cette page ou la recharger : l’import continue en arrière-plan et sa progression est conservée.</p>
+        </div>
+    {% else %}
+        <div data-poll-done></div>
+    {% endif %}
+    {% if import.log is not empty %}
+        <div class="log" aria-live="polite" data-controller="scroll-end">
+            {% for line in import.log|slice(-30) %}<div class="{{ line starts with '✓' ? 'ok' : (line starts with '!' ? 'w') }}">{{ line }}</div>{% endfor %}
+        </div>
+    {% endif %}
+</turbo-frame>
