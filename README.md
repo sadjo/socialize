@@ -108,6 +108,22 @@ make help        # toutes les commandes
 Le code est monté dans le conteneur et FrankenPHP recharge les fichiers modifiés. Xdebug est installé mais désactivé :
 `XDEBUG_MODE=debug make up` pour l'activer.
 
+### Immich de test
+
+Pour développer l'intégration Immich, une instance de test tourne à côté de l'application (projet Compose séparé,
+sans reconnaissance des personnes) :
+
+```bash
+make immich-up     # Immich v3.4.1 sur http://localhost:2283
+make immich-seed   # compte admin@socialize.test / socialize-immich, ~20 photos et 2 vidéos générées, 2 albums
+make immich-down   # arrêt (les données sont gardées dans les volumes du projet socialize-immich)
+```
+
+`make immich-seed` affiche l'adresse du serveur vue depuis l'application (`http://host.docker.internal:2283`)
+et une nouvelle clé API, à saisir dans Réglages › Immich. La clé a seulement les droits dont Socialize a besoin :
+`user.read`, `asset.read`, `asset.view`, `asset.download`, `asset.statistics`, `album.read`, `album.create`,
+`albumAsset.create`. Le script est relançable sans créer de doublon.
+
 ### Organisation du code
 
 Le code est découpé en modules sous `src/` (`Core`, `Media`, `Federation`, `Import/Instagram`, `Crosspost/Meta`,

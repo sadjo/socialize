@@ -1,0 +1,55 @@
+# Immich de test, pour développer l'intégration (jalon 6). Développement seulement, jamais en production.
+#   make immich-up      # http://localhost:2283
+#   make immich-seed    # compte, clé API, photos et vidéos générées, albums
+#   make immich-down
+#
+# Repris du docker-compose.yml de la release Immich v3.4.1, avec ces changements : pas de conteneur
+# machine learning (reconnaissance des personnes : jalon 6 bis), volumes nommés, projet Compose séparé.
+# L'application (conteneur « app ») joint Immich par http://host.docker.internal:2283.
+
+name: socialize-immich
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:v3.4.1
+    environment:
+      DB_HOSTNAME: database
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+      TZ: Europe/Paris
+    volumes:
+      - library:/data
+    ports:
+      - '${IMMICH_PORT:-2283}:2283'
+    depends_on:
+      - redis
+      - database
+    restart: unless-stopped
+    healthcheck:
+      disable: false
+
+  redis:
+    image: docker.io/valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+    healthcheck:
+      test: redis-cli ping | grep -q PONG || exit 1
+    restart: unless-stopped
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    restart: unless-stopped
+    healthcheck:
+      disable: false
+
+volumes:
+  library:
+  postgres:
