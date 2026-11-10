@@ -9,7 +9,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Lecture d'un mot de passe en console : saisie masquée et confirmée, ou entrée standard
- * (--password-stdin), plus fiable dans un terminal web comme celui de Container Manager.
+ * (--password-stdin), plus fiable dans un terminal web.
  */
 final class PasswordPrompt
 {

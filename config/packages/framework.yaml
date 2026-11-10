@@ -6,7 +6,7 @@ framework:
     # La session n'est démarrée que si elle est lue ou écrite.
     session: true
 
-    # Derrière un reverse proxy (NAS, Traefik…), renseigner TRUSTED_PROXIES.
+    # Derrière un reverse proxy (Traefik, Nginx, Caddy…), renseigner TRUSTED_PROXIES.
     trusted_proxies: '%env(TRUSTED_PROXIES)%'
     trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
 
