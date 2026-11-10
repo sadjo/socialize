@@ -71,6 +71,7 @@ final class MusicTest extends AppWebTestCase
         $this->login($this->register('camille'));
         $crawler = $this->client->request('GET', '/publier');
         self::assertSelectorExists('[data-music-picker-favorites-url-value="/musique/favoris"]');
+        self::assertSelectorExists('.music-search input[type="search"][data-action~="input->music-picker#queryChanged"][data-action~="search->music-picker#queryChanged"]', 'Recherche effacée (clavier ou bouton ✕) : retour aux favoris.');
         $token = (string) $crawler->filter('[data-music-picker-token-value]')->attr('data-music-picker-token-value');
 
         $this->client->request('GET', '/musique/favoris');

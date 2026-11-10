@@ -36,6 +36,7 @@ export default class extends Controller {
 
         // Lecteur des résultats de recherche (un morceau à la fois, l'extrait du début).
         this.listenToken = 0;
+        this.request = 0;
         this.listener = new Audio();
         this.listener.preload = 'none';
         this.listener.addEventListener('timeupdate', () => { if (this.listener.currentTime >= this.excerptValue) this.stopListening(); });
@@ -97,14 +98,16 @@ export default class extends Controller {
 
     async showFavorites() {
         this.stopListening();
+        this.showError(null);
+        const request = ++this.request;
         try {
             const response = await fetch(this.favoritesUrlValue, { headers: { Accept: 'text/html' }, credentials: 'same-origin' });
             if (!response.ok) throw new Error();
             const html = await response.text();
-            // Une recherche lancée entre-temps garde la priorité.
-            if (!this.queryTarget.value.trim()) this.resultsTarget.innerHTML = html;
+            // Seule la dernière demande (favoris ou recherche) remplit la liste.
+            if (request === this.request) this.resultsTarget.innerHTML = html;
         } catch {
-            this.resultsTarget.replaceChildren();
+            if (request === this.request) this.resultsTarget.replaceChildren();
         }
     }
 
@@ -164,10 +167,14 @@ export default class extends Controller {
         this.stopListening();
         if (!append) this.resultsTarget.innerHTML = '<p class="small">Recherche…</p>';
         const url = `${this.searchUrlValue}?${new URLSearchParams({ q: query, page })}`;
+        // Une recherche Openverse peut prendre plusieurs secondes : si la recherche est effacée
+        // ou remplacée entre-temps, sa réponse arrivée en retard est ignorée.
+        const request = ++this.request;
         try {
             const response = await fetch(url, { headers: { Accept: 'text/html' }, credentials: 'same-origin' });
             if (!response.ok) throw new Error();
             const html = await response.text();
+            if (request !== this.request) return;
             if (append) {
                 this.resultsTarget.querySelector(':scope > button[data-action*="more"]')?.remove();
                 this.resultsTarget.insertAdjacentHTML('beforeend', html);
@@ -175,6 +182,7 @@ export default class extends Controller {
                 this.resultsTarget.innerHTML = html;
             }
         } catch {
+            if (request !== this.request) return;
             if (!append) this.resultsTarget.replaceChildren();
             this.showError('La recherche de musique a échoué. Réessayez dans un instant.');
         }
