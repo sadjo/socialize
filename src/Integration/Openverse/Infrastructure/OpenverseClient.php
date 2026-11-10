@@ -24,6 +24,8 @@ final readonly class OpenverseClient
     public const int PAGE_SIZE = 20;
     /** Taille maximale d'un morceau téléchargé. */
     public const int MAX_BYTES = 30 * 1024 * 1024;
+    /** Durée de conservation de la fiche d'un morceau, en secondes. */
+    private const int TRACK_TTL = 86400;
 
     public function __construct(
         #[Autowire(service: 'openverse.http_client')]
@@ -58,6 +60,13 @@ final readonly class OpenverseClient
         $tracks = [];
         foreach ($cached['tracks'] as $result) {
             $track = OpenverseTrack::fromApi($result);
+            // La fiche est déjà là : la pré-écoute et les favoris n'auront pas à la redemander
+            // (Openverse met plusieurs secondes à répondre pour un seul morceau).
+            $this->openverseCache->get($this->trackKey($track->id), static function (ItemInterface $item) use ($result): array {
+                $item->expiresAfter(self::TRACK_TTL);
+
+                return $result;
+            });
             // Seuls les morceaux qu'on peut télécharger et assez longs pour un extrait.
             if (null !== $track->fileUrl && $track->duration >= 5) {
                 $tracks[] = $track;
@@ -68,7 +77,8 @@ final readonly class OpenverseClient
     }
 
     /**
-     * Fiche d'un morceau, gardée en cache une heure (la pré-écoute la demande à chaque requête partielle).
+     * Fiche d'un morceau, gardée en cache (la pré-écoute la demande à chaque requête partielle) ;
+     * la recherche la met en cache pour chacun de ses résultats.
      */
     public function track(string $id): OpenverseTrack
     {
@@ -78,8 +88,8 @@ final readonly class OpenverseClient
         $id = strtolower($id);
 
         /** @var array<mixed> $data */
-        $data = $this->openverseCache->get('openverse.track.'.$id, function (ItemInterface $item) use ($id): array {
-            $item->expiresAfter(3600);
+        $data = $this->openverseCache->get($this->trackKey($id), function (ItemInterface $item) use ($id): array {
+            $item->expiresAfter(self::TRACK_TTL);
 
             return $this->json('audio/'.$id.'/');
         });
@@ -171,6 +181,11 @@ final readonly class OpenverseClient
         } finally {
             fclose($out);
         }
+    }
+
+    private function trackKey(string $id): string
+    {
+        return 'openverse.track.'.strtolower($id);
     }
 
     private function fileUrl(OpenverseTrack $track): string

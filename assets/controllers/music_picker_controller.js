@@ -35,10 +35,12 @@ export default class extends Controller {
         });
 
         // Lecteur des résultats de recherche (un morceau à la fois, l'extrait du début).
+        this.listenToken = 0;
         this.listener = new Audio();
         this.listener.preload = 'none';
         this.listener.addEventListener('timeupdate', () => { if (this.listener.currentTime >= this.excerptValue) this.stopListening(); });
         this.listener.addEventListener('ended', () => this.stopListening());
+        this.listener.addEventListener('playing', () => this.listening?.classList.remove('loading'));
         this.listener.addEventListener('error', () => {
             if (this.listening) this.showError('Ce morceau ne peut pas être écouté pour le moment.');
             this.stopListening();
@@ -188,8 +190,14 @@ export default class extends Controller {
         this.renderPlay(false);
         this.listening = currentTarget;
         this.setIcon(currentTarget, true);
+        // En attendant le son (Openverse et le fournisseur peuvent mettre quelques secondes).
+        currentTarget.classList.add('loading');
+        const token = ++this.listenToken;
         this.listener.src = this.listenUrl(String(id));
-        this.listener.play().catch(() => this.stopListening());
+        this.listener.play().catch((error) => {
+            // Lecture abandonnée parce qu'un autre morceau a été lancé : rien à faire.
+            if (token === this.listenToken && error.name !== 'AbortError') this.stopListening();
+        });
     }
 
     // Pas de pochette (ou vignette indisponible) : l'icône de note reste visible.
@@ -197,11 +205,21 @@ export default class extends Controller {
         currentTarget.remove();
     }
 
+    // Arrête la pré-écoute et ferme sa connexion : le serveur cesse aussitôt de relayer le morceau.
     stopListening() {
         if (!this.listener) return;
-        this.listener.pause();
-        if (this.listening) this.setIcon(this.listening, false);
+        const button = this.listening;
         this.listening = null;
+        this.listenToken = (this.listenToken || 0) + 1;
+        if (button) {
+            this.setIcon(button, false);
+            button.classList.remove('loading');
+        }
+        this.listener.pause();
+        if (this.listener.getAttribute('src')) {
+            this.listener.removeAttribute('src');
+            this.listener.load();
+        }
     }
 
     choose({ params }) {

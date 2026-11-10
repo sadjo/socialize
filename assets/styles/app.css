@@ -660,3 +660,5 @@ label.act{cursor:pointer}
 .music-fav[aria-pressed="true"]{color:var(--coral)}
 .music-fav[aria-pressed="true"] .i{fill:var(--coral);stroke:var(--coral);animation:pop .35s}
 .music-fav-title{display:flex;align-items:center;gap:6px;margin:0}
+.music-play.loading .i{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}

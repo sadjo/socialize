@@ -103,8 +103,9 @@ final class MusicController extends AbstractController
      * Vignette d'un morceau, relayée par le serveur : le navigateur ne contacte pas Openverse.
      */
     #[Route('/musique/vignette/{openverseId}', name: 'app_music_thumbnail', requirements: ['openverseId' => self::OPENVERSE_ID], methods: ['GET'])]
-    public function thumbnail(string $openverseId, OpenverseClient $openverse): StreamedResponse
+    public function thumbnail(string $openverseId, Request $request, OpenverseClient $openverse): StreamedResponse
     {
+        $this->releaseSession($request);
         try {
             $upstream = $openverse->thumbnail($openverseId);
             $type = $upstream->getHeaders(false)['content-type'][0] ?? 'image/jpeg';
@@ -137,6 +138,7 @@ final class MusicController extends AbstractController
     #[Route('/musique/ecouter/{openverseId}', name: 'app_music_listen', requirements: ['openverseId' => self::OPENVERSE_ID], methods: ['GET'])]
     public function listen(string $openverseId, Request $request, OpenverseClient $openverse, MusicTrackRepository $tracks, MediaUrls $urls): Response
     {
+        $this->releaseSession($request);
         $local = $tracks->findByOpenverseId(strtolower($openverseId));
         if ($local instanceof MusicTrack) {
             return $this->redirect($urls->path($local->getPath()));
@@ -156,10 +158,6 @@ final class MusicController extends AbstractController
             }
         }
         $chunks = $openverse->chunks($upstream);
-        // La session est libérée avant le flux : la lecture ne bloque pas les autres pages.
-        if ($request->hasSession()) {
-            $request->getSession()->save();
-        }
 
         $response = new StreamedResponse(static function () use ($chunks): void {
             try {
@@ -175,5 +173,16 @@ final class MusicController extends AbstractController
         $response->setMaxAge(3600);
 
         return $response;
+    }
+
+    /**
+     * Libère la session dès le début (l'accès est déjà vérifié) : sans cela, les vignettes et les écoutes,
+     * qui attendent Openverse ou le fournisseur, passeraient une par une derrière son verrou.
+     */
+    private function releaseSession(Request $request): void
+    {
+        if ($request->hasSession(true)) {
+            $request->getSession()->save();
+        }
     }
 }

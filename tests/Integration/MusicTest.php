@@ -9,6 +9,7 @@ use App\Core\Domain\Post\Post;
 use App\Core\Infrastructure\Doctrine\MusicTrackRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
+use App\Integration\Openverse\Infrastructure\OpenverseClient;
 use App\Tests\AppWebTestCase;
 use League\Flysystem\FilesystemOperator;
 
@@ -105,6 +106,15 @@ final class MusicTest extends AppWebTestCase
         $this->login($this->register('hugo'));
         $this->client->request('GET', '/musique/favoris');
         self::assertSelectorCount(0, '.music-list li', 'Chaque compte a ses favoris.');
+    }
+
+    public function testSearchingKeepsEachTrackSoListeningDoesNotAskOpenverseAgain(): void
+    {
+        $openverse = self::getContainer()->get(OpenverseClient::class);
+        $openverse->search('piano');
+        self::assertSame('Piano du matin', $openverse->track(FakeOpenverse::PIANO)->title);
+        self::assertSame('Route 66', $openverse->track(strtoupper(FakeOpenverse::ROCK))->title);
+        self::assertSame([], array_values(array_filter(FakeOpenverse::$requests, static fn (string $url): bool => str_contains($url, '/v1/audio/'.FakeOpenverse::PIANO.'/'))), 'Fiche reprise de la recherche, sans nouvel appel à Openverse.');
     }
 
     public function testListeningRelaysTheFileWithoutStoringIt(): void
