@@ -3,7 +3,7 @@ DC   = docker compose -f compose.yaml -f compose.dev.yaml
 EXEC = $(DC) exec app
 
 .DEFAULT_GOAL := help
-.PHONY: help build up down logs sh console composer test quality fix prod
+.PHONY: help build up down logs sh console composer test quality fix prod immich-up immich-seed immich-down
 
 help: ## Afficher cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -42,3 +42,12 @@ fix: ## Appliquer Rector puis le style
 
 prod: ## Construire l'image de production
 	docker compose build
+
+immich-up: ## Démarrer l'Immich de test (http://localhost:2283)
+	docker compose -f compose.immich.yaml up -d --wait
+
+immich-seed: ## Remplir l'Immich de test : compte, clé API, photos, vidéos et albums
+	$(EXEC) php docker/immich/seed.php
+
+immich-down: ## Arrêter l'Immich de test (ses données sont gardées)
+	docker compose -f compose.immich.yaml down

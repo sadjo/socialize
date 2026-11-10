@@ -15,6 +15,7 @@ use App\Core\Domain\Story\Story;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
+use App\Integration\Immich\Application\ImmichPublisher;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\StoryComposer;
 use App\Web\Form\ComposeStoryType;
@@ -47,21 +48,21 @@ final class StoryController extends AbstractController
     }
 
     #[Route('/stories/nouvelle', name: 'app_story_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, StoryComposer $composer): Response
+    public function new(Request $request, ImmichPublisher $publisher, ComposeSources $sources): Response
     {
         $account = $this->currentAccount->require();
         $form = $this->createForm(ComposeStoryType::class, options: ['highlights' => $this->highlights->forAccount($account)]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, text: ?string, audience: string, highlight: ?string, highlightTitle: ?string} $data */
+            /** @var array{media: list<UploadedFile>, order: ?string, text: ?string, audience: string, highlight: ?string, highlightTitle: ?string} $data */
             $data = $form->getData();
             $highlightTitle = trim((string) $data['highlightTitle']);
             if ('__new__' === $data['highlight'] && '' === $highlightTitle) {
                 $form->get('highlightTitle')->addError(new FormError('Donnez un titre à la nouvelle story à la une.'));
             } else {
                 try {
-                    $created = $composer->publish($account, $data['media'], $data['text'], Visibility::from($data['audience']));
+                    $created = $publisher->publishStories($account, ComposeSources::order($data['order']), $data['media'], $data['text'], Visibility::from($data['audience']));
                     $this->pinAll($created, $account, $data['highlight'], $highlightTitle);
                     $this->addFlash('success', 1 === \count($created) ? 'Story publiée, visible pendant 24 h.' : \sprintf('%d stories publiées, visibles pendant 24 h.', \count($created)));
 
@@ -72,7 +73,7 @@ final class StoryController extends AbstractController
             }
         }
 
-        return $this->render('story/new.html.twig', ['form' => $form]);
+        return $this->render('story/new.html.twig', ['form' => $form] + $sources->forCurrentAccount());
     }
 
     /**

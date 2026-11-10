@@ -29,6 +29,10 @@ services:
     federation.http_client:
         alias: http_client
 
+    # Client HTTP des échanges avec Immich (remplacé dans les tests).
+    immich.http_client:
+        alias: http_client
+
 when@test:
     parameters:
         app.import_dir: '%kernel.project_dir%/var/test-storage/imports'
@@ -39,3 +43,9 @@ when@test:
         federation.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
             arguments: ['@App\Tests\Federation\FakeFediverse']
+        # Fausse instance Immich pour les tests (voir tests/Integration).
+        App\Tests\Integration\FakeImmich:
+            public: true
+        immich.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            arguments: ['@App\Tests\Integration\FakeImmich']

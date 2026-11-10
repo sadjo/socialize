@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Web\Controller;
 
 use App\Core\Domain\Post\Visibility;
+use App\Integration\Immich\Application\ImmichPublisher;
 use App\Media\Application\MediaProcessingException;
-use App\Media\Application\PostComposer;
 use App\Web\Form\ComposePostType;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,24 +19,22 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ComposeController extends AbstractController
 {
     #[Route('/publier', name: 'app_compose', methods: ['GET', 'POST'])]
-    public function __invoke(Request $request, PostComposer $composer, CurrentAccount $currentAccount): Response
+    public function __invoke(Request $request, ImmichPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources): Response
     {
         $form = $this->createForm(ComposePostType::class);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, altTexts: array<int, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string} $data */
+            /** @var array{media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string} $data */
             $data = $form->getData();
-            $uploads = [];
-            foreach ($data['media'] as $i => $file) {
-                $uploads[] = ['file' => $file, 'alt' => $data['altTexts'][$i] ?? null];
-            }
 
             try {
-                $post = $composer->publish(
+                $post = $publisher->publishPost(
                     $currentAccount->require(),
+                    ComposeSources::order($data['order']),
+                    $data['media'],
+                    ComposeSources::altTexts($data['altTexts']),
                     $data['caption'] ?? '',
-                    $uploads,
                     $data['visibility'],
                     $data['contentWarning'],
                     $data['location'],
@@ -51,6 +49,6 @@ final class ComposeController extends AbstractController
             }
         }
 
-        return $this->render('compose/new.html.twig', ['form' => $form]);
+        return $this->render('compose/new.html.twig', ['form' => $form] + $sources->forCurrentAccount());
     }
 }

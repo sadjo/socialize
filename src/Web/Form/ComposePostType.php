@@ -11,6 +11,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -24,13 +25,20 @@ final class ComposePostType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            // Ordre des médias : « n-<i> » pour le i-ème fichier de l'appareil, « i-<id> » pour un média Immich.
+            ->add('order', HiddenType::class, [
+                'required' => false,
+                'attr' => ['data-compose-target' => 'order'],
+                'constraints' => [new Assert\Length(max: 2000)],
+            ])
             ->add('media', FileType::class, [
                 'label' => 'Photos et vidéos',
                 'multiple' => true,
+                'required' => false,
                 // Champ masqué : on clique sur la zone de dépôt, qui est son label.
                 'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input', 'class' => 'sr-only'],
                 'constraints' => [
-                    new Assert\Count(min: 1, max: Post::MAX_MEDIA, minMessage: 'Ajoutez au moins une photo ou une vidéo.', maxMessage: 'Une publication contient au plus {{ limit }} médias.'),
+                    new Assert\Count(max: Post::MAX_MEDIA, maxMessage: 'Une publication contient au plus {{ limit }} médias.'),
                     new Assert\All([
                         new Assert\File(
                             maxSize: MediaRules::MAX_VIDEO_SIZE,
