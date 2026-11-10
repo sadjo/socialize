@@ -111,7 +111,7 @@ final readonly class Serializer
             }
         }
 
-        $content = $this->html($post->getCaption()).$this->musicCredit($post);
+        $content = $this->html($post->getCaption(), $post->isImported()).$this->musicCredit($post);
         $note = [
             'id' => $this->urls->note($post),
             'type' => 'Note',
@@ -249,12 +249,17 @@ final readonly class Serializer
         return \sprintf('<p>🎵 %s (%s)</p>', $label, htmlspecialchars($music->getLicenseLabel(), \ENT_QUOTES | \ENT_HTML5));
     }
 
-    private function html(string $text): string
+    /**
+     * @param bool $instagram texte importé d'Instagram : les mentions mènent aux profils Instagram
+     */
+    private function html(string $text, bool $instagram = false): string
     {
         return HtmlText::toHtml(
             $text,
             fn (string $tag): string => $this->urls->hashtag($tag),
-            fn (string $handle): string => $this->urls->base().'/@'.$handle,
+            fn (string $handle): string => $instagram && !str_contains($handle, '@')
+                ? 'https://www.instagram.com/'.rawurlencode(rtrim($handle, '.')).'/'
+                : $this->urls->base().'/@'.$handle,
         );
     }
 }

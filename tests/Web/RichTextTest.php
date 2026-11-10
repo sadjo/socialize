@@ -21,6 +21,14 @@ final class RichTextTest extends TestCase
         self::assertStringContainsString('<br>', $html);
     }
 
+    public function testMentionsOfImportedTextLeadToInstagramProfiles(): void
+    {
+        $html = new SocializeExtension(new MediaUrls())->richText('Rando avec @hugo.martin et @alice@mastodon.social', instagram: true);
+
+        self::assertStringContainsString('<a class="tag" href="https://www.instagram.com/hugo.martin/" target="_blank" rel="noopener nofollow">@hugo.martin</a>', $html);
+        self::assertStringContainsString('<a class="tag" href="/@alice">@alice@mastodon.social</a>', $html, 'Une adresse du fédivers reste un compte du fédivers.');
+    }
+
     public function testRelativeDates(): void
     {
         $ext = new SocializeExtension(new MediaUrls());

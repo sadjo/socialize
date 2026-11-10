@@ -18,7 +18,7 @@
     {{ include('post/_media.html.twig') }}
     {{ include('post/_actions.html.twig') }}
     <div class="pbody">
-        {% if post.caption %}<div><b>{{ author.username }}</b> {{ post.caption|rich_text }}</div>{% endif %}
+        {% if post.caption %}<div><b>{{ author.username }}</b> {{ post.caption|rich_text(post.isImported()) }}</div>{% endif %}
         {% set preview = post.commentsCount ? recent_comments(post, 2) : [] %}
         {% if post.commentsCount > preview|length %}<a class="meta" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}">Voir les {{ post.commentsCount }} commentaires</a>{% endif %}
         <div class="cprev" id="post-{{ post.publicId }}-comments">

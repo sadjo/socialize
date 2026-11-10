@@ -26,7 +26,7 @@
 
         <div class="cmts" id="commentaires">
             {% if post.caption %}
-                <div class="cmt">{{ ui.avatar(author, 32) }}<div class="t"><b>{{ author.username }}</b> {{ post.caption|rich_text }}<small><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></small></div></div>
+                <div class="cmt">{{ ui.avatar(author, 32) }}<div class="t"><b>{{ author.username }}</b> {{ post.caption|rich_text(post.isImported()) }}<small><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></small></div></div>
             {% endif %}
             <div class="cmts-list" id="post-{{ post.publicId }}-comments">
                 {% for comment in comments %}{{ include('comment/_comment.html.twig') }}{% endfor %}
