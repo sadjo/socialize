@@ -42,6 +42,16 @@ final class MusicTest extends AppWebTestCase
         self::assertSelectorExists(\sprintf('button[data-action="music-picker#listen"][data-music-picker-id-param="%s"]', FakeOpenverse::PIANO));
         self::assertSelectorExists(\sprintf('button[data-action="music-picker#choose"][data-music-picker-id-param="%s"][data-music-picker-title-param="Piano du matin"][data-music-picker-duration-param="75"]', FakeOpenverse::PIANO));
         self::assertStringContainsString('category=music', FakeOpenverse::$requests[0]);
+        self::assertSelectorExists(\sprintf('.music-list .music-thumb img[src="/musique/vignette/%s"]', FakeOpenverse::PIANO), 'Vignette relayée par le serveur.');
+        self::assertSelectorCount(1, '.music-list .music-thumb img', 'Pas d’image pour un morceau sans pochette : l’icône reste.');
+        self::assertSelectorCount(2, '.music-list .music-thumb svg');
+
+        $this->client->request('GET', '/musique/vignette/'.FakeOpenverse::PIANO);
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'image/jpeg');
+        self::assertStringStartsWith("\xFF\xD8", $this->client->getInternalResponse()->getContent());
+        $this->client->request('GET', '/musique/vignette/'.FakeOpenverse::ROCK);
+        self::assertResponseStatusCodeSame(404);
 
         $this->client->request('GET', '/musique/recherche?q=introuvable');
         self::assertSelectorTextContains('p.small', 'Aucune musique trouvée pour « introuvable »');

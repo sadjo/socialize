@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use Jcupitt\Vips\Image;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -55,6 +56,8 @@ final class FakeOpenverse
             !str_starts_with($url, 'https://api.openverse.org/v1/') => new MockResponse('', ['error' => 'Hôte inconnu']),
             '/v1/audio/' === $path => $this->json(['result_count' => 3, 'page_count' => 1, 'page_size' => 20, 'page' => 1, 'results' => \is_string($query['q'] ?? null) && 'introuvable' !== $query['q'] ? array_values(self::tracks()) : []]),
             (bool) preg_match('#^/v1/audio/([0-9a-f-]{36})/$#', $path, $m) && isset(self::tracks()[$m[1]]) => $this->json(self::tracks()[$m[1]]),
+            // Seul le morceau de piano a une pochette.
+            '/v1/audio/'.self::PIANO.'/thumb/' === $path => new MockResponse(Image::black(64, 64, ['bands' => 3])->add([200, 120, 60])->cast('uchar')->writeToBuffer('.jpg'), ['response_headers' => ['content-type' => 'image/jpeg']]),
             default => $this->json(['detail' => 'Not found.'], 404),
         };
     }
@@ -66,7 +69,7 @@ final class FakeOpenverse
     {
         return [
             self::PIANO => self::track(self::PIANO, 'Piano du matin', 'Lina Morel', 'by', '4.0', 75_000, ['classical', 'piano']),
-            self::ROCK => self::track(self::ROCK, 'Route 66', 'The Testers', 'by-sa', '3.0', 200_000, ['rock']),
+            self::ROCK => ['thumbnail' => null] + self::track(self::ROCK, 'Route 66', 'The Testers', 'by-sa', '3.0', 200_000, ['rock']),
             self::NO_FILE => ['url' => null] + self::track(self::NO_FILE, 'Sans fichier', 'Personne', 'cc0', '1.0', 90_000, []),
         ];
     }
@@ -84,6 +87,7 @@ final class FakeOpenverse
             'foreign_landing_url' => 'https://www.jamendo.com/track/'.substr($id, 0, 8),
             'url' => self::FILES.$id.'.m4a', 'provider' => 'jamendo', 'source' => 'jamendo', 'category' => 'music',
             'genres' => $genres, 'duration' => $durationMs, 'filetype' => 'm4a', 'mature' => false,
+            'thumbnail' => 'https://api.openverse.org/v1/audio/'.$id.'/thumb/',
         ];
     }
 

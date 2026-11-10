@@ -52,6 +52,36 @@ final class MusicController extends AbstractController
     }
 
     /**
+     * Vignette d'un morceau, relayée par le serveur : le navigateur ne contacte pas Openverse.
+     */
+    #[Route('/musique/vignette/{openverseId}', name: 'app_music_thumbnail', requirements: ['openverseId' => self::OPENVERSE_ID], methods: ['GET'])]
+    public function thumbnail(string $openverseId, OpenverseClient $openverse): StreamedResponse
+    {
+        try {
+            $upstream = $openverse->thumbnail($openverseId);
+            $type = $upstream->getHeaders(false)['content-type'][0] ?? 'image/jpeg';
+        } catch (OpenverseException|ExceptionInterface) {
+            throw $this->createNotFoundException('Vignette introuvable.');
+        }
+        $chunks = $openverse->chunks($upstream);
+
+        $response = new StreamedResponse(static function () use ($chunks): void {
+            try {
+                foreach ($chunks as $chunk) {
+                    echo $chunk;
+                    flush();
+                }
+            } catch (OpenverseException) {
+                // Vignette interrompue : le navigateur affichera l'icône de remplacement.
+            }
+        }, headers: ['Content-Type' => $type]);
+        $response->setPrivate();
+        $response->setMaxAge(86400);
+
+        return $response;
+    }
+
+    /**
      * Pré-écoute d'un morceau sans le stocker : le fichier est relayé depuis son fournisseur (le navigateur
      * ne le contacte jamais), plage par plage pour pouvoir se déplacer. Un morceau déjà copié sur
      * l'instance est servi par sa copie.

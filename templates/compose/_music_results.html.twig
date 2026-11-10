@@ -8,6 +8,9 @@
 <ul class="music-list">
     {% for track in tracks %}
         <li class="row">
+            <span class="music-thumb" aria-hidden="true">{{ ui.icon('music') }}
+                {%- if track.hasThumbnail %}<img src="{{ path('app_music_thumbnail', {openverseId: track.id}) }}" alt="" width="48" height="48" loading="lazy" decoding="async" data-action="error->music-picker#thumbnailMissing">{% endif -%}
+            </span>
             <button type="button" class="ib music-play" data-action="music-picker#listen" data-music-picker-id-param="{{ track.id }}" aria-label="Écouter « {{ track.title }} »">{{ ui.icon('play', 'sm') }}</button>
             <div class="grow">
                 <b>{{ track.title }}</b>

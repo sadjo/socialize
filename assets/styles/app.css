@@ -654,3 +654,5 @@ label.act{cursor:pointer}
 .music-modal .music-search{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
 .music-modal .music-results{max-height:none;flex:1;min-height:120px}
 .music-modal .sheet>div{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.music-thumb{position:relative;flex:0 0 48px;width:48px;height:48px;border-radius:10px;overflow:hidden;display:grid;place-items:center;background:var(--surface-2);color:var(--muted)}
+.music-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}

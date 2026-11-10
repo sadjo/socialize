@@ -109,6 +109,28 @@ final readonly class OpenverseClient
     }
 
     /**
+     * Vignette d'un morceau (pochette de l'album, mise à l'échelle par Openverse), à relayer telle quelle.
+     */
+    public function thumbnail(string $id): ResponseInterface
+    {
+        if (!preg_match('/^[0-9a-f-]{36}$/i', $id)) {
+            throw new OpenverseException('Vignette introuvable.');
+        }
+        try {
+            $response = $this->client->request('GET', self::API.'audio/'.strtolower($id).'/thumb/', ['timeout' => 15, 'max_redirects' => 3]);
+            $type = $response->getHeaders(false)['content-type'][0] ?? '';
+            if (200 !== $response->getStatusCode() || !str_starts_with($type, 'image/')) {
+                $response->cancel();
+                throw new OpenverseException('Vignette introuvable.');
+            }
+        } catch (ExceptionInterface $e) {
+            throw new OpenverseException('Vignette introuvable.', $e->getCode(), previous: $e);
+        }
+
+        return $response;
+    }
+
+    /**
      * @return iterable<string>
      */
     public function chunks(ResponseInterface $response): iterable

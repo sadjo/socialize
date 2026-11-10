@@ -149,6 +149,11 @@ export default class extends Controller {
         this.listener.play().catch(() => this.stopListening());
     }
 
+    // Pas de pochette (ou vignette indisponible) : l'icône de note reste visible.
+    thumbnailMissing({ currentTarget }) {
+        currentTarget.remove();
+    }
+
     stopListening() {
         if (!this.listener) return;
         this.listener.pause();

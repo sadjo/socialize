@@ -26,6 +26,8 @@ final readonly class OpenverseTrack
         public ?string $fileUrl,
         /** @var list<string> */
         public array $genres = [],
+        /** Vignette (pochette) fournie par Openverse, s'il y en a une. */
+        public bool $hasThumbnail = false,
     ) {
     }
 
@@ -48,6 +50,7 @@ final readonly class OpenverseTrack
             duration: is_numeric($data['duration'] ?? null) ? (int) round((float) $data['duration'] / 1000) : 0,
             fileUrl: $string('url'),
             genres: array_values(array_filter(\is_array($data['genres'] ?? null) ? $data['genres'] : [], \is_string(...))),
+            hasThumbnail: null !== $string('thumbnail'),
         );
     }
 
