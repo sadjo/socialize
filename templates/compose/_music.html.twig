@@ -8,6 +8,9 @@
 <fieldset class="field music-picker" data-controller="music-picker"
           data-music-picker-search-url-value="{{ path('app_music_search') }}"
           data-music-picker-listen-url-value="{{ path('app_music_listen', {openverseId: '00000000-0000-0000-0000-000000000000'}) }}"
+          data-music-picker-favorites-url-value="{{ path('app_music_favorites') }}"
+          data-music-picker-favorite-url-value="{{ path('app_music_favorite', {openverseId: '00000000-0000-0000-0000-000000000000'}) }}"
+          data-music-picker-token-value="{{ csrf_token(constant('App\\Web\\Controller\\MusicController::FAVORITE_TOKEN')) }}"
           data-music-picker-excerpt-value="{{ excerpt }}">
     <legend class="lab">{{ ui.icon('music', 'xs') }} Musique</legend>
     {{ form_widget(field.track) }}
@@ -43,7 +46,7 @@
         <div class="row">
             <label class="sr-only" for="{{ field.vars.id }}_q">Rechercher une musique</label>
             <input type="search" id="{{ field.vars.id }}_q" class="inp grow" placeholder="Ambiance, genre, artiste… (en anglais : chill, piano, rock)" maxlength="100"
-                   data-music-picker-target="query" data-action="keydown.enter->music-picker#search:prevent">
+                   data-music-picker-target="query" data-action="keydown.enter->music-picker#search:prevent input->music-picker#queryChanged">
             <button type="button" class="btn" data-action="music-picker#search">{{ ui.icon('search', 'xs') }}Chercher</button>
         </div>
         <p class="small">Musiques sous licence libre trouvées par <a href="https://openverse.org" target="_blank" rel="noopener">Openverse</a>. Le titre, l’artiste et la licence sont affichés avec la publication.</p>

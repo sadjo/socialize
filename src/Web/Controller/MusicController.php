@@ -6,11 +6,15 @@ namespace App\Web\Controller;
 
 use App\Core\Domain\Music\MusicTrack;
 use App\Core\Infrastructure\Doctrine\MusicTrackRepository;
+use App\Integration\Openverse\Application\MusicFavorites;
 use App\Integration\Openverse\Application\OpenverseException;
+use App\Integration\Openverse\Application\OpenverseTrack;
 use App\Integration\Openverse\Infrastructure\OpenverseClient;
 use App\Media\Application\MediaUrls;
 use App\Web\Controller\Payload\MusicSearch;
+use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -25,8 +29,15 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 #[IsGranted('ROLE_USER')]
 final class MusicController extends AbstractController
 {
+    public const string FAVORITE_TOKEN = 'music-favorite';
     /** Identifiant Openverse : un UUID, quelle que soit sa version. */
     private const string OPENVERSE_ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
+    public function __construct(
+        private readonly MusicFavorites $favorites,
+        private readonly CurrentAccount $currentAccount,
+    ) {
+    }
 
     /**
      * Une page de résultats, insérée telle quelle dans le sélecteur.
@@ -48,7 +59,44 @@ final class MusicController extends AbstractController
             'tracks' => $result['tracks'],
             'next' => $result['next'],
             'error' => $error,
+            'favorites' => $this->favorites->among($this->currentAccount->require(), $result['tracks']),
+            'favorites_view' => false,
         ]);
+    }
+
+    /**
+     * Musiques favorites du compte, montrées à l'ouverture du sélecteur, avant toute recherche.
+     */
+    #[Route('/musique/favoris', name: 'app_music_favorites', methods: ['GET'])]
+    public function favorites(): Response
+    {
+        $tracks = $this->favorites->of($this->currentAccount->require());
+
+        return $this->render('compose/_music_results.html.twig', [
+            'query' => '',
+            'page' => 1,
+            'tracks' => $tracks,
+            'next' => null,
+            'error' => null,
+            'favorites' => array_fill_keys(array_map(static fn (OpenverseTrack $t): string => $t->id, $tracks), true),
+            'favorites_view' => true,
+        ]);
+    }
+
+    /**
+     * Ajout aux favoris, ou retrait s'il y est déjà.
+     */
+    #[Route('/musique/favoris/{openverseId}', name: 'app_music_favorite', requirements: ['openverseId' => self::OPENVERSE_ID], methods: ['POST'])]
+    public function favorite(string $openverseId, Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid(self::FAVORITE_TOKEN, (string) $request->headers->get('X-CSRF-Token'))) {
+            return $this->json(['error' => 'Jeton de sécurité invalide. Rechargez la page et réessayez.'], Response::HTTP_FORBIDDEN);
+        }
+        try {
+            return $this->json(['favorite' => $this->favorites->toggle($this->currentAccount->require(), $openverseId)]);
+        } catch (OpenverseException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
     }
 
     /**

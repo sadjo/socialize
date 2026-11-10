@@ -5,6 +5,8 @@ import { Controller } from '@hotwired/stimulus';
  * par le serveur), pré-écoute relayée par le serveur sans rien stocker, choix d'un morceau et du début
  * de l'extrait. Le morceau n'est copié sur l'instance qu'à la publication.
  *
+ * Avant toute recherche, la liste montre les favoris du compte (cœur sur un résultat pour l'y ajouter).
+ *
  * Sur un écran de bureau, la recherche s'ouvre dans une fenêtre au centre (page assombrie) ;
  * sur mobile, elle reste dans la page. Le même bloc de recherche passe de l'un à l'autre.
  */
@@ -18,7 +20,7 @@ function clock(seconds) {
 
 export default class extends Controller {
     static targets = ['track', 'start', 'chosen', 'searchBox', 'query', 'results', 'error', 'title', 'credit', 'range', 'startLabel', 'audio', 'play', 'opener', 'dialog', 'dialogBody'];
-    static values = { searchUrl: String, listenUrl: String, excerpt: Number };
+    static values = { searchUrl: String, listenUrl: String, favoritesUrl: String, favoriteUrl: String, token: String, excerpt: Number };
 
     connect() {
         // Lecteur de l'extrait choisi, sur le début réglé.
@@ -49,6 +51,8 @@ export default class extends Controller {
         desktop.addEventListener('change', this.onLayout);
         this.place();
         this.renderStart();
+        // Mobile : la recherche est déjà dans la page, les favoris s'y affichent tout de suite.
+        if (!desktop.matches && !this.searchBoxTarget.hidden) this.showFavorites();
     }
 
     disconnect() {
@@ -81,6 +85,45 @@ export default class extends Controller {
         this.showError(null);
         this.dialogTarget.showModal();
         this.queryTarget.focus();
+        if (!this.queryTarget.value.trim()) this.showFavorites();
+    }
+
+    // Recherche effacée : retour aux favoris.
+    queryChanged() {
+        if (!this.queryTarget.value.trim()) this.showFavorites();
+    }
+
+    async showFavorites() {
+        this.stopListening();
+        try {
+            const response = await fetch(this.favoritesUrlValue, { headers: { Accept: 'text/html' }, credentials: 'same-origin' });
+            if (!response.ok) throw new Error();
+            const html = await response.text();
+            // Une recherche lancée entre-temps garde la priorité.
+            if (!this.queryTarget.value.trim()) this.resultsTarget.innerHTML = html;
+        } catch {
+            this.resultsTarget.replaceChildren();
+        }
+    }
+
+    async favorite({ params: { id }, currentTarget }) {
+        this.showError(null);
+        currentTarget.disabled = true;
+        try {
+            const response = await fetch(this.favoriteUrlValue.replace(ZERO_ID, String(id)), {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': this.tokenValue, Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Le favori n’a pas pu être enregistré.');
+            currentTarget.setAttribute('aria-pressed', String(data.favorite));
+            currentTarget.setAttribute('aria-label', data.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
+        } catch (error) {
+            this.showError(error.message);
+        } finally {
+            currentTarget.disabled = false;
+        }
     }
 
     close() {
@@ -114,7 +157,7 @@ export default class extends Controller {
 
     async load(page, append) {
         const query = this.queryTarget.value.trim();
-        if (!query) return;
+        if (!query) return this.showFavorites();
         this.showError(null);
         this.stopListening();
         if (!append) this.resultsTarget.innerHTML = '<p class="small">Recherche…</p>';
@@ -182,6 +225,7 @@ export default class extends Controller {
         this.audioTarget.removeAttribute('src');
         this.render();
         (desktop.matches ? this.openerTarget : this.queryTarget).focus();
+        if (!desktop.matches && !this.queryTarget.value.trim()) this.showFavorites();
     }
 
     seek() {

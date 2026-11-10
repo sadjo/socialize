@@ -65,6 +65,48 @@ final class MusicTest extends AppWebTestCase
         self::assertResponseStatusCodeSame(400);
     }
 
+    public function testFavoritesAreShownBeforeSearchingAndBelongToTheirAccount(): void
+    {
+        $this->login($this->register('camille'));
+        $crawler = $this->client->request('GET', '/publier');
+        self::assertSelectorExists('[data-music-picker-favorites-url-value="/musique/favoris"]');
+        $token = (string) $crawler->filter('[data-music-picker-token-value]')->attr('data-music-picker-token-value');
+
+        $this->client->request('GET', '/musique/favoris');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.music-fav-title', 'Vos favoris');
+        self::assertSelectorTextContains('p.small', 'Aucun favori pour l’instant');
+
+        $this->client->request('POST', '/musique/favoris/'.FakeOpenverse::PIANO, server: ['HTTP_X_CSRF_TOKEN' => 'mauvais-jeton']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(['favorite' => true], $this->favorite(FakeOpenverse::PIANO, $token));
+        self::assertSame(['favorite' => true], $this->favorite(FakeOpenverse::ROCK, $token));
+
+        $this->client->request('GET', '/musique/favoris');
+        self::assertSelectorCount(2, '.music-list li');
+        self::assertSelectorTextContains('.music-list li:first-child', 'Route 66', 'Le plus récent en premier.');
+        self::assertSelectorTextContains('.music-list li:last-child', 'Piano du matin');
+        self::assertSelectorTextContains('.music-list li:last-child', 'Lina Morel · 1:15 · CC BY 4.0 · classical, piano');
+        self::assertSelectorCount(2, '.music-list .music-fav[aria-pressed="true"]');
+        self::assertSelectorExists(\sprintf('.music-list .music-thumb img[src="/musique/vignette/%s"]', FakeOpenverse::PIANO));
+        self::assertSelectorExists(\sprintf('button[data-action="music-picker#choose"][data-music-picker-id-param="%s"]', FakeOpenverse::PIANO));
+
+        $this->client->request('GET', '/musique/recherche?q=piano');
+        self::assertSelectorCount(2, '.music-list .music-fav[aria-pressed="true"]', 'Les favoris sont marqués dans les résultats.');
+
+        self::assertSame(['favorite' => false], $this->favorite(FakeOpenverse::PIANO, $token), 'Un second clic retire le favori.');
+        $this->client->request('GET', '/musique/favoris');
+        self::assertSelectorCount(1, '.music-list li');
+
+        $this->client->request('POST', '/musique/favoris/'.FakeOpenverse::NO_FILE, server: ['HTTP_X_CSRF_TOKEN' => $token]);
+        self::assertResponseIsUnprocessable();
+        self::assertSame([], self::getContainer()->get(MusicTrackRepository::class)->findAll(), 'Un favori ne copie pas le morceau.');
+
+        $this->login($this->register('hugo'));
+        $this->client->request('GET', '/musique/favoris');
+        self::assertSelectorCount(0, '.music-list li', 'Chaque compte a ses favoris.');
+    }
+
     public function testListeningRelaysTheFileWithoutStoringIt(): void
     {
         $this->client->request('GET', '/musique/ecouter/'.FakeOpenverse::PIANO);
@@ -210,6 +252,20 @@ final class MusicTest extends AppWebTestCase
         $values['compose_post']['visibility'] = 'public';
         $values['compose_post']['music'] = ['track' => $openverseId, 'start' => $start];
         $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->jpeg()]]]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function favorite(string $openverseId, string $token): array
+    {
+        $this->client->request('POST', '/musique/favoris/'.$openverseId, server: ['HTTP_X_CSRF_TOKEN' => $token]);
+        self::assertResponseIsSuccessful();
+
+        /** @var array<string, mixed> $data */
+        $data = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+
+        return $data;
     }
 
     private function onlyPost(): Post
