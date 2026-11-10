@@ -52,7 +52,7 @@ Ou avec un serveur MySQL / MariaDB existant : définissez `DATABASE_URL` dans `d
 
 ### Derrière un reverse proxy
 
-Si un reverse proxy (NAS, Traefik…) gère déjà le HTTPS, utilisez `SERVER_NAME=:80`, publiez seulement le port 80
+Si un reverse proxy (Traefik, Nginx, Caddy…) gère déjà le HTTPS, utilisez `SERVER_NAME=:80`, publiez seulement le port 80
 et renseignez `TRUSTED_PROXIES`.
 
 ### Fédération (ActivityPub)
