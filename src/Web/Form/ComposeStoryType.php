@@ -74,7 +74,8 @@ final class ComposeStoryType extends AbstractType
                 'required' => false,
                 'attr' => ['maxlength' => Highlight::MAX_TITLE_LENGTH, 'placeholder' => 'Montagne'],
                 'constraints' => [new Assert\Length(max: Highlight::MAX_TITLE_LENGTH)],
-            ]);
+            ])
+            ->add('music', MusicChoiceType::class);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

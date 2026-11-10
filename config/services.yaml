@@ -33,6 +33,12 @@ services:
     immich.http_client:
         alias: http_client
 
+    # Client HTTP d'Openverse et des fournisseurs de musique (remplacé dans les tests) : les adresses
+    # de fichiers viennent d'Openverse, le réseau privé de l'instance leur est fermé.
+    openverse.http_client:
+        class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
+        arguments: ['@http_client']
+
 when@test:
     parameters:
         app.import_dir: '%kernel.project_dir%/var/test-storage/imports'
@@ -49,3 +55,9 @@ when@test:
         immich.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
             arguments: ['@App\Tests\Integration\FakeImmich']
+        # Faux Openverse pour les tests (voir tests/Integration).
+        App\Tests\Integration\FakeOpenverse:
+            public: true
+        openverse.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            arguments: ['@App\Tests\Integration\FakeOpenverse']

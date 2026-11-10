@@ -14,6 +14,7 @@ deptrac:
     - { name: ImportInstagram,   collectors: [{ type: classLike, value: '^App\\Import\\Instagram\\.*' }] }
     - { name: CrosspostMeta,     collectors: [{ type: classLike, value: '^App\\Crosspost\\Meta\\.*' }] }
     - { name: IntegrationImmich, collectors: [{ type: classLike, value: '^App\\Integration\\Immich\\.*' }] }
+    - { name: IntegrationOpenverse, collectors: [{ type: classLike, value: '^App\\Integration\\Openverse\\.*' }] }
     - { name: Api,               collectors: [{ type: classLike, value: '^App\\Api\\.*' }] }
     - { name: Mcp,               collectors: [{ type: classLike, value: '^App\\Mcp\\.*' }] }
     - { name: Web,               collectors: [{ type: classLike, value: '^App\\Web\\.*' }] }
@@ -25,7 +26,8 @@ deptrac:
     ImportInstagram: [Core, Media]
     CrosspostMeta: [Core, Media]
     IntegrationImmich: [Core, Media]
-    Api: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich]
-    Mcp: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich]
-    Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich]
+    IntegrationOpenverse: [Core, Media]
+    Api: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationOpenverse]
+    Mcp: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationOpenverse]
+    Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationOpenverse]
     Admin: [Core, Federation]

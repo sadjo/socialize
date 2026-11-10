@@ -1,24 +1,14 @@
 import { Controller } from '@hotwired/stimulus';
+import { SOUND_EVENT, playAlone, setSound, soundOn } from '../lib/sound.js';
 
 /*
  * Vidéo dans un fil, comme sur Instagram : l'affiche d'abord, lecture dès que la vidéo est bien
  * visible (une seule à la fois), bouton son en bas à gauche, et lecteur complet dans une fenêtre au clic.
  *
- * Le choix du son vaut pour toutes les vidéos : activé sur l'une, il l'est pour les suivantes
- * (et pour la session) ; coupé, les suivantes démarrent sans le son.
+ * Le choix du son vaut pour toutes les vidéos et musiques (voir lib/sound.js). Dans une publication
+ * qui a une musique, la vidéo reste muette : la musique remplace son son, comme sur Instagram.
  */
-const SOUND_KEY = 'socialize.sound';
-const SOUND_EVENT = 'socialize:sound';
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-function soundOn() {
-    try { return sessionStorage.getItem(SOUND_KEY) === 'on'; } catch { return false; }
-}
-
-function setSound(on) {
-    try { sessionStorage.setItem(SOUND_KEY, on ? 'on' : 'off'); } catch { /* stockage indisponible */ }
-    window.dispatchEvent(new CustomEvent(SOUND_EVENT, { detail: { on } }));
-}
 
 export default class extends Controller {
     static targets = ['video', 'sound'];
@@ -51,9 +41,14 @@ export default class extends Controller {
         this.play();
     }
 
+    // Publication avec musique : la vidéo reste muette.
+    get silent() {
+        return this.element.closest('.media')?.hasAttribute('data-music') ?? false;
+    }
+
     play() {
         const video = this.videoTarget;
-        video.muted = !soundOn();
+        video.muted = this.silent || !soundOn();
         this.render();
         video.play().catch(() => {
             // Le navigateur refuse le son sans geste de l'utilisateur sur cette vidéo : lecture muette.
@@ -63,12 +58,8 @@ export default class extends Controller {
         });
     }
 
-    // Une seule vidéo à la fois : les autres se mettent en pause.
-    onPlay = () => {
-        document.querySelectorAll('.player video').forEach((other) => {
-            if (other !== this.videoTarget && !other.paused) other.pause();
-        });
-    };
+    // Une seule publication à la fois : les vidéos et musiques des autres se mettent en pause.
+    onPlay = () => playAlone(this.videoTarget);
 
     toggleSound(event) {
         event.stopPropagation();
@@ -78,7 +69,7 @@ export default class extends Controller {
     // Choix du son fait sur n'importe quelle vidéo : appliqué à celle-ci si elle joue.
     applySound(on) {
         const video = this.videoTarget;
-        video.muted = !on;
+        video.muted = this.silent || !on;
         if (on && this.visible && video.paused) this.play();
         this.render();
     }

@@ -6,6 +6,7 @@ namespace App\Federation\Application;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Music\MusicTrack;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\Comment;
@@ -110,6 +111,7 @@ final readonly class Serializer
             }
         }
 
+        $content = $this->html($post->getCaption()).$this->musicCredit($post);
         $note = [
             'id' => $this->urls->note($post),
             'type' => 'Note',
@@ -118,8 +120,8 @@ final readonly class Serializer
             'url' => $this->urls->note($post),
             'to' => $to,
             'cc' => $cc,
-            'content' => $this->html($post->getCaption()),
-            'contentMap' => ['fr' => $this->html($post->getCaption())],
+            'content' => $content,
+            'contentMap' => ['fr' => $content],
             'sensitive' => $post->isSensitive(),
             'summary' => $post->getContentWarning(),
             'attachment' => $attachments,
@@ -228,6 +230,23 @@ final readonly class Serializer
     private function tags(string $text): array
     {
         return array_map(fn (string $tag): array => ['type' => 'Hashtag', 'href' => $this->urls->hashtag($tag), 'name' => '#'.$tag], HtmlText::hashtags($text));
+    }
+
+    /**
+     * Mention de la musique, que les autres serveurs du fédivers ne jouent pas : « 🎵 Titre – Artiste (licence) ».
+     */
+    private function musicCredit(Post $post): string
+    {
+        $music = $post->getMusic();
+        if (!$music instanceof MusicTrack) {
+            return '';
+        }
+        $label = htmlspecialchars(\sprintf('%s – %s', $music->getTitle(), $music->getArtist()), \ENT_QUOTES | \ENT_HTML5);
+        if (null !== $music->getSourceUrl()) {
+            $label = \sprintf('<a href="%s" rel="nofollow noopener" target="_blank">%s</a>', htmlspecialchars($music->getSourceUrl(), \ENT_QUOTES | \ENT_HTML5), $label);
+        }
+
+        return \sprintf('<p>🎵 %s (%s)</p>', $label, htmlspecialchars($music->getLicenseLabel(), \ENT_QUOTES | \ENT_HTML5));
     }
 
     private function html(string $text): string

@@ -44,6 +44,8 @@ a{color:inherit;text-decoration:none}
 h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
 h1{font-size:1.75rem;font-weight:800} h2{font-size:1.25rem;font-weight:700} h3{font-size:1.02rem;font-weight:700}
 p{margin:0}
+/* Un élément masqué (attribut hidden) le reste, même si sa classe lui donne un display. */
+[hidden]{display:none!important}
 small,.small{font-size:.82rem;color:var(--muted)}
 .i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .i.sm{width:18px;height:18px}.i.xs{width:14px;height:14px}
@@ -193,6 +195,13 @@ tr:last-child td{border-bottom:0}
 .snd .i{width:16px;height:16px}
 .player .snd .on,.player.muted .snd .off{display:block}
 .player .snd .off,.player.muted .snd .on{display:none}
+/* Musique d'une publication : un seul bouton son pour la publication, la vidéo reste muette */
+.media[data-music] .player .snd{display:none}
+.music-snd{z-index:2}
+.music-snd .on,.media.music-on .music-snd .off{display:none}
+.music-snd .off,.media.music-on .music-snd .on{display:block}
+.music-credit a{color:inherit}
+.music-credit .i{vertical-align:-2px}
 .cnt{position:absolute;top:12px;right:12px;padding:3px 9px;border-radius:10px;font-size:.75rem;font-weight:700;background:var(--media-shade);color:var(--on-media);backdrop-filter:blur(8px)}
 .nb{position:absolute;top:50%;translate:0 -50%;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--glass);backdrop-filter:blur(10px);color:var(--fg);opacity:0;transition:opacity .2s}
 .media:hover .nb,.media:focus-within .nb{opacity:1}
@@ -255,7 +264,7 @@ tr:last-child td{border-bottom:0}
 .addc{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:center}
 .addc .inp{min-height:38px;border-radius:19px}
 @media (max-width:767px){
-  .ov{place-items:end center;padding-inline:0;padding-bottom:0}
+  .ov{padding-inline:0}
   .pd{grid-template-columns:1fr;border-radius:26px 26px 0 0;max-height:calc(100dvh - 40px);overflow-y:auto}
   .pd-side{border-left:0}
   .pd-media .media{max-height:60dvh}
@@ -416,7 +425,6 @@ pre.code{margin:0;padding:14px 16px;border-radius:14px;background:var(--bg);bord
 .imm-filters{gap:8px}
 .imm-filters select{min-width:0;flex:1 1 180px}
 .imm-date{display:flex;align-items:center;gap:6px}
-.imm-date[hidden]{display:none}
 .imm-scroll{max-height:440px;overflow-y:auto;border-radius:14px;padding-right:4px}
 .imm-scroll turbo-frame{display:block}
 .imm-day{font-size:.8rem;font-weight:700;color:var(--muted);margin:12px 0 6px;text-transform:none}
@@ -473,9 +481,6 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 .dom .grow{flex:1;min-width:140px}
 
 /* ---------- Divers ---------- */
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:var(--shadow);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:2px;animation:up .25s}
-.sheet::before{content:"";width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
-@keyframes up{from{transform:translateY(100%)}}
 .toast{position:fixed;left:50%;translate:-50% 0;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:90;background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:14px;font-weight:600;font-size:.9rem;box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px);animation:rise .25s}
 @media (max-width:767px){.toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
 .skel{background:linear-gradient(90deg,var(--surface-2),var(--surface) 50%,var(--surface-2));background-size:200% 100%;animation:sk 1.2s infinite}
@@ -593,19 +598,17 @@ button[disabled]{opacity:.5;cursor:not-allowed}
 .pmenu .menu .danger{color:var(--coral)}
 
 /* ---------- Feuille de partage ---------- */
+/* Toutes les fenêtres modales sont au centre du navigateur, sur bureau comme sur mobile. */
+dialog:modal{margin:auto}
 .share-sheet{border:0;padding:0;background:transparent;max-width:min(420px,calc(100vw - 24px));width:100%;color:var(--fg)}
+.share-sheet .sheet{animation:rise .15s}
 .share-sheet::backdrop{background:oklch(0.15 0.02 285 / .55);backdrop-filter:blur(4px)}
 .share-sheet .sheet{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:10px;box-shadow:var(--shadow);display:flex;flex-direction:column}
 .share-sheet header{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 8px 10px;font-family:var(--font-display)}
 .share-sheet .opt{display:flex;align-items:center;gap:14px;padding:12px;border-radius:14px;font:inherit;color:var(--fg);background:none;border:0;text-align:left;cursor:pointer;width:100%}
-.share-sheet .opt[hidden]{display:none}
 .share-sheet .opt:hover,.share-sheet .opt:focus-visible{background:var(--surface-2)}
 .share-sheet .opt span{display:flex;flex-direction:column}
 .share-sheet .opt small{color:var(--muted);font-size:.78rem}
-@media (max-width:767px){
-  .share-sheet{margin:auto auto 0;max-width:100vw}
-  .share-sheet .sheet{border-radius:22px 22px 0 0;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
-}
 
 /* ---------- Commentaires ---------- */
 .cmts-list{display:flex;flex-direction:column;gap:16px}
@@ -627,3 +630,34 @@ label.act{cursor:pointer}
 .video-modal video{display:block;width:100%;max-height:calc(100dvh - 32px);background:#000;border-radius:14px}
 .video-modal .close{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;z-index:1;color:#fff;background:oklch(0 0 0 / .45)}
 @media (max-width:767px){.video-modal video{border-radius:0}}
+
+/* Sélecteur de musique (création et modification) */
+.music-picker{border:0;padding:0;margin:0;display:grid;gap:8px}
+.music-picker legend{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.music-chosen{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.music-chosen .row{align-items:center;gap:10px}
+.music-start{display:grid;gap:4px}
+.music-start input{width:100%;accent-color:var(--accent)}
+.music-search{display:grid;gap:8px}
+.music-results{display:grid;gap:8px;max-height:320px;overflow:auto}
+.music-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.music-list li{gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.music-list b{overflow-wrap:anywhere}
+.sv-music{font-size:.78rem;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Bureau : recherche de musique dans une fenêtre au centre, page assombrie (mobile : dans la page) */
+.music-open{justify-self:start}
+.music-modal{border:0;padding:0;background:transparent;width:min(600px,calc(100vw - 48px));max-height:min(720px,calc(100dvh - 48px));color:var(--fg);overflow:visible}
+.music-modal::backdrop{background:oklch(0.15 0.02 285 / .55);backdrop-filter:blur(4px)}
+.music-modal .sheet{display:flex;flex-direction:column;gap:10px;max-height:min(720px,calc(100dvh - 48px));background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px 16px 16px;box-shadow:var(--shadow);animation:rise .15s}
+.music-modal header{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-display);font-size:1.05rem}
+.music-modal .music-search{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.music-modal .music-results{max-height:none;flex:1;min-height:120px}
+.music-modal .sheet>div{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.music-thumb{position:relative;flex:0 0 48px;width:48px;height:48px;border-radius:10px;overflow:hidden;display:grid;place-items:center;background:var(--surface-2);color:var(--muted)}
+.music-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.music-fav{color:var(--muted)}
+.music-fav[aria-pressed="true"]{color:var(--coral)}
+.music-fav[aria-pressed="true"] .i{fill:var(--coral);stroke:var(--coral);animation:pop .35s}
+.music-fav-title{display:flex;align-items:center;gap:6px;margin:0}
+.music-play.loading .i{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}

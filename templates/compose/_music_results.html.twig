@@ -1,0 +1,34 @@
+{# Une page de résultats de recherche de musique, ou les favoris (sélecteur music-picker).
+   Variables : query, page, tracks, next, error, favorites (identifiants en favori), favorites_view #}
+{% import '_macros.html.twig' as ui %}
+{% if favorites_view %}
+    <p class="lab music-fav-title">{{ ui.icon('heart', 'xs') }} Vos favoris</p>
+    {% if tracks is empty %}<p class="small">Aucun favori pour l’instant. Touchez {{ ui.icon('heart', 'xs') }} sur un résultat de recherche pour le retrouver ici.</p>{% endif %}
+{% elseif error %}
+    <p class="field-errors">{{ error }}</p>
+{% elseif tracks is empty and page == 1 %}
+    <p class="small">{{ query ? 'Aucune musique trouvée pour « ' ~ query ~ ' ». Essayez un autre mot, en anglais de préférence.' : 'Saisissez une ambiance, un genre ou un artiste.' }}</p>
+{% endif %}
+<ul class="music-list">
+    {% for track in tracks %}
+        <li class="row">
+            <span class="music-thumb" aria-hidden="true">{{ ui.icon('music') }}
+                {%- if track.hasThumbnail %}<img src="{{ path('app_music_thumbnail', {openverseId: track.id}) }}" alt="" width="48" height="48" loading="lazy" decoding="async" data-action="error->music-picker#thumbnailMissing">{% endif -%}
+            </span>
+            <button type="button" class="ib music-play" data-action="music-picker#listen" data-music-picker-id-param="{{ track.id }}" aria-label="Écouter « {{ track.title }} »">{{ ui.icon('play', 'sm') }}</button>
+            <div class="grow">
+                <b>{{ track.title }}</b>
+                <div class="small">{{ track.artist }} · {{ '%d:%02d'|format(track.duration // 60, track.duration % 60) }} · {{ track.licenseLabel }}{% if track.genres %} · {{ track.genres|slice(0, 3)|join(', ') }}{% endif %}</div>
+            </div>
+            {% set favorite = favorites[track.id] ?? false %}
+            <button type="button" class="ib music-fav" data-action="music-picker#favorite" data-music-picker-id-param="{{ track.id }}"
+                    aria-pressed="{{ favorite ? 'true' : 'false' }}" aria-label="{{ favorite ? 'Retirer des favoris' : 'Ajouter aux favoris' }}">{{ ui.icon('heart', 'sm') }}</button>
+            <button type="button" class="btn sm" data-action="music-picker#choose"
+                    data-music-picker-id-param="{{ track.id }}" data-music-picker-title-param="{{ track.title }}" data-music-picker-artist-param="{{ track.artist }}"
+                    data-music-picker-license-param="{{ track.licenseLabel }}" data-music-picker-duration-param="{{ track.duration }}">Choisir</button>
+        </li>
+    {% endfor %}
+</ul>
+{% if next %}
+    <button type="button" class="btn sm ghost" data-action="music-picker#more" data-music-picker-page-param="{{ next }}">Plus de résultats</button>
+{% endif %}

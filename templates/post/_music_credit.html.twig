@@ -1,0 +1,6 @@
+{# Crédit de la musique d'une publication ou d'une story (attribution exigée par les licences Creative Commons). Variables : music #}
+{% import '_macros.html.twig' as ui %}
+<div class="psub music-credit">{{ ui.icon('music', 'xs') }}
+    {%- if music.sourceUrl %} <a href="{{ music.sourceUrl }}" target="_blank" rel="noopener" title="Écouter sur {{ music.provider|capitalize }}">{{ music.title }} · {{ music.artist }}</a>{% else %} {{ music.title }} · {{ music.artist }}{% endif %}
+    · {% if music.licenseUrl %}<a href="{{ music.licenseUrl }}" target="_blank" rel="noopener license">{{ music.licenseLabel }}</a>{% else %}{{ music.licenseLabel }}{% endif %}
+</div>

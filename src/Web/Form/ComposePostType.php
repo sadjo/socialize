@@ -80,6 +80,7 @@ final class ComposePostType extends AbstractType
                 'help' => 'Facultatif. Les médias restent floutés jusqu’à ce qu’on clique dessus.',
                 'attr' => ['maxlength' => 500, 'placeholder' => 'Exemple : macro d’insecte'],
                 'constraints' => [new Assert\Length(max: 500)],
-            ]);
+            ])
+            ->add('music', MusicChoiceType::class);
     }
 }

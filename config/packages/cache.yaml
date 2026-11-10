@@ -17,3 +17,15 @@ framework:
         # Namespaced pools use the above "app" backend by default
         #pools:
             #my.dedicated.cache: null
+        pools:
+            # Résultats de recherche d'Openverse (une heure), pour ménager le quota anonyme.
+            openverse.cache:
+                adapter: cache.app
+                default_lifetime: 3600
+
+when@test:
+    framework:
+        cache:
+            pools:
+                openverse.cache:
+                    adapter: cache.adapter.array

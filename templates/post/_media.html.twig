@@ -1,7 +1,9 @@
-{# Médias d'une publication : carrousel, vidéo, avertissement de contenu. Variables : post #}
+{# Médias d'une publication : carrousel, vidéo, musique, avertissement de contenu. Variables : post #}
 {% import '_macros.html.twig' as ui %}
 {% set count = post.media|length %}
-<div class="media" data-controller="carousel{{ post.sensitive ? ' reveal' }}" data-action="dblclick->like#doubleTap" data-carousel-count-value="{{ count }}">
+{% set music = post.music %}
+<div class="media" data-controller="carousel{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="dblclick->like#doubleTap" data-carousel-count-value="{{ count }}"
+     {%- if music %} data-music data-music-start-value="{{ post.musicStart }}" data-music-excerpt-value="{{ constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') }}"{% endif %}>
     <div class="track" data-carousel-target="track">
         {% for media in post.media %}
             <div class="slide{{ media.video ? ' vid' }}">
@@ -28,6 +30,12 @@
             </div>
         {% endfor %}
     </div>
+    {% if music %}
+        <audio class="post-music" preload="none" src="{{ music_url(music) }}" data-music-target="audio"></audio>
+        <button type="button" class="snd music-snd" data-music-target="sound" data-action="music#toggleSound" aria-label="Écouter la musique" aria-pressed="false">
+            {{- ui.icon('mute', 'off') }}{{ ui.icon('volume', 'on') -}}
+        </button>
+    {% endif %}
     {% if count > 1 %}
         <span class="cnt num" data-carousel-target="counter">1/{{ count }}</span>
         <button type="button" class="nb prev" data-action="carousel#prev" aria-label="Média précédent">{{ ui.icon('left', 'sm') }}</button>

@@ -6,6 +6,8 @@ namespace App\Core\Domain\Story;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Music\MusicChoice;
+use App\Core\Domain\Music\MusicTrack;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
 use Doctrine\DBAL\Types\Types;
@@ -42,6 +44,15 @@ class Story
 
     #[ORM\Column]
     private int $viewsCount = 0;
+
+    /** Musique jouée pendant la story (morceau libre d'Openverse). */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?MusicTrack $music = null;
+
+    /** Début de l'extrait joué, en secondes. */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $musicStart = 0;
 
     public function __construct(
         #[ORM\ManyToOne]
@@ -114,6 +125,22 @@ class Story
             throw new \DomainException('Une story contient un seul média.');
         }
         $this->media = $media;
+    }
+
+    public function getMusic(): ?MusicTrack
+    {
+        return $this->music;
+    }
+
+    public function getMusicStart(): int
+    {
+        return $this->musicStart;
+    }
+
+    public function chooseMusic(?MusicChoice $choice): void
+    {
+        $this->music = $choice?->track;
+        $this->musicStart = $choice->start ?? 0;
     }
 
     public function getHighlight(): ?Highlight

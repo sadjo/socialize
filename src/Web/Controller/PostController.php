@@ -15,6 +15,8 @@ use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\Serializer;
 use App\Federation\Infrastructure\Http\ActivityJsonResponse;
+use App\Integration\Openverse\Application\MusicLibrary;
+use App\Integration\Openverse\Application\OpenverseException;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\MediaUrls;
 use App\Media\Application\PostComposer;
@@ -142,7 +144,7 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/modifier', name: 'app_post_edit', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET', 'POST'])]
-    public function edit(string $id, Request $request, PostEditor $editor, MediaUrls $urls): Response
+    public function edit(string $id, Request $request, PostEditor $editor, MediaUrls $urls, MusicLibrary $music): Response
     {
         $post = $this->visiblePost($id);
         if (!$post->isOwnedBy($this->currentAccount->get()) || $post->isFederated()) {
@@ -169,11 +171,12 @@ final class PostController extends AbstractController
             'contentWarning' => $post->getContentWarning(),
             'order' => implode(',', array_column($existing, 'token')),
             'altTexts' => $altTexts,
+            'music' => ['track' => $post->getMusic()?->getOpenverseId(), 'start' => (string) $post->getMusicStart()],
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string} $data */
+            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}} $data */
             $data = $form->getData();
             try {
                 $editor->edit(
@@ -185,11 +188,12 @@ final class PostController extends AbstractController
                     array_values(array_filter(explode(',', $data['order']))),
                     $data['media'] ?? [],
                     $data['altTexts'] ?? [],
+                    $music->choice($data['music']['track'], (int) $data['music']['start']),
                 );
                 $this->addFlash('success', 'Publication modifiée.');
 
                 return $this->redirectToRoute('app_post_show', ['id' => $id], Response::HTTP_SEE_OTHER);
-            } catch (MediaProcessingException $e) {
+            } catch (MediaProcessingException|OpenverseException $e) {
                 $form->addError(new FormError($e->getMessage()));
             }
         }
