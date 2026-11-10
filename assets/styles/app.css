@@ -633,7 +633,6 @@ label.act{cursor:pointer}
 
 /* Sélecteur de musique (création et modification) */
 .music-picker{border:0;padding:0;margin:0;display:grid;gap:8px}
-.music-picker [hidden]{display:none!important}
 .music-picker legend{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .music-chosen{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 .music-chosen .row{align-items:center;gap:10px}
