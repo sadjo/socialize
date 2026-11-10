@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Integration\Openverse\Application;
 
+use App\Core\Domain\Music\MusicTrack;
+
 /**
  * Morceau trouvé sur Openverse (résultat de recherche ou fiche détaillée).
  */
@@ -49,21 +51,8 @@ final readonly class OpenverseTrack
         );
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function toArray(): array
+    public function getLicenseLabel(): string
     {
-        return [
-            'id' => $this->id,
-            'title' => $this->title,
-            'artist' => $this->artist,
-            'license' => $this->license,
-            'licenseVersion' => $this->licenseVersion,
-            'sourceUrl' => $this->sourceUrl,
-            'provider' => $this->provider,
-            'duration' => $this->duration,
-            'genres' => $this->genres,
-        ];
+        return MusicTrack::formatLicense($this->license, $this->licenseVersion);
     }
 }

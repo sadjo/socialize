@@ -11,6 +11,7 @@ use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * API publique d'Openverse (https://api.openverse.org), sans compte : recherche de musique
@@ -66,13 +67,59 @@ final readonly class OpenverseClient
         return ['tracks' => $tracks, 'next' => $cached['next']];
     }
 
+    /**
+     * Fiche d'un morceau, gardée en cache une heure (la pré-écoute la demande à chaque requête partielle).
+     */
     public function track(string $id): OpenverseTrack
     {
         if (!preg_match('/^[0-9a-f-]{36}$/i', $id)) {
             throw new OpenverseException('Morceau introuvable sur Openverse.');
         }
+        $id = strtolower($id);
 
-        return OpenverseTrack::fromApi($this->json('audio/'.strtolower($id).'/'));
+        /** @var array<mixed> $data */
+        $data = $this->openverseCache->get('openverse.track.'.$id, function (ItemInterface $item) use ($id): array {
+            $item->expiresAfter(3600);
+
+            return $this->json('audio/'.$id.'/');
+        });
+
+        return OpenverseTrack::fromApi($data);
+    }
+
+    /**
+     * Ouvre le fichier du morceau chez son fournisseur, pour le relayer tel quel (pré-écoute sans stockage).
+     * La plage demandée par le navigateur (en-tête Range) est transmise : on peut se déplacer dans le morceau.
+     */
+    public function open(OpenverseTrack $track, ?string $range = null): ResponseInterface
+    {
+        $headers = null !== $range && preg_match('/^bytes=\d*-\d*$/', $range) ? ['Range' => $range] : [];
+        try {
+            $response = $this->client->request('GET', $this->fileUrl($track), ['headers' => $headers, 'timeout' => 30, 'max_redirects' => 5]);
+            $status = $response->getStatusCode();
+        } catch (ExceptionInterface $e) {
+            throw new OpenverseException(\sprintf('Le morceau n’a pas pu être lu depuis %s.', $track->provider), $e->getCode(), previous: $e);
+        }
+        if (!\in_array($status, [200, 206], true)) {
+            $response->cancel();
+            throw new OpenverseException(\sprintf('Le fournisseur du morceau (%s) a répondu par une erreur (%d).', $track->provider, $status));
+        }
+
+        return $response;
+    }
+
+    /**
+     * @return iterable<string>
+     */
+    public function chunks(ResponseInterface $response): iterable
+    {
+        try {
+            foreach ($this->client->stream($response) as $chunk) {
+                yield $chunk->getContent();
+            }
+        } catch (ExceptionInterface $e) {
+            throw new OpenverseException('La lecture du morceau a été interrompue.', $e->getCode(), previous: $e);
+        }
     }
 
     /**
@@ -80,11 +127,7 @@ final readonly class OpenverseClient
      */
     public function download(OpenverseTrack $track, string $target): void
     {
-        $url = $track->fileUrl;
-        if (null === $url || !\in_array(parse_url($url, \PHP_URL_SCHEME), ['http', 'https'], true)) {
-            throw new OpenverseException('Ce morceau ne peut pas être téléchargé.');
-        }
-
+        $url = $this->fileUrl($track);
         $out = fopen($target, 'w') ?: throw new OpenverseException('Impossible d’écrire le morceau reçu.');
         try {
             $response = $this->client->request('GET', $url, ['timeout' => 30, 'max_duration' => 300, 'max_redirects' => 5]);
@@ -106,6 +149,16 @@ final readonly class OpenverseClient
         } finally {
             fclose($out);
         }
+    }
+
+    private function fileUrl(OpenverseTrack $track): string
+    {
+        $url = $track->fileUrl;
+        if (null === $url || !\in_array(parse_url($url, \PHP_URL_SCHEME), ['http', 'https'], true)) {
+            throw new OpenverseException('Ce morceau ne peut pas être téléchargé.');
+        }
+
+        return $url;
     }
 
     /**

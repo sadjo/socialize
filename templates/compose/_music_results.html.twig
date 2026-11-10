@@ -8,11 +8,14 @@
 <ul class="music-list">
     {% for track in tracks %}
         <li class="row">
+            <button type="button" class="ib music-play" data-action="music-picker#listen" data-music-picker-id-param="{{ track.id }}" aria-label="Écouter « {{ track.title }} »">{{ ui.icon('play', 'sm') }}</button>
             <div class="grow">
                 <b>{{ track.title }}</b>
-                <div class="small">{{ track.artist }} · {{ '%d:%02d'|format(track.duration // 60, track.duration % 60) }} · {{ track.license == 'cc0' ? 'CC0' : track.license == 'pdm' ? 'Domaine public' : 'CC ' ~ track.license|upper }}{% if track.genres %} · {{ track.genres|slice(0, 3)|join(', ') }}{% endif %}</div>
+                <div class="small">{{ track.artist }} · {{ '%d:%02d'|format(track.duration // 60, track.duration % 60) }} · {{ track.licenseLabel }}{% if track.genres %} · {{ track.genres|slice(0, 3)|join(', ') }}{% endif %}</div>
             </div>
-            <button type="button" class="btn sm" data-action="music-picker#choose" data-music-picker-id-param="{{ track.id }}">Choisir</button>
+            <button type="button" class="btn sm" data-action="music-picker#choose"
+                    data-music-picker-id-param="{{ track.id }}" data-music-picker-title-param="{{ track.title }}" data-music-picker-artist-param="{{ track.artist }}"
+                    data-music-picker-license-param="{{ track.licenseLabel }}" data-music-picker-duration-param="{{ track.duration }}">Choisir</button>
         </li>
     {% endfor %}
 </ul>

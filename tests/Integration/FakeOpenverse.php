@@ -51,7 +51,7 @@ final class FakeOpenverse
         parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
 
         return match (true) {
-            str_starts_with($url, self::FILES) => new MockResponse($this->audio(), ['response_headers' => ['content-type' => 'audio/mp4']]),
+            str_starts_with($url, self::FILES) => $this->file($this->header($options, 'range')),
             !str_starts_with($url, 'https://api.openverse.org/v1/') => new MockResponse('', ['error' => 'Hôte inconnu']),
             '/v1/audio/' === $path => $this->json(['result_count' => 3, 'page_count' => 1, 'page_size' => 20, 'page' => 1, 'results' => \is_string($query['q'] ?? null) && 'introuvable' !== $query['q'] ? array_values(self::tracks()) : []]),
             (bool) preg_match('#^/v1/audio/([0-9a-f-]{36})/$#', $path, $m) && isset(self::tracks()[$m[1]]) => $this->json(self::tracks()[$m[1]]),
@@ -103,6 +103,38 @@ final class FakeOpenverse
         }
 
         return self::$audio;
+    }
+
+    /**
+     * Fichier audio du faux fournisseur, en entier ou par plage (requête partielle, comme Jamendo).
+     */
+    private function file(?string $range): MockResponse
+    {
+        $audio = $this->audio();
+        $size = \strlen($audio);
+        if (null !== $range && preg_match('/^bytes=(\d+)-(\d*)$/', $range, $m)) {
+            $from = (int) $m[1];
+            $to = '' === $m[2] ? $size - 1 : min((int) $m[2], $size - 1);
+
+            return new MockResponse(substr($audio, $from, $to - $from + 1), ['http_code' => 206, 'response_headers' => [
+                'content-type' => 'audio/mp4', 'accept-ranges' => 'bytes',
+                'content-length' => (string) ($to - $from + 1), 'content-range' => \sprintf('bytes %d-%d/%d', $from, $to, $size),
+            ]]);
+        }
+
+        return new MockResponse($audio, ['response_headers' => ['content-type' => 'audio/mp4', 'content-length' => (string) $size, 'accept-ranges' => 'bytes']]);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function header(array $options, string $name): ?string
+    {
+        $headers = \is_array($options['normalized_headers'] ?? null) ? $options['normalized_headers'] : [];
+        $lines = $headers[$name] ?? [];
+        $line = \is_array($lines) ? ($lines[0] ?? null) : null;
+
+        return \is_string($line) ? trim(substr($line, \strlen($name) + 1)) : null;
     }
 
     /**

@@ -2,8 +2,8 @@ import { Controller } from '@hotwired/stimulus';
 
 /*
  * Sélecteur de musique des écrans de création : recherche dans Openverse (page de résultats rendue
- * par le serveur), choix d'un morceau (copié sur l'instance), puis réglage du début de l'extrait,
- * qu'on peut écouter avant de publier.
+ * par le serveur), pré-écoute relayée par le serveur sans rien stocker, choix d'un morceau et du début
+ * de l'extrait. Le morceau n'est copié sur l'instance qu'à la publication.
  */
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -14,20 +14,41 @@ function clock(seconds) {
 
 export default class extends Controller {
     static targets = ['track', 'start', 'chosen', 'searchBox', 'query', 'results', 'error', 'title', 'credit', 'range', 'startLabel', 'audio', 'play'];
-    static values = { searchUrl: String, chooseUrl: String, token: String, excerpt: Number };
+    static values = { searchUrl: String, listenUrl: String, excerpt: Number };
 
     connect() {
+        // Lecteur de l'extrait choisi, sur le début réglé.
         this.onTime = () => {
             if (this.audioTarget.currentTime >= this.startValue() + this.excerptValue) this.stopPreview();
         };
         this.audioTarget.addEventListener('timeupdate', this.onTime);
         this.audioTarget.addEventListener('ended', () => this.stopPreview());
+        this.audioTarget.addEventListener('error', () => {
+            if (this.audioTarget.getAttribute('src')) this.showError('Ce morceau ne peut pas être écouté pour le moment.');
+            this.stopPreview();
+        });
+
+        // Lecteur des résultats de recherche (un morceau à la fois, l'extrait du début).
+        this.listener = new Audio();
+        this.listener.preload = 'none';
+        this.listener.addEventListener('timeupdate', () => { if (this.listener.currentTime >= this.excerptValue) this.stopListening(); });
+        this.listener.addEventListener('ended', () => this.stopListening());
+        this.listener.addEventListener('error', () => {
+            if (this.listening) this.showError('Ce morceau ne peut pas être écouté pour le moment.');
+            this.stopListening();
+        });
+
         this.renderStart();
     }
 
     disconnect() {
         this.audioTarget.removeEventListener('timeupdate', this.onTime);
         this.audioTarget.pause();
+        this.stopListening();
+    }
+
+    listenUrl(id) {
+        return this.listenUrlValue.replace(ZERO_ID, id);
     }
 
     startValue() {
@@ -46,6 +67,7 @@ export default class extends Controller {
         const query = this.queryTarget.value.trim();
         if (!query) return;
         this.showError(null);
+        this.stopListening();
         if (!append) this.resultsTarget.innerHTML = '<p class="small">Recherche…</p>';
         const url = `${this.searchUrlValue}?${new URLSearchParams({ q: query, page })}`;
         try {
@@ -64,35 +86,36 @@ export default class extends Controller {
         }
     }
 
-    async choose({ params: { id }, currentTarget }) {
+    // Pré-écoute d'un résultat : ▶ lance, ▮▮ arrête ; un autre résultat remplace le précédent.
+    listen({ params: { id }, currentTarget }) {
         this.showError(null);
-        const label = currentTarget.textContent;
-        currentTarget.disabled = true;
-        currentTarget.textContent = 'Préparation…';
-        try {
-            const response = await fetch(this.chooseUrlValue.replace(ZERO_ID, id), {
-                method: 'POST',
-                headers: { 'X-CSRF-Token': this.tokenValue, Accept: 'application/json' },
-                credentials: 'same-origin',
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'Ce morceau n’a pas pu être préparé.');
-            this.select(data);
-        } catch (error) {
-            this.showError(error.message);
-        } finally {
-            currentTarget.disabled = false;
-            currentTarget.textContent = label;
-        }
+        const same = this.listening === currentTarget;
+        this.stopListening();
+        if (same) return;
+        this.audioTarget.pause();
+        this.renderPlay(false);
+        this.listening = currentTarget;
+        this.setIcon(currentTarget, true);
+        this.listener.src = this.listenUrl(String(id));
+        this.listener.play().catch(() => this.stopListening());
     }
 
-    select(track) {
-        this.trackTarget.value = track.id;
-        this.titleTarget.textContent = track.title;
-        this.creditTarget.textContent = `${track.artist} · ${track.license}`;
-        this.rangeTarget.max = String(Math.max(0, track.duration - this.excerptValue));
+    stopListening() {
+        if (!this.listener) return;
+        this.listener.pause();
+        if (this.listening) this.setIcon(this.listening, false);
+        this.listening = null;
+    }
+
+    choose({ params }) {
+        this.showError(null);
+        this.stopListening();
+        this.trackTarget.value = String(params.id);
+        this.titleTarget.textContent = String(params.title);
+        this.creditTarget.textContent = `${params.artist} · ${params.license}`;
+        this.rangeTarget.max = String(Math.max(0, Number(params.duration) - this.excerptValue));
         this.rangeTarget.value = '0';
-        this.audioTarget.src = track.src;
+        this.audioTarget.src = this.listenUrl(String(params.id));
         this.chosenTarget.hidden = false;
         this.searchBoxTarget.hidden = true;
         this.renderStart();
@@ -116,7 +139,11 @@ export default class extends Controller {
     togglePreview() {
         const audio = this.audioTarget;
         if (!audio.paused) return this.stopPreview();
-        audio.currentTime = this.startValue();
+        this.stopListening();
+        this.showError(null);
+        const start = () => { audio.currentTime = this.startValue(); };
+        if (audio.readyState === 0) audio.addEventListener('loadedmetadata', start, { once: true });
+        else start();
         audio.play().then(() => this.renderPlay(true)).catch(() => this.renderPlay(false));
     }
 
@@ -131,8 +158,13 @@ export default class extends Controller {
     }
 
     renderPlay(playing) {
-        this.playTarget.querySelector('use').setAttribute('href', playing ? '#i-pause' : '#i-play');
+        this.setIcon(this.playTarget, playing);
         this.playTarget.setAttribute('aria-label', playing ? 'Arrêter l’écoute' : 'Écouter l’extrait');
+    }
+
+    setIcon(button, playing) {
+        button.querySelector('use')?.setAttribute('href', playing ? '#i-pause' : '#i-play');
+        button.setAttribute('aria-pressed', String(playing));
     }
 
     showError(message) {

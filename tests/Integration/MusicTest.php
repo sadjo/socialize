@@ -26,17 +26,18 @@ final class MusicTest extends AppWebTestCase
         self::assertResponseRedirects('/connexion');
 
         $this->login($this->register('camille'));
-        $crawler = $this->client->request('GET', '/publier');
+        $this->client->request('GET', '/publier');
         self::assertSelectorExists('[data-controller="music-picker"] input[name="compose_post[music][track]"]');
         self::assertSelectorExists('[data-music-picker-search-url-value="/musique/recherche"]');
 
         $this->client->request('GET', '/musique/recherche?q=piano');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('.music-list', 'Piano du matin');
-        self::assertSelectorTextContains('.music-list', 'Lina Morel · 1:15 · CC BY · classical, piano');
+        self::assertSelectorTextContains('.music-list', 'Lina Morel · 1:15 · CC BY 4.0 · classical, piano');
         self::assertSelectorTextContains('.music-list', 'Route 66');
         self::assertSelectorTextNotContains('.music-list', 'Sans fichier', 'Un morceau sans fichier téléchargeable n’est pas proposé.');
-        self::assertSelectorExists(\sprintf('button[data-music-picker-id-param="%s"]', FakeOpenverse::PIANO));
+        self::assertSelectorExists(\sprintf('button[data-action="music-picker#listen"][data-music-picker-id-param="%s"]', FakeOpenverse::PIANO));
+        self::assertSelectorExists(\sprintf('button[data-action="music-picker#choose"][data-music-picker-id-param="%s"][data-music-picker-title-param="Piano du matin"][data-music-picker-duration-param="75"]', FakeOpenverse::PIANO));
         self::assertStringContainsString('category=music', FakeOpenverse::$requests[0]);
 
         $this->client->request('GET', '/musique/recherche?q=introuvable');
@@ -49,65 +50,59 @@ final class MusicTest extends AppWebTestCase
 
         $this->client->request('GET', '/musique/recherche?q='.str_repeat('a', 101));
         self::assertResponseStatusCodeSame(400);
-        unset($crawler);
     }
 
-    public function testChoosingATrackCopiesItOnceOnTheInstance(): void
+    public function testListeningRelaysTheFileWithoutStoringIt(): void
     {
+        $this->client->request('GET', '/musique/ecouter/'.FakeOpenverse::PIANO);
+        self::assertResponseRedirects('/connexion');
+
         $this->login($this->register('camille'));
-        $token = $this->chooseToken();
+        $this->client->request('GET', '/musique/ecouter/'.FakeOpenverse::PIANO, server: ['HTTP_RANGE' => 'bytes=0-99']);
+        self::assertResponseStatusCodeSame(206);
+        self::assertResponseHeaderSame('Content-Type', 'audio/mp4');
+        self::assertResponseHeaderSame('Accept-Ranges', 'bytes');
+        self::assertMatchesRegularExpression('#^bytes 0-99/\d+$#', (string) $this->client->getResponse()->headers->get('Content-Range'));
+        self::assertSame(100, \strlen($this->client->getInternalResponse()->getContent()));
 
-        $this->client->request('POST', '/musique/choisir/'.FakeOpenverse::PIANO, server: ['HTTP_X_CSRF_TOKEN' => 'mauvais-jeton']);
-        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/musique/ecouter/'.FakeOpenverse::PIANO);
+        self::assertResponseIsSuccessful();
+        self::assertGreaterThan(10_000, \strlen($this->client->getInternalResponse()->getContent()));
 
-        $first = $this->choose(FakeOpenverse::PIANO, $token);
-        self::assertSame('Piano du matin', $first['title']);
-        self::assertSame('Lina Morel', $first['artist']);
-        self::assertSame('CC BY 4.0', $first['license']);
-        self::assertSame(40, $first['duration'], 'Durée lue dans le fichier, pas celle annoncée par Openverse.');
-        self::assertMatchesRegularExpression('#^/m/music/[1-9A-HJ-NP-Za-km-z]+\.m4a$#', $first['src']);
+        self::assertSame([], self::getContainer()->get(MusicTrackRepository::class)->findAll(), 'La pré-écoute ne copie rien sur l’instance.');
+        self::assertSame([], $this->derivatives()->listContents('music')->toArray());
 
-        $track = self::getContainer()->get(MusicTrackRepository::class)->findByPublicId($first['id']);
-        self::assertInstanceOf(MusicTrack::class, $track);
-        self::assertSame('https://www.jamendo.com/track/0c0a8a9b', $track->getSourceUrl());
-        self::assertTrue($this->derivatives()->fileExists($track->getPath()));
-
-        $downloads = \count(array_filter(FakeOpenverse::$requests, static fn (string $url): bool => str_starts_with($url, FakeOpenverse::FILES)));
-        $second = $this->choose(FakeOpenverse::PIANO, $token);
-        self::assertSame($first['id'], $second['id'], 'Un morceau déjà copié est réutilisé.');
-        self::assertCount($downloads, array_filter(FakeOpenverse::$requests, static fn (string $url): bool => str_starts_with($url, FakeOpenverse::FILES)));
-
-        $this->client->request('POST', '/musique/choisir/'.FakeOpenverse::NO_FILE, server: ['HTTP_X_CSRF_TOKEN' => $token]);
-        self::assertResponseStatusCodeSame(422);
-        self::assertSame(['error' => 'Ce morceau ne peut pas être téléchargé.'], json_decode((string) $this->client->getResponse()->getContent(), true));
+        $this->client->request('GET', '/musique/ecouter/'.FakeOpenverse::NO_FILE);
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testAPostPlaysItsMusicAndCreditsIt(): void
     {
         $this->login($this->register('camille'));
-        $track = $this->choose(FakeOpenverse::PIANO, $this->chooseToken());
-
-        $crawler = $this->client->request('GET', '/publier');
-        /** @var array{compose_post: array<string, mixed>} $values */
-        $values = $crawler->selectButton('Publier')->form()->getPhpValues();
-        $values['compose_post']['caption'] = 'Matin calme';
-        $values['compose_post']['visibility'] = 'public';
         // Au-delà de la fin du morceau (40 s) : le début est ramené pour garder un extrait de 30 s.
-        $values['compose_post']['music'] = ['track' => $track['id'], 'start' => '25'];
-        $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->jpeg()]]]);
+        $this->publish(FakeOpenverse::PIANO, '25', 'Matin calme');
         self::assertResponseRedirects();
 
         $post = $this->onlyPost();
-        self::assertSame('Piano du matin', $post->getMusic()?->getTitle());
+        $track = $post->getMusic();
+        self::assertInstanceOf(MusicTrack::class, $track);
+        self::assertSame('Piano du matin', $track->getTitle());
+        self::assertSame(40, $track->getDuration(), 'Durée lue dans le fichier, pas celle annoncée par Openverse.');
+        self::assertSame('https://www.jamendo.com/track/0c0a8a9b', $track->getSourceUrl());
+        self::assertTrue($this->derivatives()->fileExists($track->getPath()), 'Le morceau est copié sur l’instance à la publication.');
         self::assertSame(10, $post->getMusicStart());
 
         $this->client->followRedirect();
         self::assertSelectorExists('.media[data-controller~="music"][data-music-start-value="10"][data-music-excerpt-value="30"]');
-        self::assertSelectorExists(\sprintf('.media audio.post-music[src="%s"]', $track['src']));
+        self::assertSelectorExists(\sprintf('.media audio.post-music[src="/m/%s"]', $track->getPath()));
         self::assertSelectorExists('.media .music-snd[aria-pressed="false"]');
         self::assertSelectorTextContains('.music-credit', 'Piano du matin · Lina Morel');
         self::assertSelectorTextContains('.music-credit', 'CC BY 4.0');
         self::assertSelectorExists('.music-credit a[href="https://creativecommons.org/licenses/by/4.0/"]');
+
+        // Un morceau déjà copié est servi par sa copie, sans passer par le fournisseur.
+        $this->client->request('GET', '/musique/ecouter/'.FakeOpenverse::PIANO);
+        self::assertResponseRedirects('/m/'.$track->getPath());
 
         // Version fédérée : mention de la musique, que les autres serveurs ne jouent pas.
         $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => 'application/activity+json']);
@@ -117,26 +112,35 @@ final class MusicTest extends AppWebTestCase
         self::assertStringContainsString('🎵 <a href="https://www.jamendo.com/track/0c0a8a9b" rel="nofollow noopener" target="_blank">Piano du matin – Lina Morel</a> (CC BY 4.0)', $note['content']);
     }
 
+    public function testATrackIsCopiedOnceAndAnUnusableOneIsRefused(): void
+    {
+        $this->login($this->register('camille'));
+        $this->publish(FakeOpenverse::ROCK, '0');
+        $this->publish(FakeOpenverse::ROCK, '30');
+
+        self::assertCount(1, self::getContainer()->get(MusicTrackRepository::class)->findAll());
+        self::assertCount(1, array_filter(FakeOpenverse::$requests, static fn (string $url): bool => str_starts_with($url, FakeOpenverse::FILES)), 'Un seul téléchargement.');
+
+        $this->publish(FakeOpenverse::NO_FILE, '0');
+        self::assertResponseIsUnprocessable();
+        self::assertSelectorTextContains('.form-errors', 'Ce morceau ne peut pas être téléchargé.');
+        self::assertSelectorNotExists('.music-chosen[hidden]', 'Le morceau choisi reste affiché.');
+        self::assertSelectorTextContains('.music-chosen', 'Sans fichier');
+    }
+
     public function testEditingAPostChangesOrRemovesItsMusic(): void
     {
         $this->login($this->register('camille'));
-        $token = $this->chooseToken();
-        $piano = $this->choose(FakeOpenverse::PIANO, $token);
-        $rock = $this->choose(FakeOpenverse::ROCK, $token);
-
-        $crawler = $this->client->request('GET', '/publier');
-        /** @var array{compose_post: array<string, mixed>} $values */
-        $values = $crawler->selectButton('Publier')->form()->getPhpValues();
-        $values['compose_post']['music'] = ['track' => $piano['id'], 'start' => '0'];
-        $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->jpeg()]]]);
+        $this->publish(FakeOpenverse::PIANO, '0');
         $post = $this->onlyPost();
 
         $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
         self::assertSelectorTextContains('.music-chosen', 'Piano du matin');
+        self::assertSelectorExists(\sprintf('.music-chosen audio[src="/musique/ecouter/%s"]', FakeOpenverse::PIANO));
         $form = $crawler->selectButton('Enregistrer les modifications')->form();
-        self::assertSame($piano['id'], $form->getValues()['edit_post[music][track]'] ?? null, 'La musique actuelle est préremplie.');
+        self::assertSame(FakeOpenverse::PIANO, $form->getValues()['edit_post[music][track]'] ?? null, 'La musique actuelle est préremplie.');
 
-        $this->client->submit($form, ['edit_post[music][track]' => $rock['id'], 'edit_post[music][start]' => '5']);
+        $this->client->submit($form, ['edit_post[music][track]' => FakeOpenverse::ROCK, 'edit_post[music][start]' => '5']);
         self::assertResponseRedirects();
         $post = $this->onlyPost();
         self::assertSame('Route 66', $post->getMusic()?->getTitle());
@@ -148,55 +152,51 @@ final class MusicTest extends AppWebTestCase
         self::assertNull($this->onlyPost()->getMusic());
 
         $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
-        $this->client->submit($crawler->selectButton('Enregistrer les modifications')->form(), ['edit_post[music][track]' => '1CgzyA4uEynS7BD47o9fsu']);
+        $this->client->submit($crawler->selectButton('Enregistrer les modifications')->form(), ['edit_post[music][track]' => '7d0e2a1c-0000-4000-8000-000000000999']);
         self::assertResponseIsUnprocessable();
-        self::assertSelectorTextContains('.form-errors', 'La musique choisie est introuvable');
+        self::assertSelectorTextContains('.form-errors', 'Morceau introuvable sur Openverse.');
+
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        $this->client->submit($crawler->selectButton('Enregistrer les modifications')->form(), ['edit_post[music][track]' => 'pas-un-identifiant']);
+        self::assertResponseIsUnprocessable();
+        self::assertSelectorTextContains('main', 'La musique choisie est introuvable');
     }
 
     public function testAStoryPlaysItsMusicInTheViewer(): void
     {
         $this->login($this->register('camille'));
-        $track = $this->choose(FakeOpenverse::ROCK, $this->chooseToken());
 
         $crawler = $this->client->request('GET', '/stories/nouvelle');
         /** @var array{compose_story: array<string, mixed>} $values */
         $values = $crawler->selectButton('Partager la story')->form()->getPhpValues();
         $values['compose_story']['audience'] = 'public';
-        $values['compose_story']['music'] = ['track' => $track['id'], 'start' => '4'];
+        $values['compose_story']['music'] = ['track' => FakeOpenverse::ROCK, 'start' => '4'];
         $this->client->request('POST', '/stories/nouvelle', $values, ['compose_story' => ['media' => [$this->jpeg(1080, 1920)]]]);
         self::assertResponseRedirects('/');
 
         $story = self::getContainer()->get(StoryRepository::class)->findAll()[0];
-        self::assertSame('Route 66', $story->getMusic()?->getTitle());
+        $track = $story->getMusic();
+        self::assertInstanceOf(MusicTrack::class, $track);
+        self::assertSame('Route 66', $track->getTitle());
 
         $crawler = $this->client->request('GET', '/@camille/stories');
         self::assertResponseIsSuccessful();
         /** @var array{groups: list<array{stories: list<array{duration: float, music: array{src: string, start: int, excerpt: int, credit: string}}>}>} $data */
         $data = json_decode((string) $crawler->filter('[data-story-viewer-data-value]')->attr('data-story-viewer-data-value'), true, flags: \JSON_THROW_ON_ERROR);
         $story = $data['groups'][0]['stories'][0];
-        self::assertSame(['src' => $track['src'], 'start' => 4, 'excerpt' => 30, 'credit' => 'Route 66 · The Testers · CC BY-SA 3.0'], $story['music']);
+        self::assertSame(['src' => '/m/'.$track->getPath(), 'start' => 4, 'excerpt' => 30, 'credit' => 'Route 66 · The Testers · CC BY-SA 3.0'], $story['music']);
         self::assertEqualsWithDelta(15.0, $story['duration'], 0.01, 'Une photo avec musique reste affichée plus longtemps.');
     }
 
-    private function chooseToken(): string
+    private function publish(string $openverseId, string $start, string $caption = ''): void
     {
         $crawler = $this->client->request('GET', '/publier');
-
-        return (string) $crawler->filter('[data-music-picker-token-value]')->attr('data-music-picker-token-value');
-    }
-
-    /**
-     * @return array{id: string, title: string, artist: string, license: string, duration: int, src: string}
-     */
-    private function choose(string $openverseId, string $token): array
-    {
-        $this->client->request('POST', '/musique/choisir/'.$openverseId, server: ['HTTP_X_CSRF_TOKEN' => $token]);
-        self::assertResponseIsSuccessful();
-
-        /** @var array{id: string, title: string, artist: string, license: string, duration: int, src: string} $data */
-        $data = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-
-        return $data;
+        /** @var array{compose_post: array<string, mixed>} $values */
+        $values = $crawler->selectButton('Publier')->form()->getPhpValues();
+        $values['compose_post']['caption'] = $caption;
+        $values['compose_post']['visibility'] = 'public';
+        $values['compose_post']['music'] = ['track' => $openverseId, 'start' => $start];
+        $this->client->request('POST', '/publier', $values, ['compose_post' => ['media' => [$this->jpeg()]]]);
     }
 
     private function onlyPost(): Post

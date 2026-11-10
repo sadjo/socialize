@@ -1,13 +1,14 @@
-{# Sélecteur de musique libre (Openverse) : recherche, choix d'un morceau, début de l'extrait.
-   Variables : field (champ music du formulaire), current (MusicTrack ou null), current_start (secondes) #}
+{# Sélecteur de musique libre (Openverse) : recherche, pré-écoute relayée, choix d'un morceau, début de l'extrait.
+   Le morceau est copié sur l'instance à la publication. Variables : field (champ music du formulaire) #}
 {% import '_macros.html.twig' as ui %}
-{% set current = current ?? music_track(field.track.vars.value) %}
-{% set current_start = current_start ?? (field.start.vars.value ?: 0) %}
+{% set excerpt = constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') %}
+{% set track_id = field.track.vars.value %}
+{% set current = music_choice(track_id) %}
+{% set current_start = field.start.vars.value ?: 0 %}
 <fieldset class="field music-picker" data-controller="music-picker"
           data-music-picker-search-url-value="{{ path('app_music_search') }}"
-          data-music-picker-choose-url-value="{{ path('app_music_choose', {openverseId: '00000000-0000-0000-0000-000000000000'}) }}"
-          data-music-picker-token-value="{{ csrf_token(constant('App\\Web\\Controller\\MusicController::CHOOSE_TOKEN')) }}"
-          data-music-picker-excerpt-value="{{ constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') }}">
+          data-music-picker-listen-url-value="{{ path('app_music_listen', {openverseId: '00000000-0000-0000-0000-000000000000'}) }}"
+          data-music-picker-excerpt-value="{{ excerpt }}">
     <legend class="lab">{{ ui.icon('music', 'xs') }} Musique</legend>
     {{ form_widget(field.track) }}
     {{ form_widget(field.start) }}
@@ -17,16 +18,16 @@
             <button type="button" class="ib music-play" data-action="music-picker#togglePreview" data-music-picker-target="play" aria-label="Écouter l’extrait">{{ ui.icon('play', 'sm') }}</button>
             <div class="grow">
                 <b data-music-picker-target="title">{{ current ? current.title }}</b>
-                <div class="small" data-music-picker-target="credit">{{ current ? current.artist ~ ' · ' ~ current.licenseLabel }}</div>
+                <div class="small" data-music-picker-target="credit">{{ current ? current.artist ~ ' · ' ~ current.license }}</div>
             </div>
             <button type="button" class="btn sm ghost" data-action="music-picker#remove">Retirer</button>
         </div>
         <label class="music-start">
-            <span class="small">Début de l’extrait : <b class="num" data-music-picker-target="startLabel">0:00</b></span>
-            <input type="range" min="0" step="1" value="{{ current_start }}" max="{{ current ? max(0, current.duration - constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT')) : 0 }}"
+            <span class="small">Extrait : <b class="num" data-music-picker-target="startLabel">0:00</b></span>
+            <input type="range" min="0" step="1" value="{{ current_start }}" max="{{ current ? max(0, current.duration - excerpt) : 0 }}"
                    data-music-picker-target="range" data-action="input->music-picker#seek change->music-picker#seek" aria-label="Début de l’extrait">
         </label>
-        <audio preload="none" data-music-picker-target="audio"{% if current %} src="{{ music_url(current) }}"{% endif %}></audio>
+        <audio preload="none" data-music-picker-target="audio"{% if current %} src="{{ path('app_music_listen', {openverseId: track_id}) }}"{% endif %}></audio>
     </div>
 
     <div class="music-search" data-music-picker-target="searchBox"{% if current %} hidden{% endif %}>

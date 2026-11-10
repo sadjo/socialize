@@ -171,7 +171,7 @@ final class PostController extends AbstractController
             'contentWarning' => $post->getContentWarning(),
             'order' => implode(',', array_column($existing, 'token')),
             'altTexts' => $altTexts,
-            'music' => ['track' => $post->getMusic()?->getPublicId(), 'start' => (string) $post->getMusicStart()],
+            'music' => ['track' => $post->getMusic()?->getOpenverseId(), 'start' => (string) $post->getMusicStart()],
         ]);
         $form->handleRequest($request);
 

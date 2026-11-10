@@ -109,17 +109,21 @@ final readonly class MusicLibrary
     }
 
     /**
-     * Musique choisie dans un formulaire (identifiant public du morceau et début de l'extrait), ou null.
+     * Musique choisie dans un formulaire (identifiant Openverse du morceau et début de l'extrait), ou null.
+     * Le morceau est copié sur l'instance à ce moment-là s'il ne l'est pas encore.
      *
-     * @throws OpenverseException si le morceau n'existe pas
+     * @throws OpenverseException si le morceau est introuvable ou ne peut pas être copié
      */
-    public function choice(?string $trackId, ?int $start): ?MusicChoice
+    public function choice(?string $openverseId, ?int $start): ?MusicChoice
     {
-        if (null === $trackId || '' === trim($trackId)) {
+        $openverseId = trim((string) $openverseId);
+        if ('' === $openverseId) {
             return null;
         }
-        $track = $this->tracks->findByPublicId(trim($trackId)) ?? throw new OpenverseException('La musique choisie est introuvable. Choisissez-la à nouveau.');
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $openverseId)) {
+            throw new OpenverseException('La musique choisie est introuvable. Choisissez-la à nouveau.');
+        }
 
-        return new MusicChoice($track, $start ?? 0);
+        return new MusicChoice($this->import($openverseId), $start ?? 0);
     }
 }

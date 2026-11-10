@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
-use App\Integration\Openverse\Application\MusicLibrary;
+use App\Core\Domain\Music\MusicTrack;
+use App\Core\Infrastructure\Doctrine\MusicTrackRepository;
 use App\Integration\Openverse\Application\OpenverseException;
 use App\Integration\Openverse\Infrastructure\OpenverseClient;
 use App\Media\Application\MediaUrls;
 use App\Web\Controller\Payload\MusicSearch;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /**
  * Sélecteur de musique libre (Openverse) des écrans de création et de modification.
@@ -23,7 +25,6 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 final class MusicController extends AbstractController
 {
-    public const string CHOOSE_TOKEN = 'music-choose';
     /** Identifiant Openverse : un UUID, quelle que soit sa version. */
     private const string OPENVERSE_ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
@@ -51,28 +52,50 @@ final class MusicController extends AbstractController
     }
 
     /**
-     * Choix d'un morceau : copie sur l'instance (une fois par morceau), puis lecteur de l'extrait.
+     * Pré-écoute d'un morceau sans le stocker : le fichier est relayé depuis son fournisseur (le navigateur
+     * ne le contacte jamais), plage par plage pour pouvoir se déplacer. Un morceau déjà copié sur
+     * l'instance est servi par sa copie.
      */
-    #[Route('/musique/choisir/{openverseId}', name: 'app_music_choose', requirements: ['openverseId' => self::OPENVERSE_ID], methods: ['POST'])]
-    public function choose(string $openverseId, Request $request, MusicLibrary $library, MediaUrls $urls): JsonResponse
+    #[Route('/musique/ecouter/{openverseId}', name: 'app_music_listen', requirements: ['openverseId' => self::OPENVERSE_ID], methods: ['GET'])]
+    public function listen(string $openverseId, Request $request, OpenverseClient $openverse, MusicTrackRepository $tracks, MediaUrls $urls): Response
     {
-        if (!$this->isCsrfTokenValid(self::CHOOSE_TOKEN, (string) $request->headers->get('X-CSRF-Token'))) {
-            return $this->json(['error' => 'Jeton de sécurité invalide. Rechargez la page et réessayez.'], Response::HTTP_FORBIDDEN);
+        $local = $tracks->findByOpenverseId(strtolower($openverseId));
+        if ($local instanceof MusicTrack) {
+            return $this->redirect($urls->path($local->getPath()));
         }
 
         try {
-            $track = $library->import($openverseId);
-        } catch (OpenverseException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $upstream = $openverse->open($openverse->track($openverseId), $request->headers->get('Range'));
+            $source = $upstream->getHeaders(false);
+        } catch (OpenverseException|ExceptionInterface) {
+            throw $this->createNotFoundException('Ce morceau ne peut pas être écouté pour le moment.');
         }
 
-        return $this->json([
-            'id' => $track->getPublicId(),
-            'title' => $track->getTitle(),
-            'artist' => $track->getArtist(),
-            'license' => $track->getLicenseLabel(),
-            'duration' => $track->getDuration(),
-            'src' => $urls->path($track->getPath()),
-        ]);
+        $headers = ['Content-Type' => $source['content-type'][0] ?? 'audio/mpeg', 'Accept-Ranges' => 'bytes'];
+        foreach (['content-length' => 'Content-Length', 'content-range' => 'Content-Range'] as $name => $header) {
+            if (isset($source[$name][0])) {
+                $headers[$header] = $source[$name][0];
+            }
+        }
+        $chunks = $openverse->chunks($upstream);
+        // La session est libérée avant le flux : la lecture ne bloque pas les autres pages.
+        if ($request->hasSession()) {
+            $request->getSession()->save();
+        }
+
+        $response = new StreamedResponse(static function () use ($chunks): void {
+            try {
+                foreach ($chunks as $chunk) {
+                    echo $chunk;
+                    flush();
+                }
+            } catch (OpenverseException) {
+                // Lecture interrompue chez le fournisseur : le navigateur redemandera la suite.
+            }
+        }, $upstream->getStatusCode(), $headers);
+        $response->setPrivate();
+        $response->setMaxAge(3600);
+
+        return $response;
     }
 }

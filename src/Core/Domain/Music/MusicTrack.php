@@ -94,10 +94,15 @@ class MusicTrack
      */
     public function getLicenseLabel(): string
     {
-        return match (strtolower($this->license)) {
+        return self::formatLicense($this->license, $this->licenseVersion);
+    }
+
+    public static function formatLicense(string $license, ?string $version): string
+    {
+        return match (strtolower($license)) {
             'pdm' => 'Domaine public',
-            'cc0' => trim('CC0 '.($this->licenseVersion ?? '')),
-            default => trim('CC '.strtoupper($this->license).' '.($this->licenseVersion ?? '')),
+            'cc0' => trim('CC0 '.($version ?? '')),
+            default => trim('CC '.strtoupper($license).' '.($version ?? '')),
         };
     }
 
