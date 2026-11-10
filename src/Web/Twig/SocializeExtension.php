@@ -60,15 +60,32 @@ final readonly class SocializeExtension
     /**
      * Texte saisi par un compte : échappé, retours à la ligne conservés,
      * hashtags et mentions mis en valeur.
+     *
+     * Texte importé d'Instagram : les mentions (« @compte ») désignent des comptes Instagram,
+     * et mènent donc à leur profil sur Instagram plutôt qu'à un profil de l'instance.
      */
     #[AsTwigFilter('rich_text', isSafe: ['html'])]
-    public function richText(string $text): string
+    public function richText(string $text, bool $instagram = false): string
     {
         $html = htmlspecialchars($text, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
         $html = (string) preg_replace('/(?<![\w&])#([\p{L}\p{N}_]{1,100})/u', '<span class="tag">#$1</span>', $html);
-        $html = (string) preg_replace('/(?<![\w\/])@([a-z0-9_.]{1,30})(@[a-z0-9.-]+\.[a-z]{2,})?/iu', '<a class="tag" href="/@$1">@$1$2</a>', $html);
+        $html = (string) preg_replace_callback(
+            '/(?<![\w\/])@([a-z0-9_.]{1,30})(@[a-z0-9.-]+\.[a-z]{2,})?/iu',
+            static fn (array $m): string => $instagram && '' === ($m[2] ?? '')
+                ? \sprintf('<a class="tag" href="%s" target="_blank" rel="noopener nofollow">@%s</a>', self::instagramProfile($m[1]), $m[1])
+                : \sprintf('<a class="tag" href="/@%s">@%s%s</a>', $m[1], $m[1], $m[2] ?? ''),
+            $html,
+        );
 
         return nl2br($html, false);
+    }
+
+    /**
+     * Profil Instagram d'un compte mentionné dans un contenu importé.
+     */
+    public static function instagramProfile(string $username): string
+    {
+        return 'https://www.instagram.com/'.rawurlencode(rtrim($username, '.')).'/';
     }
 
     private function frenchDate(\DateTimeInterface $date): string
