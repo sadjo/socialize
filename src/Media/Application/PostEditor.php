@@ -6,6 +6,7 @@ namespace App\Media\Application;
 
 use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
- * Modifie une publication : texte, visibilité, et médias (ajout, retrait, ordre, texte alternatif).
+ * Modifie une publication : texte, visibilité, musique, et médias (ajout, retrait, ordre, texte alternatif).
  *
  * L'ordre est une liste de jetons : « m-<id> » pour un média existant, « n-<i> » pour le i-ème
  * nouveau fichier. Un média existant absent de la liste est retiré, avec ses fichiers.
@@ -47,6 +48,7 @@ final readonly class PostEditor
         array $order,
         array $newFiles = [],
         array $altTexts = [],
+        ?MusicChoice $music = null,
     ): void {
         $existing = [];
         foreach ($post->getMedia() as $media) {
@@ -69,6 +71,7 @@ final readonly class PostEditor
 
         $previousVisibility = $post->getVisibility();
         $post->edit($caption, $visibility, $contentWarning, $location, $this->clock->now());
+        $post->chooseMusic($music);
 
         // Retrait des médias absents de la nouvelle liste (les fichiers sont supprimés après l'enregistrement).
         $removed = [];

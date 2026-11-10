@@ -19,6 +19,7 @@
                     {% if post.archived %}<span class="chip imp" title="Visible uniquement par vous, dans vos archives">{{ ui.icon('album', 'xs') }}Archivée</span>{% endif %}
                     <span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon(post.visibility.value == 'public' ? 'globe' : 'lock', 'xs') }}{{ post.visibility.label }}</span></div>
                 {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
+            {% if post.music %}{{ include('post/_music_credit.html.twig', {music: post.music}) }}{% endif %}
             </div>
             {{ include('post/_menu.html.twig') }}
         </header>

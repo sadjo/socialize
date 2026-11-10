@@ -7,6 +7,8 @@ et de publier aussi sur Instagram et Facebook selon des règles réglables.
 > **État : jalon 6.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
 > stories, archives, fédération ActivityPub (Mastodon, Pixelfed), import d'une archive Instagram et publication
 > depuis Immich : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
+> Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
+> (licences Creative Commons, crédit affiché), copiée sur l'instance et jouée quand la publication est à l'écran.
 > Jalons suivants : personnes reconnues par Immich (mentions), API/MCP, crosspost.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
@@ -127,7 +129,7 @@ et une nouvelle clé API, à saisir dans Réglages › Immich. La clé a seuleme
 ### Organisation du code
 
 Le code est découpé en modules sous `src/` (`Core`, `Media`, `Federation`, `Import/Instagram`, `Crosspost/Meta`,
-`Integration/Immich`, `Api`, `Mcp`, `Web`, `Admin`). Chaque module suit la structure `Domain` / `Application` /
+`Integration/Immich`, `Integration/Openverse`, `Api`, `Mcp`, `Web`, `Admin`). Chaque module suit la structure `Domain` / `Application` /
 `Infrastructure`. Deptrac vérifie que les modules métier ne dépendent que du socle (`Core` et `Media`) : voir `deptrac.yaml`.
 
 ### Qualité et montées de version

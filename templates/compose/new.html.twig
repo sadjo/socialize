@@ -34,6 +34,7 @@
                     </div>
                 </fieldset>
                 {{ form_row(form.contentWarning) }}
+                {{ include('compose/_music.html.twig', {field: form.music}) }}
                 <button class="btn pri" data-compose-target="submit">Publier</button>
             </section>
         </div>

@@ -8,6 +8,7 @@ use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,12 +39,14 @@ final readonly class PostComposer
         Visibility $visibility = Visibility::Public,
         ?string $contentWarning = null,
         ?string $location = null,
+        ?MusicChoice $music = null,
     ): Post {
         if ([] === $uploads) {
             throw new MediaProcessingException('Ajoutez au moins une photo ou une vidéo.');
         }
 
         $post = new Post($author, $caption, $visibility, $contentWarning, $location);
+        $post->chooseMusic($music);
         $stored = [];
         try {
             foreach ($uploads as $position => $upload) {

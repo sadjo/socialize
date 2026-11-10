@@ -193,6 +193,13 @@ tr:last-child td{border-bottom:0}
 .snd .i{width:16px;height:16px}
 .player .snd .on,.player.muted .snd .off{display:block}
 .player .snd .off,.player.muted .snd .on{display:none}
+/* Musique d'une publication : un seul bouton son pour la publication, la vidéo reste muette */
+.media[data-music] .player .snd{display:none}
+.music-snd{z-index:2}
+.music-snd .on,.media.music-on .music-snd .off{display:none}
+.music-snd .off,.media.music-on .music-snd .on{display:block}
+.music-credit a{color:inherit}
+.music-credit .i{vertical-align:-2px}
 .cnt{position:absolute;top:12px;right:12px;padding:3px 9px;border-radius:10px;font-size:.75rem;font-weight:700;background:var(--media-shade);color:var(--on-media);backdrop-filter:blur(8px)}
 .nb{position:absolute;top:50%;translate:0 -50%;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--glass);backdrop-filter:blur(10px);color:var(--fg);opacity:0;transition:opacity .2s}
 .media:hover .nb,.media:focus-within .nb{opacity:1}
@@ -627,3 +634,17 @@ label.act{cursor:pointer}
 .video-modal video{display:block;width:100%;max-height:calc(100dvh - 32px);background:#000;border-radius:14px}
 .video-modal .close{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;z-index:1;color:#fff;background:oklch(0 0 0 / .45)}
 @media (max-width:767px){.video-modal video{border-radius:0}}
+
+/* Sélecteur de musique (création et modification) */
+.music-picker{border:0;padding:0;margin:0;display:grid;gap:8px}
+.music-picker legend{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.music-chosen{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.music-chosen .row{align-items:center;gap:10px}
+.music-start{display:grid;gap:4px}
+.music-start input{width:100%;accent-color:var(--accent)}
+.music-search{display:grid;gap:8px}
+.music-results{display:grid;gap:8px;max-height:320px;overflow:auto}
+.music-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.music-list li{gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.music-list b{overflow-wrap:anywhere}
+.sv-music{font-size:.78rem;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

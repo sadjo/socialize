@@ -8,7 +8,7 @@ const HOLD_DELAY = 250;
  * seule l'image (préchargée avant l'échange) ou la vidéo change, sans scintillement.
  */
 export default class extends Controller {
-    static targets = ['frame', 'media', 'bars', 'author', 'name', 'meta', 'text', 'own', 'pause', 'mute', 'close'];
+    static targets = ['frame', 'media', 'bars', 'author', 'name', 'meta', 'text', 'own', 'pause', 'mute', 'close', 'music'];
     static values = { data: Object };
 
     connect() {
@@ -39,6 +39,7 @@ export default class extends Controller {
         const story = this.story;
         cancelAnimationFrame(this.raf);
         this.stopVideo();
+        this.stopMusic();
         this.elapsed = 0;
         this.renderChrome();
 
@@ -50,13 +51,15 @@ export default class extends Controller {
             this.markSeen(story);
             this.preloadNext();
             this.started = performance.now();
+            this.startMusic(story);
             this.tick();
         };
 
         if (story.type === 'video') {
             const video = document.createElement('video');
             video.playsInline = true;
-            video.muted = this.muted;
+            // Avec une musique, la vidéo reste muette : la musique remplace son son.
+            video.muted = this.muted || !!story.music;
             video.preload = 'auto';
             video.poster = story.poster || '';
             video.src = story.src;
@@ -117,7 +120,9 @@ export default class extends Controller {
             this.ownTarget.replaceChildren(views, link);
         }
 
-        this.muteTarget.hidden = story.type !== 'video';
+        this.muteTarget.hidden = story.type !== 'video' && !story.music;
+        this.musicTarget.hidden = !story.music;
+        this.musicTarget.querySelector('span').textContent = story.music?.credit || '';
         this.updateButtons();
     }
 
@@ -177,6 +182,7 @@ export default class extends Controller {
     pause() {
         this.paused = true;
         this.video?.pause();
+        this.audio?.pause();
         this.updateButtons();
     }
 
@@ -185,12 +191,17 @@ export default class extends Controller {
         this.paused = false;
         this.started = performance.now();
         this.video?.play().catch(() => {});
+        if (this.audio && !this.muted) this.audio.play().catch(() => {});
         this.updateButtons();
     }
 
     toggleMute() {
         this.muted = !this.muted;
-        if (this.video) this.video.muted = this.muted;
+        if (this.video && !this.story.music) this.video.muted = this.muted;
+        if (this.audio) {
+            if (this.muted) this.audio.pause();
+            else if (!this.paused) this.audio.play().catch(() => {});
+        }
         this.updateButtons();
     }
 
@@ -211,6 +222,7 @@ export default class extends Controller {
     close() {
         cancelAnimationFrame(this.raf);
         this.stopVideo();
+        this.stopMusic();
         window.location.href = this.dataValue.closeUrl;
     }
 
@@ -228,7 +240,31 @@ export default class extends Controller {
         this.video = null;
     }
 
-        markSeen(story) {
+    /*
+     * Musique de la story : l'extrait choisi, en boucle, tant que la story est affichée et le son activé.
+     */
+    startMusic(story) {
+        if (!story.music) return;
+        const audio = new Audio();
+        audio.preload = 'auto';
+        audio.src = story.music.src;
+        const { start, excerpt } = story.music;
+        audio.addEventListener('loadedmetadata', () => { audio.currentTime = start; }, { once: true });
+        audio.addEventListener('timeupdate', () => { if (audio.currentTime >= start + excerpt) audio.currentTime = start; });
+        audio.addEventListener('ended', () => { audio.currentTime = start; audio.play().catch(() => {}); });
+        this.audio = audio;
+        if (!this.muted && !this.paused) audio.play().catch(() => {});
+    }
+
+    stopMusic() {
+        if (!this.audio) return;
+        this.audio.pause();
+        this.audio.removeAttribute('src');
+        this.audio.load();
+        this.audio = null;
+    }
+
+    markSeen(story) {
         if (!story.seenUrl || story.seen || this.seen.has(story.id)) return;
         this.seen.add(story.id);
         story.seen = true;

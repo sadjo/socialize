@@ -7,6 +7,8 @@ namespace App\Web\Twig;
 use App\Core\Application\Story\StoryGroup;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Music\MusicChoice;
+use App\Core\Domain\Music\MusicTrack;
 use App\Core\Domain\Story\Highlight;
 use App\Media\Application\MediaUrls;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -17,6 +19,9 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
  */
 final readonly class StoryViewerData
 {
+    /** Durée d'affichage d'une story photo avec musique, en secondes. */
+    public const float PHOTO_WITH_MUSIC = 15.0;
+
     public function __construct(
         private MediaUrls $urls,
         private UrlGeneratorInterface $router,
@@ -46,12 +51,20 @@ final readonly class StoryViewerData
                 if (null === $media || !$media->isReady()) {
                     continue;
                 }
+                $music = $story->getMusic();
                 $stories[] = [
                     'id' => $story->getPublicId(),
                     'type' => $media->isVideo() ? 'video' : 'image',
                     'src' => $this->urls->derivative($media, $media->isVideo() ? MediaAttachment::DERIVATIVE_VIDEO : MediaAttachment::DERIVATIVE_LARGE),
                     'poster' => $media->isVideo() ? $this->urls->derivative($media, MediaAttachment::DERIVATIVE_POSTER) : null,
-                    'duration' => $media->isVideo() ? ($media->getDuration() ?? 15.0) : 5.0,
+                    // Une photo avec musique reste affichée le temps d'un court extrait, comme sur Instagram.
+                    'duration' => $media->isVideo() ? ($media->getDuration() ?? 15.0) : ($music instanceof MusicTrack ? self::PHOTO_WITH_MUSIC : 5.0),
+                    'music' => $music instanceof MusicTrack ? [
+                        'src' => $this->urls->path($music->getPath()),
+                        'start' => $story->getMusicStart(),
+                        'excerpt' => MusicChoice::EXCERPT,
+                        'credit' => \sprintf('%s · %s · %s', $music->getTitle(), $music->getArtist(), $music->getLicenseLabel()),
+                    ] : null,
                     'text' => $story->getText(),
                     'ago' => $this->twig->ago($story->getCreatedAt()),
                     'seen' => isset($group->seen[$story->getPublicId()]),

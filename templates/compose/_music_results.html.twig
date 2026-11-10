@@ -1,0 +1,21 @@
+{# Une page de résultats de recherche de musique (sélecteur music-picker). Variables : query, page, tracks, next, error #}
+{% import '_macros.html.twig' as ui %}
+{% if error %}
+    <p class="field-errors">{{ error }}</p>
+{% elseif tracks is empty and page == 1 %}
+    <p class="small">{{ query ? 'Aucune musique trouvée pour « ' ~ query ~ ' ». Essayez un autre mot, en anglais de préférence.' : 'Saisissez une ambiance, un genre ou un artiste.' }}</p>
+{% endif %}
+<ul class="music-list">
+    {% for track in tracks %}
+        <li class="row">
+            <div class="grow">
+                <b>{{ track.title }}</b>
+                <div class="small">{{ track.artist }} · {{ '%d:%02d'|format(track.duration // 60, track.duration % 60) }} · {{ track.license == 'cc0' ? 'CC0' : track.license == 'pdm' ? 'Domaine public' : 'CC ' ~ track.license|upper }}{% if track.genres %} · {{ track.genres|slice(0, 3)|join(', ') }}{% endif %}</div>
+            </div>
+            <button type="button" class="btn sm" data-action="music-picker#choose" data-music-picker-id-param="{{ track.id }}">Choisir</button>
+        </li>
+    {% endfor %}
+</ul>
+{% if next %}
+    <button type="button" class="btn sm ghost" data-action="music-picker#more" data-music-picker-page-param="{{ next }}">Plus de résultats</button>
+{% endif %}

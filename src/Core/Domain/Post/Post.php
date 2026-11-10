@@ -7,6 +7,8 @@ namespace App\Core\Domain\Post;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Media\MediaStatus;
+use App\Core\Domain\Music\MusicChoice;
+use App\Core\Domain\Music\MusicTrack;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -77,6 +79,15 @@ class Post
     #[ORM\OneToMany(targetEntity: MediaAttachment::class, mappedBy: 'post', cascade: ['persist', 'remove'], fetch: 'EAGER', orphanRemoval: true)]
     #[ORM\OrderBy(['position' => 'ASC'])]
     private Collection $media;
+
+    /** Musique jouée quand la publication est à l'écran (morceau libre d'Openverse). */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?MusicTrack $music = null;
+
+    /** Début de l'extrait joué, en secondes. */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $musicStart = 0;
 
     public function __construct(
         #[ORM\ManyToOne]
@@ -276,6 +287,25 @@ class Post
         $this->contentWarning = self::nullIfBlank($contentWarning);
         $this->location = self::nullIfBlank($location);
         $this->updatedAt = $now;
+    }
+
+    public function getMusic(): ?MusicTrack
+    {
+        return $this->music;
+    }
+
+    public function getMusicStart(): int
+    {
+        return $this->musicStart;
+    }
+
+    /**
+     * Choix (ou retrait, avec null) de la musique de la publication.
+     */
+    public function chooseMusic(?MusicChoice $choice): void
+    {
+        $this->music = $choice?->track;
+        $this->musicStart = $choice->start ?? 0;
     }
 
     public function isArchived(): bool

@@ -71,6 +71,7 @@ final class EditPostType extends AbstractType
                 'required' => false,
                 'attr' => ['maxlength' => 500],
                 'constraints' => [new Assert\Length(max: 500)],
-            ]);
+            ])
+            ->add('music', MusicChoiceType::class);
     }
 }

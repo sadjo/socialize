@@ -11,6 +11,7 @@
                 {% if post.visibility.value != 'public' %}<span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon('lock', 'xs') }}{{ post.visibility.label }}</span>{% endif %}
             </div>
             {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
+            {% if post.music %}{{ include('post/_music_credit.html.twig', {music: post.music}) }}{% endif %}
         </div>
         {{ include('post/_menu.html.twig', {in_feed: true}) }}
     </header>

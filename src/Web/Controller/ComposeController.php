@@ -6,6 +6,8 @@ namespace App\Web\Controller;
 
 use App\Core\Domain\Post\Visibility;
 use App\Integration\Immich\Application\ImmichPublisher;
+use App\Integration\Openverse\Application\MusicLibrary;
+use App\Integration\Openverse\Application\OpenverseException;
 use App\Media\Application\MediaProcessingException;
 use App\Web\Form\ComposePostType;
 use App\Web\Security\CurrentAccount;
@@ -19,13 +21,13 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ComposeController extends AbstractController
 {
     #[Route('/publier', name: 'app_compose', methods: ['GET', 'POST'])]
-    public function __invoke(Request $request, ImmichPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources): Response
+    public function __invoke(Request $request, ImmichPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources, MusicLibrary $music): Response
     {
         $form = $this->createForm(ComposePostType::class);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string} $data */
+            /** @var array{media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}} $data */
             $data = $form->getData();
 
             try {
@@ -38,6 +40,7 @@ final class ComposeController extends AbstractController
                     $data['visibility'],
                     $data['contentWarning'],
                     $data['location'],
+                    $music->choice($data['music']['track'], (int) $data['music']['start']),
                 );
                 $this->addFlash('success', $post->hasVideo()
                     ? 'Publié. La vidéo est en cours de préparation, elle apparaîtra dans quelques instants.'
@@ -46,6 +49,8 @@ final class ComposeController extends AbstractController
                 return $this->redirectToRoute('app_post_show', ['id' => $post->getPublicId()], Response::HTTP_SEE_OTHER);
             } catch (MediaProcessingException $e) {
                 $form->get('media')->addError(new FormError($e->getMessage()));
+            } catch (OpenverseException $e) {
+                $form->addError(new FormError($e->getMessage()));
             }
         }
 

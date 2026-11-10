@@ -6,6 +6,7 @@ namespace App\Integration\Immich\Application;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Story\Story;
@@ -45,7 +46,7 @@ final readonly class ImmichPublisher
      * @param list<File>             $files fichiers envoyés depuis l'appareil
      * @param array<string, ?string> $alts  texte alternatif par jeton
      */
-    public function publishPost(Account $author, array $order, array $files, array $alts, string $caption, Visibility $visibility, ?string $contentWarning, ?string $location): Post
+    public function publishPost(Account $author, array $order, array $files, array $alts, string $caption, Visibility $visibility, ?string $contentWarning, ?string $location, ?MusicChoice $music = null): Post
     {
         $sources = $this->resolve($author, $order, $files, Post::MAX_MEDIA);
         try {
@@ -56,6 +57,7 @@ final readonly class ImmichPublisher
                 $visibility,
                 $contentWarning,
                 $location,
+                $music,
             );
             $this->complete(array_values($post->getMedia()->toArray()), $sources);
 
@@ -71,11 +73,11 @@ final readonly class ImmichPublisher
      *
      * @return list<Story>
      */
-    public function publishStories(Account $author, array $order, array $files, ?string $text, Visibility $audience): array
+    public function publishStories(Account $author, array $order, array $files, ?string $text, Visibility $audience, ?MusicChoice $music = null): array
     {
         $sources = $this->resolve($author, $order, $files, Story::MAX_PER_UPLOAD);
         try {
-            $stories = $this->stories->publish($author, array_column($sources['items'], 'file'), $text, $audience);
+            $stories = $this->stories->publish($author, array_column($sources['items'], 'file'), $text, $audience, $music);
             $this->complete(array_map(static fn (Story $s): ?MediaAttachment => $s->getMedia(), $stories), $sources);
 
             return $stories;
