@@ -27,6 +27,12 @@ final readonly class ArchiveAnalyzer
     /** Écart toléré entre la date d'une publication et celle de ses métadonnées. */
     private const int METADATA_TOLERANCE = 2;
 
+    /**
+     * Éléments enregistrés à la fois : une archive complète compte des milliers d'éléments, qu'on ne garde
+     * pas tous en mémoire (le worker a une limite de mémoire).
+     */
+    private const int BATCH_SIZE = 200;
+
     public function __construct(
         private EntityManagerInterface $em,
         private ImportItemRepository $items,
@@ -44,6 +50,8 @@ final readonly class ArchiveAnalyzer
 
         $locations = $this->locations($archive);
         $state = new AnalysisState($import, $archive);
+        // Analyse relancée après une interruption : les éléments déjà enregistrés sont repris de zéro.
+        $this->items->removeAllOf($import);
 
         foreach ($postFiles as $file) {
             foreach ($this->listOf($archive->json($file), 'ig_posts') as $post) {
@@ -63,6 +71,8 @@ final readonly class ArchiveAnalyzer
                 }
             }
         }
+
+        $this->flushPending($state);
 
         $missing = $state->missing;
         $repaired = $state->repaired;
@@ -86,6 +96,21 @@ final readonly class ArchiveAnalyzer
 
         $import->analyzed($state->counts, $warnings);
         $this->em->flush();
+    }
+
+    /**
+     * Enregistre les éléments en attente, puis les libère de la mémoire de Doctrine.
+     */
+    private function flushPending(AnalysisState $state): void
+    {
+        if ([] === $state->pending) {
+            return;
+        }
+        $this->em->flush();
+        foreach ($state->pending as $item) {
+            $this->em->detach($item);
+        }
+        $state->pending = [];
     }
 
     /**
@@ -152,6 +177,10 @@ final readonly class ArchiveAnalyzer
             $item->skip(ItemStatus::Failed, 'Aucun de ses médias n’est dans l’archive (supprimés par Instagram).');
         }
         $this->em->persist($item);
+        $state->pending[] = $item;
+        if (\count($state->pending) >= self::BATCH_SIZE) {
+            $this->flushPending($state);
+        }
         ++$state->counts[match ($kind) {
             ItemKind::Post => 'posts',
             ItemKind::ArchivedPost => 'archived',

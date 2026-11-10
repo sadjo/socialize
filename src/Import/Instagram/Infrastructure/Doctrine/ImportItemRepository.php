@@ -36,6 +36,19 @@ final class ImportItemRepository extends ServiceEntityRepository
     }
 
     /**
+     * Supprime les éléments d'un import (analyse reprise depuis le début).
+     */
+    public function removeAllOf(InstagramImport $import): void
+    {
+        $this->getEntityManager()->createQueryBuilder()
+            ->delete(ImportItem::class, 'i')
+            ->where('i.import = :import')
+            ->setParameter('import', $import->getId(), UuidType::NAME)
+            ->getQuery()
+            ->execute();
+    }
+
+    /**
      * Un élément identique a-t-il déjà été importé par ce compte (relance d'un import, archive plus récente) ?
      */
     public function alreadyImported(Account $account, string $fingerprint): bool

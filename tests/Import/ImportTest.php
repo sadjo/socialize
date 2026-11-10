@@ -10,9 +10,11 @@ use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Story\Story;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
+use App\Import\Instagram\Application\ArchiveAnalyzer;
 use App\Import\Instagram\Domain\ImportItem;
 use App\Import\Instagram\Domain\ImportStatus;
 use App\Import\Instagram\Domain\InstagramImport;
+use App\Import\Instagram\Infrastructure\ArchiveReader;
 use App\Import\Instagram\Infrastructure\Doctrine\ImportItemRepository;
 use App\Import\Instagram\Infrastructure\Doctrine\InstagramImportRepository;
 use App\Tests\AppWebTestCase;
@@ -74,6 +76,24 @@ final class ImportTest extends AppWebTestCase
 
         $items = self::getContainer()->get(ImportItemRepository::class)->findAll();
         self::assertCount(5, $items, 'Les messages privés de l’archive sont ignorés.');
+    }
+
+    public function testAnAnalysisResumedAfterAnInterruptionStartsOverWithoutDuplicates(): void
+    {
+        $this->login($this->register('camille'));
+        $import = $this->uploaded();
+        $items = self::getContainer()->get(ImportItemRepository::class);
+        self::assertCount(5, $items->findBy(['import' => $import]));
+
+        // Worker arrêté en cours d'analyse (manque de mémoire…) : le message est redistribué et l'analyse refaite.
+        $archive = new ArchiveReader(array_column($import->getParts(), 'path'));
+        try {
+            self::getContainer()->get(ArchiveAnalyzer::class)->analyze($import, $archive);
+        } finally {
+            $archive->close();
+        }
+        self::getContainer()->get('doctrine')->getManager()->clear();
+        self::assertCount(5, $items->findBy(['import' => $import]), 'Les éléments déjà enregistrés sont remplacés, pas doublés.');
     }
 
     public function testUploadsAreReservedToTheirOwnerAndLimitedInSize(): void

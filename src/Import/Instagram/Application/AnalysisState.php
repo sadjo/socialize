@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Import\Instagram\Application;
 
+use App\Import\Instagram\Domain\ImportItem;
 use App\Import\Instagram\Domain\InstagramImport;
 use App\Import\Instagram\Infrastructure\ArchiveReader;
 
@@ -20,6 +21,9 @@ final class AnalysisState
 
     public int $missing = 0;
     public int $repaired = 0;
+
+    /** @var list<ImportItem> éléments pas encore enregistrés (enregistrés par lots) */
+    public array $pending = [];
 
     public function __construct(
         public readonly InstagramImport $import,
