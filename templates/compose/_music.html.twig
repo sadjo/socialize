@@ -30,6 +30,15 @@
         <audio preload="none" data-music-picker-target="audio"{% if current %} src="{{ path('app_music_listen', {openverseId: track_id}) }}"{% endif %}></audio>
     </div>
 
+    {# Bureau : la recherche s'ouvre dans une fenêtre au centre de l'écran ; mobile : elle reste dans la page. #}
+    <button type="button" class="btn music-open" data-music-picker-target="opener" data-action="music-picker#open" hidden>{{ ui.icon('music', 'xs') }}Ajouter une musique</button>
+    <dialog class="music-modal" data-music-picker-target="dialog" data-action="close->music-picker#closed click->music-picker#backdrop" aria-labelledby="{{ field.vars.id }}_title">
+        <div class="sheet">
+            <header><b id="{{ field.vars.id }}_title">Ajouter une musique</b>
+                <button type="button" class="ib" data-action="music-picker#close" aria-label="Fermer">{{ ui.icon('x', 'sm') }}</button></header>
+            <div data-music-picker-target="dialogBody"></div>
+        </div>
+    </dialog>
     <div class="music-search" data-music-picker-target="searchBox"{% if current %} hidden{% endif %}>
         <div class="row">
             <label class="sr-only" for="{{ field.vars.id }}_q">Rechercher une musique</label>

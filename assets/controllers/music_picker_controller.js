@@ -4,8 +4,12 @@ import { Controller } from '@hotwired/stimulus';
  * Sélecteur de musique des écrans de création : recherche dans Openverse (page de résultats rendue
  * par le serveur), pré-écoute relayée par le serveur sans rien stocker, choix d'un morceau et du début
  * de l'extrait. Le morceau n'est copié sur l'instance qu'à la publication.
+ *
+ * Sur un écran de bureau, la recherche s'ouvre dans une fenêtre au centre (page assombrie) ;
+ * sur mobile, elle reste dans la page. Le même bloc de recherche passe de l'un à l'autre.
  */
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';
+const desktop = window.matchMedia('(min-width: 768px)');
 
 function clock(seconds) {
     const s = Math.max(0, Math.round(seconds));
@@ -13,7 +17,7 @@ function clock(seconds) {
 }
 
 export default class extends Controller {
-    static targets = ['track', 'start', 'chosen', 'searchBox', 'query', 'results', 'error', 'title', 'credit', 'range', 'startLabel', 'audio', 'play'];
+    static targets = ['track', 'start', 'chosen', 'searchBox', 'query', 'results', 'error', 'title', 'credit', 'range', 'startLabel', 'audio', 'play', 'opener', 'dialog', 'dialogBody'];
     static values = { searchUrl: String, listenUrl: String, excerpt: Number };
 
     connect() {
@@ -38,12 +42,57 @@ export default class extends Controller {
             this.stopListening();
         });
 
+        // Emplacement du bloc de recherche dans la page, pour l'y remettre en passant au format mobile.
+        this.anchor = document.createComment('recherche de musique');
+        this.searchBoxTarget.before(this.anchor);
+        this.onLayout = () => this.place();
+        desktop.addEventListener('change', this.onLayout);
+        this.place();
         this.renderStart();
     }
 
     disconnect() {
+        desktop.removeEventListener('change', this.onLayout);
         this.audioTarget.removeEventListener('timeupdate', this.onTime);
         this.audioTarget.pause();
+        this.stopListening();
+        if (this.dialogTarget.open) this.dialogTarget.close();
+    }
+
+    // Bureau : recherche dans la fenêtre ; mobile : dans la page.
+    place() {
+        if (desktop.matches) {
+            this.dialogBodyTarget.append(this.searchBoxTarget);
+        } else {
+            if (this.dialogTarget.open) this.dialogTarget.close();
+            this.anchor.after(this.searchBoxTarget);
+        }
+        this.render();
+    }
+
+    render() {
+        const chosen = this.trackTarget.value !== '';
+        this.chosenTarget.hidden = !chosen;
+        this.openerTarget.hidden = chosen || !desktop.matches;
+        this.searchBoxTarget.hidden = desktop.matches ? false : chosen;
+    }
+
+    open() {
+        this.showError(null);
+        this.dialogTarget.showModal();
+        this.queryTarget.focus();
+    }
+
+    close() {
+        this.dialogTarget.close();
+    }
+
+    // Clic sur le fond assombri : fermeture.
+    backdrop(event) {
+        if (event.target === this.dialogTarget) this.close();
+    }
+
+    closed() {
         this.stopListening();
     }
 
@@ -116,8 +165,8 @@ export default class extends Controller {
         this.rangeTarget.max = String(Math.max(0, Number(params.duration) - this.excerptValue));
         this.rangeTarget.value = '0';
         this.audioTarget.src = this.listenUrl(String(params.id));
-        this.chosenTarget.hidden = false;
-        this.searchBoxTarget.hidden = true;
+        if (this.dialogTarget.open) this.close();
+        this.render();
         this.renderStart();
     }
 
@@ -126,9 +175,8 @@ export default class extends Controller {
         this.trackTarget.value = '';
         this.startTarget.value = '';
         this.audioTarget.removeAttribute('src');
-        this.chosenTarget.hidden = true;
-        this.searchBoxTarget.hidden = false;
-        this.queryTarget.focus();
+        this.render();
+        (desktop.matches ? this.openerTarget : this.queryTarget).focus();
     }
 
     seek() {

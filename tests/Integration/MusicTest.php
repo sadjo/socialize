@@ -29,6 +29,9 @@ final class MusicTest extends AppWebTestCase
         $this->client->request('GET', '/publier');
         self::assertSelectorExists('[data-controller="music-picker"] input[name="compose_post[music][track]"]');
         self::assertSelectorExists('[data-music-picker-search-url-value="/musique/recherche"]');
+        self::assertSelectorExists('.music-picker button.music-open[data-action="music-picker#open"]', 'Bureau : bouton qui ouvre la fenêtre de recherche.');
+        self::assertSelectorExists('.music-picker dialog.music-modal [data-music-picker-target="dialogBody"]');
+        self::assertSelectorExists('.music-picker > .music-search input[type="search"]', 'Mobile : la recherche est dans la page.');
 
         $this->client->request('GET', '/musique/recherche?q=piano');
         self::assertResponseIsSuccessful();

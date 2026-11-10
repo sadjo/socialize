@@ -637,6 +637,7 @@ label.act{cursor:pointer}
 
 /* Sélecteur de musique (création et modification) */
 .music-picker{border:0;padding:0;margin:0;display:grid;gap:8px}
+.music-picker [hidden]{display:none!important}
 .music-picker legend{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .music-chosen{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 .music-chosen .row{align-items:center;gap:10px}
@@ -648,3 +649,12 @@ label.act{cursor:pointer}
 .music-list li{gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
 .music-list b{overflow-wrap:anywhere}
 .sv-music{font-size:.78rem;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Bureau : recherche de musique dans une fenêtre au centre, page assombrie (mobile : dans la page) */
+.music-open{justify-self:start}
+.music-modal{border:0;padding:0;background:transparent;width:min(600px,calc(100vw - 48px));max-height:min(720px,calc(100dvh - 48px));color:var(--fg);overflow:visible}
+.music-modal::backdrop{background:oklch(0.15 0.02 285 / .55);backdrop-filter:blur(4px)}
+.music-modal .sheet{display:flex;flex-direction:column;gap:10px;max-height:min(720px,calc(100dvh - 48px));background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px 16px 16px;box-shadow:var(--shadow);animation:rise .15s}
+.music-modal header{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-display);font-size:1.05rem}
+.music-modal .music-search{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.music-modal .music-results{max-height:none;flex:1;min-height:120px}
+.music-modal .sheet>div{min-height:0;display:flex;flex-direction:column;overflow:hidden}
