@@ -3,7 +3,7 @@ import { SOUND_EVENT, playAlone, setSound, soundOn } from '../lib/sound.js';
 
 /*
  * Vidéo dans un fil, comme sur Instagram : l'affiche d'abord, lecture dès que la vidéo est bien
- * visible (une seule à la fois), bouton son en bas à gauche, et lecteur complet dans une fenêtre au clic.
+ * visible (une seule à la fois), bouton son en bas à gauche ; un clic l'ouvre dans la visionneuse (lightbox_controller).
  *
  * Le choix du son vaut pour toutes les vidéos et musiques (voir lib/sound.js). Dans une publication
  * qui a une musique, la vidéo reste muette : la musique remplace son son, comme sur Instagram.
@@ -72,40 +72,6 @@ export default class extends Controller {
         video.muted = this.silent || !on;
         if (on && this.visible && video.paused) this.play();
         this.render();
-    }
-
-    // Clic sur la vidéo : lecteur complet (commandes, plein écran) dans une fenêtre.
-    open(event) {
-        event.preventDefault();
-        const inline = this.videoTarget;
-        const dialog = document.createElement('dialog');
-        dialog.className = 'video-modal';
-        dialog.setAttribute('aria-label', inline.getAttribute('aria-label') || 'Vidéo');
-        dialog.innerHTML = '<button type="button" class="ib close" aria-label="Fermer"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>';
-        const video = document.createElement('video');
-        video.controls = true;
-        video.playsInline = true;
-        video.poster = inline.poster;
-        video.src = inline.currentSrc || inline.querySelector('source')?.src || '';
-        video.muted = !soundOn();
-        dialog.prepend(video);
-        document.body.appendChild(dialog);
-
-        const startAt = inline.currentTime;
-        inline.pause();
-        video.addEventListener('loadedmetadata', () => { video.currentTime = startAt; }, { once: true });
-        video.addEventListener('volumechange', () => { if (soundOn() === video.muted) setSound(!video.muted); });
-        dialog.addEventListener('click', (e) => { if (e.target === dialog || e.target.closest('.close')) dialog.close(); });
-        dialog.addEventListener('close', () => {
-            video.pause();
-            dialog.remove();
-            if (this.visible) {
-                inline.currentTime = video.currentTime;
-                this.play();
-            }
-        });
-        dialog.showModal();
-        video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
     }
 
     render() {

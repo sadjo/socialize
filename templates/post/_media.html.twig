@@ -1,18 +1,23 @@
-{# Médias d'une publication : carrousel, vidéo, musique, avertissement de contenu. Variables : post #}
+{# Médias d'une publication : carrousel, visionneuse (clic), vidéo, musique, avertissement de contenu. Variables : post #}
 {% import '_macros.html.twig' as ui %}
 {% set count = post.media|length %}
 {% set music = post.music %}
-<div class="media" data-controller="carousel{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="dblclick->like#doubleTap" data-carousel-count-value="{{ count }}"
+<div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="dblclick->like#doubleTap dblclick->lightbox#cancel" data-carousel-count-value="{{ count }}"
      {%- if music %} data-music data-music-start-value="{{ post.musicStart }}" data-music-excerpt-value="{{ constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') }}"{% endif %}>
     <div class="track" data-carousel-target="track">
         {% for media in post.media %}
-            <div class="slide{{ media.video ? ' vid' }}">
+            {% set viewable = media.ready %}
+            <div class="slide{{ media.video ? ' vid' }}"
+                 {%- if viewable %} data-lightbox-target="item" data-action="click->lightbox#open" data-lightbox-type="{{ media.video ? 'video' : 'image' }}"
+                 data-lightbox-src="{{ media_url(media, media.video ? 'video' : 'large') }}"{% if media.video and media_url(media, 'poster') %} data-lightbox-poster="{{ media_url(media, 'poster') }}"{% endif %}
+                 {%- if media.width and media.height %} data-lightbox-width="{{ media.width }}" data-lightbox-height="{{ media.height }}"{% endif %}
+                 data-lightbox-alt="{{ media.altText ?? ((media.video ? 'Vidéo ' : 'Photo ') ~ loop.index ~ ' sur ' ~ count) }}"{% endif %}>
                 {% if media.ready and media.video %}
                     {# Sans affiche (vidéo d'une instance qui n'en fournit pas), le navigateur montre la première image. #}
                     {% set poster = media_url(media, 'poster') %}
                     <div class="player muted" data-controller="video">
                         <video playsinline muted loop preload="{{ poster ? 'none' : 'metadata' }}"{% if poster %} poster="{{ poster }}"{% endif %} data-video-target="video"
-                               data-action="click->video#open"{% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
+                               {% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
                             {# Copie convertie : toujours un MP4 (H.264), quel que soit l'original (MOV d'iPhone…). Vidéo distante : type laissé au navigateur. #}
                             <source src="{{ media_url(media, 'video') }}{{ poster ? '' : '#t=0.1' }}"{% if not media.isRemote() %} type="video/mp4"{% endif %}>
                         </video>
@@ -39,8 +44,9 @@
     {% endif %}
     {% if count > 1 %}
         <span class="cnt num" data-carousel-target="counter">1/{{ count }}</span>
-        <button type="button" class="nb prev" data-action="carousel#prev" aria-label="Média précédent">{{ ui.icon('left', 'sm') }}</button>
-        <button type="button" class="nb next" data-action="carousel#next" aria-label="Média suivant">{{ ui.icon('right', 'sm') }}</button>
+        {# Pas de flèche vers l'arrière sur le premier média, ni vers l'avant sur le dernier (carousel_controller). #}
+        <button type="button" class="nb prev" data-carousel-target="prev" data-action="carousel#prev" aria-label="Média précédent" hidden>{{ ui.icon('left', 'sm') }}</button>
+        <button type="button" class="nb next" data-carousel-target="next" data-action="carousel#next" aria-label="Média suivant">{{ ui.icon('right', 'sm') }}</button>
         <div class="dots" aria-hidden="true">{% for i in 1..count %}<i class="{{ loop.first ? 'on' }}" data-carousel-target="dot"></i>{% endfor %}</div>
     {% endif %}
     {% if post.sensitive %}

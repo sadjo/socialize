@@ -1,8 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 
-/* Carrousel des médias d'une publication : boutons, points et balayage tactile. */
+/* Carrousel des médias d'une publication : boutons (masqués aux extrémités), points et balayage tactile. */
 export default class extends Controller {
-    static targets = ['track', 'dot', 'counter'];
+    static targets = ['track', 'dot', 'counter', 'prev', 'next'];
     static values = { count: Number, index: { type: Number, default: 0 } };
 
     connect() {
@@ -28,6 +28,8 @@ export default class extends Controller {
         this.trackTarget.style.transform = `translateX(-${index * 100}%)`;
         this.dotTargets.forEach((dot, i) => dot.classList.toggle('on', i === index));
         if (this.hasCounterTarget) this.counterTarget.textContent = `${index + 1}/${this.countValue}`;
+        if (this.hasPrevTarget) this.prevTarget.hidden = index <= 0;
+        if (this.hasNextTarget) this.nextTarget.hidden = index >= this.countValue - 1;
         this.element.querySelectorAll('video').forEach((video) => video.pause());
     }
 
