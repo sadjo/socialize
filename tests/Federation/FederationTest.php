@@ -210,6 +210,31 @@ final class FederationTest extends AppWebTestCase
                     self::assertSame('2019-06-14T12:00:00+00:00', self::dig($creates, $announced - 1, 'object', 'published'), 'Le fédivers reçoit la date d’origine.');
                 }
             }
+
+            // Plus tard, camille annonce finalement ses publications importées discrètement.
+            $before = \count($this->fediverse()->delivered('Create'));
+            $console = new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? self::bootKernel());
+            $command = new \Symfony\Component\Console\Tester\CommandTester($console->find('app:import:announce'));
+            $command->execute(['identifier' => 'camille', '--dry-run' => true]);
+            self::assertStringContainsString('3 publications importées à annoncer', $command->getDisplay());
+            self::assertCount($before, $this->fediverse()->delivered('Create'), 'Essai à blanc : rien n’est envoyé.');
+
+            $command->execute(['identifier' => 'camille', '--pause' => '0']);
+            $command->assertCommandIsSuccessful();
+            $creates = \array_slice($this->fediverse()->delivered('Create'), $before);
+            self::assertCount(3, $creates, 'Les trois publications importées partent vers Alice.');
+            foreach (array_keys($creates) as $i) {
+                self::assertSame('http://localhost/users/camille', $this->str($creates, $i, 'actor'));
+            }
+            $dates = array_map(fn (int $i): string => $this->str($creates, $i, 'object', 'published'), array_keys($creates));
+            $sorted = $dates;
+            sort($sorted);
+            self::assertSame($sorted, $dates, 'De la plus ancienne à la plus récente.');
+            self::assertSame(['2016-03-01T12:00:00+00:00', '2019-06-14T12:00:00+00:00'], [$dates[0], $dates[2]], 'À leur date d’origine.');
+
+            $command->execute(['identifier' => 'camille']);
+            self::assertStringContainsString('Aucune publication importée à annoncer', $command->getDisplay());
+            self::assertCount($before + 3, $this->fediverse()->delivered('Create'), 'Une publication n’est annoncée qu’une fois.');
         } finally {
             @unlink($archive);
         }

@@ -8,6 +8,7 @@ use App\Core\Application\Feed\Cursor;
 use App\Core\Application\Feed\TimelinePage;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Post\Post;
+use App\Core\Domain\Post\PostSource;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\PublicId;
 use App\Core\Domain\Social\Follow;
@@ -165,6 +166,30 @@ final class PostRepository extends ServiceEntityRepository
             ->setParameter('account', $account->getId(), UuidType::NAME)
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * Publications importées sans annonce au fédivers, de la plus ancienne à la plus récente : celles que
+     * leurs abonnés distants peuvent recevoir (ni privées, ni archivées).
+     *
+     * @return list<Post>
+     */
+    public function importedNotAnnounced(Account $account): array
+    {
+        /* @var list<Post> */
+        return $this->createQueryBuilder('p')
+            ->where('p.account = :account')
+            ->andWhere('p.source = :source')
+            ->andWhere('p.announce = false')
+            ->andWhere('p.archivedAt IS NULL')
+            ->andWhere('p.visibility != :private')
+            ->setParameter('account', $account->getId(), UuidType::NAME)
+            ->setParameter('source', PostSource::InstagramImport)
+            ->setParameter('private', Visibility::Private)
+            ->orderBy('p.publishedAt', 'ASC')
+            ->addOrderBy('p.id', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     private function base(): QueryBuilder
