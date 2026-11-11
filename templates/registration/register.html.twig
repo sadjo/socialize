@@ -7,6 +7,9 @@
     <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
     <section class="card">
         <h1>Créer un compte</h1>
+        {% if invitation is defined and invitation.invitedBy %}
+            <div class="note">{{ invitation.invitedBy.displayName }} vous invite à rejoindre Socialize. Invitation valable jusqu’au {{ invitation.expiresAt|format_datetime('long', 'short', locale: 'fr') }}.</div>
+        {% endif %}
         {% if first_account %}
             <div class="note">Vous êtes la première personne à s’inscrire : ce compte administrera l’instance.</div>
         {% endif %}
@@ -20,6 +23,6 @@
             <button class="btn pri">Créer mon compte</button>
         {{ form_end(form) }}
     </section>
-    <p class="alt">Déjà inscrit ? <a class="lnk" href="{{ path('app_login') }}">Se connecter</a></p>
+    <p class="alt">Déjà inscrit ? <a class="lnk" href="{{ login_url ?? path('app_login') }}">Se connecter</a></p>
 </div>
 {% endblock %}

@@ -35,6 +35,8 @@ framework:
             App\Import\Instagram\Application\AnalyzeInstagramArchive: async
             App\Import\Instagram\Application\ImportInstagramBatch: async
             App\Integration\Immich\Application\AddToImmichAlbum: async
+            # E-mails envoyés tout de suite : l'administrateur sait aussitôt si une invitation est partie.
+            Symfony\Component\Mailer\Messenger\SendEmailMessage: sync
 
 when@test:
     framework:

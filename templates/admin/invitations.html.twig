@@ -1,0 +1,59 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Invitations · Administration · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow admin">
+    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Invitez une personne à créer un compte, même lorsque les inscriptions sont fermées. Une invitation sert une seule fois et expire au bout de 7 jours.</p></div></div>
+
+    {% for link in app.flashes('invitation_link') %}
+        <section class="card invite-link" aria-live="polite">
+            <p><b>Lien d’invitation</b> · affiché une seule fois, copiez-le maintenant.</p>
+            <div class="row">
+                <input class="inp grow" type="text" value="{{ link }}" readonly aria-label="Lien d’invitation" onfocus="this.select()">
+                <button type="button" class="btn pri" data-controller="copy" data-copy-text-value="{{ link }}" data-copy-toast-value="Lien d’invitation copié" data-action="copy#copy">{{ ui.icon('copy', 'xs') }}Copier</button>
+            </div>
+        </section>
+    {% endfor %}
+
+    <section class="card">
+        <h2>Nouvelle invitation</h2>
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.email) }}
+            <button class="btn pri">{{ ui.icon('send', 'xs') }}Inviter</button>
+        {{ form_end(form) }}
+    </section>
+
+    <section class="card">
+        <h2>Invitations</h2>
+        {% if invitations is empty %}
+            <p class="small">Aucune invitation pour l’instant.</p>
+        {% else %}
+            <table class="invitations">
+                <thead><tr><th>Destinataire</th><th>État</th><th>Créée</th><th>Compte</th><th></th></tr></thead>
+                <tbody>
+                {% for invitation in invitations %}
+                    {% set status = invitation.status(now) %}
+                    <tr>
+                        <td>{{ invitation.email ?? 'Lien à copier' }}</td>
+                        <td><span class="chip invite-{{ status.value }}">{{ status.label }}</span>{% if status.value == 'pending' %}<div class="small">jusqu’au {{ invitation.expiresAt|format_datetime('short', 'short', locale: 'fr') }}</div>{% endif %}</td>
+                        <td><time datetime="{{ invitation.createdAt|date('c') }}">{{ invitation.createdAt|format_datetime('short', 'short', locale: 'fr') }}</time></td>
+                        <td>{% if invitation.usedBy %}<a class="lnk" href="{{ path('app_profile', {username: invitation.usedBy.username}) }}">@{{ invitation.usedBy.username }}</a>{% endif %}</td>
+                        <td>
+                            {% if status.value == 'pending' %}
+                                <form method="post" action="{{ path('admin_invitation_revoke', {id: invitation.publicId}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('invitation-revoke-' ~ invitation.publicId) }}">
+                                    <button class="btn sm ghost">Révoquer</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

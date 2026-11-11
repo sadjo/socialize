@@ -670,3 +670,10 @@ label.act{cursor:pointer}
 .music-fav-title{display:flex;align-items:center;gap:6px;margin:0}
 .music-play.loading .i{animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.35}}
+
+/* Administration : invitations */
+.invite-link{border-color:var(--accent)}
+.invite-link .row{margin-top:10px}
+.invitations td{vertical-align:top}
+.chip.invite-pending{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip.invite-used{color:var(--ok)}
