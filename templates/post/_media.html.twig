@@ -44,8 +44,9 @@
     {% endif %}
     {% if count > 1 %}
         <span class="cnt num" data-carousel-target="counter">1/{{ count }}</span>
-        <button type="button" class="nb prev" data-action="carousel#prev" aria-label="Média précédent">{{ ui.icon('left', 'sm') }}</button>
-        <button type="button" class="nb next" data-action="carousel#next" aria-label="Média suivant">{{ ui.icon('right', 'sm') }}</button>
+        {# Pas de flèche vers l'arrière sur le premier média, ni vers l'avant sur le dernier (carousel_controller). #}
+        <button type="button" class="nb prev" data-carousel-target="prev" data-action="carousel#prev" aria-label="Média précédent" hidden>{{ ui.icon('left', 'sm') }}</button>
+        <button type="button" class="nb next" data-carousel-target="next" data-action="carousel#next" aria-label="Média suivant">{{ ui.icon('right', 'sm') }}</button>
         <div class="dots" aria-hidden="true">{% for i in 1..count %}<i class="{{ loop.first ? 'on' }}" data-carousel-target="dot"></i>{% endfor %}</div>
     {% endif %}
     {% if post.sensitive %}

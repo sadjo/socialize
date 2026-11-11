@@ -35,5 +35,9 @@ final class LightboxTest extends AppWebTestCase
         self::assertSelectorExists('.slide[data-lightbox-type="video"][data-lightbox-src$="-video.mp4"][data-lightbox-poster$=".webp"]');
         self::assertSelectorExists('.slide[data-lightbox-type="image"][data-lightbox-alt="Photo 3 sur 3"]');
         self::assertSelectorNotExists('video[data-action*="video#open"]', 'La vidéo s’ouvre dans la même visionneuse que les photos.');
+
+        // Carrousel : sur le premier média, pas de flèche vers l'arrière (le contrôleur gère ensuite les extrémités).
+        self::assertSelectorExists('.media button.nb.prev[data-carousel-target="prev"][hidden]');
+        self::assertSelectorExists('.media button.nb.next[data-carousel-target="next"]:not([hidden])');
     }
 }
