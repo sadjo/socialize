@@ -29,6 +29,9 @@ export default class extends Controller {
     static targets = ['video', 'sound'];
 
     connect() {
+        // Vidéo insérée par une navigation Turbo : WebKit (Safari, iPhone) n'en lance pas le chargement et elle
+        // reste noire. load() relance la sélection de la source (sans rien télécharger tant qu'elle n'est pas lue).
+        this.videoTarget.load();
         this.visible = false;
         this.observer = new IntersectionObserver(([entry]) => this.visibilityChanged(entry), { threshold: 0.6 });
         this.observer.observe(this.videoTarget);
