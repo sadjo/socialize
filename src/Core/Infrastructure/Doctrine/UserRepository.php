@@ -49,6 +49,17 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
         return $user;
     }
 
+    /**
+     * Comptes de l'instance, les plus récents d'abord (administration).
+     *
+     * @return list<User>
+     */
+    public function recent(int $limit = 200): array
+    {
+        /* @var list<User> */
+        return $this->findBy([], ['createdAt' => 'DESC'], $limit);
+    }
+
     public function hasAny(): bool
     {
         return null !== $this->createQueryBuilder('u')->select('u.id')->setMaxResults(1)->getQuery()->getOneOrNullResult();

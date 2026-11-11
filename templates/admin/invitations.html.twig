@@ -6,6 +6,7 @@
 {% block content %}
 <div class="page-narrow admin">
     <div class="page-h"><div class="grow"><h1>Administration</h1><p>Invitez une personne à créer un compte, même lorsque les inscriptions sont fermées. Une invitation sert une seule fois et expire au bout de 7 jours.</p></div></div>
+    {{ include('admin/_tabs.html.twig', {current: 'invitations'}) }}
 
     {% for link in app.flashes('invitation_link') %}
         <section class="card invite-link" aria-live="polite">

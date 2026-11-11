@@ -1,0 +1,40 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Comptes · Administration · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow admin">
+    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Créez un compte directement, même lorsque les inscriptions sont fermées, puis transmettez ses identifiants à la personne.</p></div></div>
+    {{ include('admin/_tabs.html.twig', {current: 'accounts'}) }}
+
+    <section class="card">
+        <h2>Nouveau compte</h2>
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.email) }}
+            {{ form_row(form.username) }}
+            {{ form_row(form.displayName) }}
+            {{ form_row(form.password.first) }}
+            {{ form_row(form.password.second) }}
+            <button class="btn pri">{{ ui.icon('plus', 'xs') }}Créer le compte</button>
+        {{ form_end(form) }}
+    </section>
+
+    <section class="card">
+        <h2>Comptes ({{ users|length }})</h2>
+        <table class="accounts">
+            <thead><tr><th>Compte</th><th>Adresse e-mail</th><th>Créé</th></tr></thead>
+            <tbody>
+            {% for user in users %}
+                <tr>
+                    <td><a class="lnk" href="{{ path('app_profile', {username: user.account.username}) }}">@{{ user.account.username }}</a>{% if user.isAdmin() %} <span class="chip">Administrateur</span>{% endif %}</td>
+                    <td>{{ user.email }}</td>
+                    <td><time datetime="{{ user.createdAt|date('c') }}">{{ user.createdAt|format_date('short', locale: 'fr') }}</time></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}

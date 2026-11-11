@@ -10,7 +10,7 @@
         <div class="sep"></div>
         <a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>
         <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
-        {% if app.user.isAdmin() %}<a class="nav{{ (current_route ?? '') starts with 'admin_' ? ' on' }}" href="{{ path('admin_invitations') }}">{{ ui.icon('shield') }}<span class="lbl">Administration</span></a>{% endif %}
+        {% if app.user.isAdmin() %}<a class="nav{{ (current_route ?? '') starts with 'admin_' ? ' on' }}" href="{{ path('admin_accounts') }}">{{ ui.icon('shield') }}<span class="lbl">Administration</span></a>{% endif %}
     {% else %}
         <div class="sep"></div>
         <a class="nav{{ current_route == 'app_login' ? ' on' }}" href="{{ login_url }}">{{ ui.icon('login') }}<span class="lbl">Connexion</span></a>
