@@ -54,6 +54,8 @@ small,.small{font-size:.82rem;color:var(--muted)}
 
 /* ---------- Ossature ---------- */
 .app{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);gap:28px;max-width:1340px;margin:0 auto}
+/* Sans menu (profil public vu par un visiteur, instance réservée aux comptes) : le contenu prend toute la largeur */
+.app.no-menu{grid-template-columns:minmax(0,1fr)}
 .side{position:sticky;top:0;height:100dvh;padding-block:22px;display:flex;flex-direction:column;gap:2px}
 .logo{display:flex;align-items:center;gap:10px;padding:6px 12px 22px;font:800 1.3rem/1 var(--font-display);letter-spacing:-.03em}
 .logo-mark{width:34px;height:34px;border-radius:11px;background:var(--grad);display:grid;place-items:center;flex:none;box-shadow:0 6px 18px -6px oklch(0.6 0.2 300 / .7)}

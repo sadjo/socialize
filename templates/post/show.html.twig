@@ -40,7 +40,7 @@
         {% if app.user %}
             {{ include('comment/_form.html.twig') }}
         {% else %}
-            <div class="addc"><a class="lnk" href="{{ path('app_login') }}">Connectez-vous pour commenter</a></div>
+            <div class="addc"><a class="lnk" href="{{ login_url ?? path('app_login') }}">Connectez-vous pour commenter</a></div>
         {% endif %}
 
     </div>

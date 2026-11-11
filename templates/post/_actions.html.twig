@@ -10,7 +10,7 @@
                 <button class="act{{ is_liked ? ' liked' }}" aria-pressed="{{ is_liked ? 'true' : 'false' }}" aria-label="{{ is_liked ? 'Je n’aime plus' : 'J’aime' }}">{{ ui.icon('heart') }}</button>
             </form>
         {% else %}
-            <a class="act" href="{{ path('app_login') }}" aria-label="Connectez-vous pour aimer">{{ ui.icon('heart') }}</a>
+            <a class="act" href="{{ login_url ?? path('app_login') }}" aria-label="Connectez-vous pour aimer">{{ ui.icon('heart') }}</a>
         {% endif %}
         {% if app.user %}
             {# L'étiquette du champ de commentaire : un clic place le curseur dans le champ. #}

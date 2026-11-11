@@ -17,6 +17,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 final class FeedController extends AbstractController
 {
@@ -33,14 +34,15 @@ final class FeedController extends AbstractController
     }
 
     #[Route('/', name: 'app_home', methods: ['GET'])]
-    public function home(Request $request, AccountRepository $accounts, RegistrationPolicy $registration, StoryFeed $stories): Response
+    public function home(Request $request, AccountRepository $accounts, RegistrationPolicy $registration, StoryFeed $stories, AuthenticationUtils $authentication): Response
     {
         $viewer = $this->currentAccount->get();
         // Instance pas encore ouverte au public : l'accueil des visiteurs se limite au formulaire de connexion.
         if (!$viewer instanceof \App\Core\Domain\Account\Account && $this->homeLoginOnly) {
             return $this->render('security/home.html.twig', [
-                'error' => null,
-                'last_email' => '',
+                // Erreur d'une tentative de connexion (renvoyée ici depuis /connexion).
+                'error' => $authentication->getLastAuthenticationError(),
+                'last_email' => $authentication->getLastUsername(),
                 'registration_open' => $registration->isOpen(),
             ]);
         }

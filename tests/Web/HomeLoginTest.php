@@ -41,18 +41,22 @@ final class HomeLoginTest extends AppWebTestCase
 
     public function testPublicFeedsAndRegistrationAreClosedToVisitors(): void
     {
-        foreach (['/local', '/federe', '/inscription'] as $path) {
+        foreach (['/local', '/federe', '/recherche', '/recherche?q=@alice@remote.test', '/inscription', '/connexion'] as $path) {
             $this->client->request('GET', $path);
             self::assertResponseRedirects('/', message: $path);
         }
 
-        // Profil public consultable, sans lien vers les fils publics ni vers l'inscription.
+        // Profil public consultable, sans menu (ni à gauche, ni en bas sur mobile) ni lien vers les pages fermées.
         $camille = $this->register('camille');
         $this->client->request('GET', '/@camille');
         self::assertResponseIsSuccessful();
-        self::assertSelectorNotExists('a[href="/local"]');
-        self::assertSelectorNotExists('a[href="/inscription"]');
-        self::assertSelectorExists('nav.side a[href="/connexion"]');
+        self::assertSelectorExists('.app.no-menu');
+        self::assertSelectorNotExists('nav.side');
+        self::assertSelectorNotExists('nav.tabbar');
+        foreach (['/local', '/federe', '/recherche', '/inscription', '/connexion'] as $closed) {
+            self::assertSelectorNotExists(\sprintf('a[href="%s"]', $closed), $closed);
+        }
+        self::assertSelectorExists('header.mtop a[href="/"]', 'La connexion se fait depuis l’accueil.');
 
         $this->login($camille);
         $this->client->request('GET', '/local');
@@ -60,5 +64,28 @@ final class HomeLoginTest extends AppWebTestCase
         self::assertSelectorExists('nav.side a[href="/local"]', 'Connecté : fils publics accessibles.');
         $this->client->request('GET', '/federe');
         self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/recherche');
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/@camille');
+        self::assertSelectorExists('nav.side', 'Connecté : le menu revient sur les profils.');
+    }
+
+    public function testALoginErrorIsShownOnTheHomePage(): void
+    {
+        $this->register('camille', password: 'mot-de-passe-solide');
+        $crawler = $this->client->request('GET', '/');
+        $this->client->submit($crawler->selectButton('Se connecter')->form(['identifier' => 'camille', 'password' => 'mauvais-mot-de-passe']));
+        self::assertResponseRedirects('/connexion');
+        $this->client->followRedirect();
+        self::assertResponseRedirects('/');
+        $this->client->followRedirect();
+        self::assertSelectorExists('main.auth-page .form-errors li');
+        self::assertInputValueSame('identifier', 'camille', 'Identifiant prérempli.');
+
+        // Page protégée : renvoi vers la connexion, donc vers l'accueil.
+        $this->client->request('GET', '/publier');
+        self::assertResponseRedirects('/connexion');
+        $this->client->followRedirect();
+        self::assertResponseRedirects('/');
     }
 }

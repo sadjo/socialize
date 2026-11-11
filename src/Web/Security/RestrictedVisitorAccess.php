@@ -13,13 +13,14 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Instance pas encore ouverte au public (temporaire, HOME_LOGIN_ONLY) : les visiteurs non connectés n'ont accès
- * ni aux fils publics ni à l'inscription, et sont renvoyés vers l'accueil (formulaire de connexion).
- * Les profils et publications publics restent consultables par leur adresse.
+ * ni aux fils publics, ni à la recherche, ni à l'inscription, et sont renvoyés vers l'accueil, qui porte le formulaire
+ * de connexion. La page /connexion n'est plus affichée mais reçoit toujours le formulaire (POST, géré par le pare-feu ;
+ * une erreur y renvoie, puis vers l'accueil, qui l'affiche). Profils et publications publics restent consultables.
  */
 final readonly class RestrictedVisitorAccess
 {
     /** Pages fermées aux visiteurs. */
-    public const array ROUTES = ['app_feed_local', 'app_feed_federated', 'app_register'];
+    public const array ROUTES = ['app_feed_local', 'app_feed_federated', 'app_search', 'app_register', 'app_login'];
 
     public function __construct(
         private CurrentAccount $currentAccount,
