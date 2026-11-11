@@ -56,8 +56,10 @@ final class AudienceGroupTest extends AppWebTestCase
         self::assertSelectorTextNotContains('.member-choices', '@zoe');
 
         $form = $crawler->selectButton('Enregistrer')->form();
-        $form['audience_group[members]'][0]->tick(); // hugo (ordre alphabétique)
-        $this->client->submit($form);
+        /** @var array{audience_group: array<string, mixed>} $values */
+        $values = $form->getPhpValues();
+        $values['audience_group']['members'] = [$this->hugo->getAccount()->getId()->toRfc4122()];
+        $this->client->request('POST', $form->getUri(), $values);
         self::assertResponseRedirects('/reglages/groupes');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.group-list', 'Famille');

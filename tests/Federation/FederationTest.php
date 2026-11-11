@@ -137,7 +137,9 @@ final class FederationTest extends AppWebTestCase
         self::assertNotNull($post);
         $friends = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($friends->getId());
         self::assertNotNull($friends);
-        self::getContainer()->get(\App\Media\Application\PostEditor::class)->edit($post, 'En famille', Visibility::Groups, null, null, ['m-'.$post->getMedia()->first()?->getPublicId()], audienceGroups: [$friends]);
+        $media = $post->getMedia()->first();
+        self::assertInstanceOf(\App\Core\Domain\Media\MediaAttachment::class, $media);
+        self::getContainer()->get(\App\Media\Application\PostEditor::class)->edit($post, 'En famille', Visibility::Groups, null, null, [\App\Media\Application\PostEditor::token($media)], audienceGroups: [$friends]);
         $delete = $this->fediverse()->delivered('Delete');
         self::assertCount(1, $delete);
         self::assertSame('http://localhost/p/'.$post->getPublicId(), $this->dig($delete, 0, 'object', 'id'));
