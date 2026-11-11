@@ -162,6 +162,14 @@ class Post
         return $this->announce;
     }
 
+    /**
+     * Publication importée discrètement, à annoncer finalement aux abonnés du fédivers.
+     */
+    public function allowAnnouncement(): void
+    {
+        $this->announce = true;
+    }
+
     public function updateFederated(string $caption, ?string $contentWarning): void
     {
         $this->caption = trim($caption);
