@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{# Page d'accueil des visiteurs non connectés, tant que l'instance n'est pas ouverte au public (HOME_LOGIN_ONLY) :
+   seulement le formulaire de connexion, sans menu. #}
+{% block title %}Socialize{% endblock %}
+
+{% block body %}
+<main class="auth-page">
+    {{ include('security/_login_form.html.twig') }}
+</main>
+{% endblock %}

@@ -501,6 +501,9 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 .field .help{font-size:.8rem;color:var(--muted)}
 .field.invalid .inp{border-color:var(--bad)}
 .auth{max-width:440px;margin:4vh auto 0;display:flex;flex-direction:column;gap:20px}
+/* Accueil réduit à la connexion (HOME_LOGIN_ONLY) : formulaire seul, centré dans la page */
+.auth-page{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+.auth-page .auth{width:100%;margin:0}
 .auth .logo{justify-content:center;padding:0;font-size:1.6rem}
 .auth .card{padding:24px}
 .auth .alt{text-align:center;font-size:.9rem;color:var(--muted)}
