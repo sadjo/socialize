@@ -682,3 +682,14 @@ label.act{cursor:pointer}
 .invitations td{vertical-align:top}
 .chip.invite-pending{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .chip.invite-used{color:var(--ok)}
+
+/* Menu complet sur mobile (bouton « Menu » de la barre du haut) : fenêtre au centre, comme les autres */
+.mobile-menu{border:0;padding:0;background:transparent;width:min(360px,calc(100vw - 32px));color:var(--fg)}
+.mobile-menu::backdrop{background:oklch(0.15 0.02 285 / .55);backdrop-filter:blur(4px)}
+.mobile-menu .sheet{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:10px;box-shadow:var(--shadow);animation:rise .15s;max-height:calc(100dvh - 48px);overflow-y:auto}
+.mobile-menu header{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 8px 12px;font-family:var(--font-display)}
+.mobile-menu nav{display:flex;flex-direction:column;gap:2px}
+.mobile-menu .nav{width:100%}
+.mobile-menu .sep{height:1px;background:var(--line);margin:8px 12px}
+.mobile-menu .grow{display:none}
+.mobile-menu .side-version{text-align:center;margin:8px 0 2px}
