@@ -54,6 +54,8 @@ small,.small{font-size:.82rem;color:var(--muted)}
 
 /* ---------- Ossature ---------- */
 .app{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);gap:28px;max-width:1340px;margin:0 auto}
+/* Sans menu (profil public vu par un visiteur, instance réservée aux comptes) : le contenu prend toute la largeur */
+.app.no-menu{grid-template-columns:minmax(0,1fr)}
 .side{position:sticky;top:0;height:100dvh;padding-block:22px;display:flex;flex-direction:column;gap:2px}
 .logo{display:flex;align-items:center;gap:10px;padding:6px 12px 22px;font:800 1.3rem/1 var(--font-display);letter-spacing:-.03em}
 .logo-mark{width:34px;height:34px;border-radius:11px;background:var(--grad);display:grid;place-items:center;flex:none;box-shadow:0 6px 18px -6px oklch(0.6 0.2 300 / .7)}
@@ -501,6 +503,11 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 .field .help{font-size:.8rem;color:var(--muted)}
 .field.invalid .inp{border-color:var(--bad)}
 .auth{max-width:440px;margin:4vh auto 0;display:flex;flex-direction:column;gap:20px}
+/* Accueil réduit à la connexion (HOME_LOGIN_ONLY) : formulaire seul, centré dans la page */
+.auth-page{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+.auth-page{grid-template-rows:1fr auto;gap:12px}
+.auth-page .auth{width:100%;margin:0;align-self:center}
+.auth-version{font-size:.75rem;color:var(--faint);font-variant-numeric:tabular-nums;text-align:center}
 .auth .logo{justify-content:center;padding:0;font-size:1.6rem}
 .auth .card{padding:24px}
 .auth .alt{text-align:center;font-size:.9rem;color:var(--muted)}

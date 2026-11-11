@@ -4,6 +4,8 @@ twig:
     globals:
         local_domain: '%app.local_domain%'
         app_version: '%app.version%'
+        # Instance réservée aux comptes (temporaire) : liens des fils publics et de l'inscription masqués aux visiteurs.
+        home_login_only: '%env(bool:HOME_LOGIN_ONLY)%'
 
 when@test:
     twig:
