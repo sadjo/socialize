@@ -3,6 +3,7 @@ twig:
     form_themes: ['form/socialize_theme.html.twig']
     globals:
         local_domain: '%app.local_domain%'
+        app_version: '%app.version%'
 
 when@test:
     twig:

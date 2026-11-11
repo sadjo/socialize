@@ -37,6 +37,7 @@
         {% if me %}
             <a class="nav" href="{{ path('app_logout') }}">{{ ui.icon('logout') }}<span class="lbl">Déconnexion</span></a>
         {% endif %}
+        <p class="side-version" title="Version de Socialize">{{ app_version }}</p>
     </nav>
 
     <main id="main">
