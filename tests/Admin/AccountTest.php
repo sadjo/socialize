@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Admin;
 
+use App\Core\Application\Account\Invitations;
 use App\Core\Domain\Account\User;
 use App\Core\Infrastructure\Doctrine\UserRepository;
 use App\Tests\AppWebTestCase;
@@ -72,13 +73,48 @@ final class AccountTest extends AppWebTestCase
         $this->client->submit($crawler->selectButton('Créer le compte')->form([
             'account[email]' => 'lina@exemple.fr',
             'account[username]' => 'Lina Morel',
-            'account[password][first]' => 'court',
-            'account[password][second]' => 'court',
+            'account[password][first]' => '',
+            'account[password][second]' => '',
         ]));
         self::assertResponseIsUnprocessable();
         self::assertSelectorTextContains('main', 'Utilisez seulement des lettres minuscules');
-        self::assertSelectorTextContains('main', 'au moins 10 caractères');
+        self::assertSelectorTextContains('main', 'Saisissez un mot de passe.');
         self::assertNull(self::getContainer()->get(UserRepository::class)->findOneByEmail('lina@exemple.fr'));
+    }
+
+    public function testOnlyTheAdministratorMayChooseAShortPassword(): void
+    {
+        $this->login($this->register('alice'));
+        $crawler = $this->client->request('GET', '/admin/comptes');
+        $this->client->submit($crawler->selectButton('Créer le compte')->form([
+            'account[email]' => 'papi@exemple.fr',
+            'account[username]' => 'papi',
+            'account[password][first]' => '1234',
+            'account[password][second]' => '1234',
+        ]));
+        self::assertResponseRedirects('/admin/comptes', message: 'Mot de passe court accepté pour un compte créé par l’administrateur.');
+
+        $this->client->request('GET', '/deconnexion');
+        $crawler = $this->client->request('GET', '/connexion');
+        $this->client->submit($crawler->selectButton('Se connecter')->form(['identifier' => 'papi', 'password' => '1234']));
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorExists('nav.side a[href="/@papi"]');
+
+        // L'inscription (ici par invitation), elle, garde ses 10 caractères minimum.
+        $admin = self::getContainer()->get(UserRepository::class)->findOneByEmail('alice@exemple.test');
+        self::assertInstanceOf(User::class, $admin);
+        ['token' => $token] = self::getContainer()->get(Invitations::class)->create($admin->getAccount());
+        $this->client->request('GET', '/deconnexion');
+        $crawler = $this->client->request('GET', '/invitation/'.$token);
+        $this->client->submit($crawler->selectButton('Créer mon compte')->form([
+            'registration[email]' => 'mamie@exemple.fr',
+            'registration[username]' => 'mamie',
+            'registration[password][first]' => '1234',
+            'registration[password][second]' => '1234',
+        ]));
+        self::assertResponseIsUnprocessable();
+        self::assertSelectorTextContains('main', 'au moins 10 caractères');
     }
 
     private function currentUserId(): ?string

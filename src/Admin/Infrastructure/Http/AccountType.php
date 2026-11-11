@@ -14,7 +14,8 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Compte créé par l'administrateur (mêmes règles que l'inscription).
+ * Compte créé par l'administrateur : mêmes règles que l'inscription, sauf la longueur minimale du mot de passe
+ * (10 caractères), que l'administrateur peut choisir de ne pas imposer.
  *
  * @extends AbstractType<array{email: string, username: string, displayName: ?string, password: string}>
  */
@@ -45,12 +46,12 @@ final class AccountType extends AbstractType
             ])
             ->add('password', RepeatedType::class, [
                 'type' => PasswordType::class,
-                'first_options' => ['label' => 'Mot de passe', 'help' => '10 caractères au minimum. À transmettre à la personne, qui pourra le changer.', 'attr' => ['autocomplete' => 'new-password']],
+                'first_options' => ['label' => 'Mot de passe', 'help' => 'Pas de longueur minimale ici (10 caractères conseillés). À transmettre à la personne, qui pourra le changer.', 'attr' => ['autocomplete' => 'new-password']],
                 'second_options' => ['label' => 'Confirmez le mot de passe', 'attr' => ['autocomplete' => 'new-password']],
                 'invalid_message' => 'Les deux mots de passe ne sont pas identiques.',
                 'constraints' => [
-                    new Assert\NotBlank(),
-                    new Assert\Length(min: 10, max: 4096, minMessage: 'Le mot de passe doit contenir au moins {{ limit }} caractères.'),
+                    new Assert\NotBlank(message: 'Saisissez un mot de passe.'),
+                    new Assert\Length(max: 4096),
                 ],
             ]);
     }
