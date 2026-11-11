@@ -2,6 +2,8 @@
 
 parameters:
     app.name: 'Socialize'
+    # Version affichée en bas du menu (tag v0.X.Y dans l'image de production, « dev » sinon).
+    app.version: '%env(APP_VERSION)%'
     app.storage_dir: '%env(resolve:STORAGE_DIR)%'
     # Archives Instagram reçues (supprimées à la fin de l'import) et taille maximale d'une archive (20 Go).
     app.import_dir: '%app.storage_dir%/imports'

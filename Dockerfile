@@ -117,3 +117,7 @@ RUN set -eux; \
     php bin/console asset-map:compile; \
     chmod +x bin/console; \
     sync
+
+# Version affichée dans l'interface (tag v0.X.Y passé par la CI) ; en dernier pour garder le cache des étapes précédentes.
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
