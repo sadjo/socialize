@@ -56,11 +56,11 @@ final class InvitationTest extends AppWebTestCase
         $this->client->request('GET', '/admin/invitations');
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/');
-        self::assertSelectorNotExists('nav.side a[href="/admin/invitations"]');
+        self::assertSelectorNotExists('nav.side a[href="/admin/comptes"]');
 
         $this->login($admin);
         $this->client->request('GET', '/');
-        self::assertSelectorExists('nav.side a[href="/admin/invitations"]', 'Entrée « Administration » dans le menu.');
+        self::assertSelectorExists('nav.side a[href="/admin/comptes"]', 'Entrée « Administration » dans le menu.');
         $this->client->request('GET', '/admin/invitations');
         self::assertResponseIsSuccessful();
     }

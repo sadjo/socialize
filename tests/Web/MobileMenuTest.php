@@ -25,11 +25,11 @@ final class MobileMenuTest extends AppWebTestCase
         }
         self::assertSelectorExists('dialog.mobile-menu button[data-controller="theme"]');
         self::assertSelectorTextSame('dialog.mobile-menu .side-version', 'dev');
-        self::assertSelectorNotExists('dialog.mobile-menu a[href="/admin/invitations"]');
+        self::assertSelectorNotExists('dialog.mobile-menu a[href="/admin/comptes"]');
 
         $this->login($admin);
         $this->client->request('GET', '/');
-        self::assertSelectorExists('dialog.mobile-menu a[href="/admin/invitations"]', 'Administration pour l’administrateur.');
+        self::assertSelectorExists('dialog.mobile-menu a[href="/admin/comptes"]', 'Administration pour l’administrateur.');
     }
 
     public function testVisitorsKeepTheirLoginButton(): void
