@@ -10,6 +10,21 @@ import { SOUND_EVENT, playAlone, setSound, soundOn } from '../lib/sound.js';
  */
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+/*
+ * Arrête une vidéo et libère son décodeur : remise à l'état initial (affiche), sans rien retélécharger.
+ * Safari (iPhone) garde sinon le décodeur d'une vidéo retirée de la page, et la suivante reste noire.
+ */
+export function release(video) {
+    video.pause();
+    video.preload = 'none';
+    video.load();
+}
+
+// Avant la mise en cache d'une page par Turbo : vidéos remises à zéro (la copie gardée ne joue rien).
+document.addEventListener('turbo:before-cache', () => {
+    document.querySelectorAll('.player video').forEach(release);
+});
+
 export default class extends Controller {
     static targets = ['video', 'sound'];
 
@@ -27,7 +42,7 @@ export default class extends Controller {
         this.observer.disconnect();
         window.removeEventListener(SOUND_EVENT, this.onSound);
         this.videoTarget.removeEventListener('play', this.onPlay);
-        this.videoTarget.pause();
+        release(this.videoTarget);
     }
 
     visibilityChanged(entry) {

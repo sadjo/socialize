@@ -17,6 +17,7 @@ final class VersionTest extends AppWebTestCase
             $this->client->getCrawler()->filter('meta[name="viewport"]')->attr('content'),
             'Zoom fixe sur mobile.',
         );
+        self::assertSame('no-preview', $this->client->getCrawler()->filter('meta[name="turbo-cache-control"]')->attr('content'), 'Pas d’aperçu en cache (vidéos noires sur iPhone).');
 
         $this->login($this->register('camille'));
         $crawler = $this->client->request('GET', '/');

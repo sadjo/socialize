@@ -5,6 +5,9 @@
         {# Zoom fixe sur mobile : pas de zoom au toucher d'un champ ni au pincement (Android). Voir aussi assets/app.js (iOS). #}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
         <meta name="color-scheme" content="dark light">
+        {# Turbo : pas d'aperçu en cache à l'ouverture d'un lien (le bouton « retour » utilise toujours le cache).
+           Sinon les vidéos de l'aperçu démarrent puis sont remplacées : sur iPhone, la vraie vidéo reste noire. #}
+        <meta name="turbo-cache-control" content="no-preview">
         <title>{% block title %}Socialize{% endblock %}</title>
         <script>try{var t=localStorage.getItem('socialize-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%22 stop-color=%22%234f5bd5%22/><stop offset=%22.5%22 stop-color=%22%23a24fd0%22/><stop offset=%221%22 stop-color=%22%23f08a6b%22/></linearGradient></defs><rect width=%2232%22 height=%2232%22 rx=%229%22 fill=%22url(%23g)%22/><circle cx=%2215%22 cy=%2217%22 r=%226%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222.6%22/></svg>">
