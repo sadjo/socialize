@@ -6,6 +6,7 @@ namespace App\Web\Controller;
 
 use App\Core\Application\Post\PostAccess;
 use App\Core\Application\Post\PostArchiver;
+use App\Core\Application\Social\AudienceGroups;
 use App\Core\Application\Social\SocialActions;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
@@ -144,7 +145,7 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/modifier', name: 'app_post_edit', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET', 'POST'])]
-    public function edit(string $id, Request $request, PostEditor $editor, MediaUrls $urls, MusicLibrary $music): Response
+    public function edit(string $id, Request $request, PostEditor $editor, MediaUrls $urls, MusicLibrary $music, AudienceGroups $groups): Response
     {
         $post = $this->visiblePost($id);
         if (!$post->isOwnedBy($this->currentAccount->get()) || $post->isFederated()) {
@@ -172,11 +173,12 @@ final class PostController extends AbstractController
             'order' => implode(',', array_column($existing, 'token')),
             'altTexts' => $altTexts,
             'music' => ['track' => $post->getMusic()?->getOpenverseId(), 'start' => (string) $post->getMusicStart()],
-        ]);
+            'audienceGroups' => $post->getAudienceGroups(),
+        ], ['groups' => $groups->of($post->getAccount())]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}} $data */
+            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>} $data */
             $data = $form->getData();
             try {
                 $editor->edit(
@@ -189,6 +191,7 @@ final class PostController extends AbstractController
                     $data['media'] ?? [],
                     $data['altTexts'] ?? [],
                     $music->choice($data['music']['track'], (int) $data['music']['start']),
+                    Visibility::Groups === $data['visibility'] ? $data['audienceGroups'] : [],
                 );
                 $this->addFlash('success', 'Publication modifiée.');
 

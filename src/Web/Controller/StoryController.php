@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
+use App\Core\Application\Social\AudienceGroups;
 use App\Core\Application\Story\StoryAccess;
 use App\Core\Application\Story\StoryActions;
 use App\Core\Application\Story\StoryFeed;
@@ -50,21 +51,21 @@ final class StoryController extends AbstractController
     }
 
     #[Route('/stories/nouvelle', name: 'app_story_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, ImmichPublisher $publisher, ComposeSources $sources, MusicLibrary $music): Response
+    public function new(Request $request, ImmichPublisher $publisher, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
     {
         $account = $this->currentAccount->require();
-        $form = $this->createForm(ComposeStoryType::class, options: ['highlights' => $this->highlights->forAccount($account)]);
+        $form = $this->createForm(ComposeStoryType::class, options: ['highlights' => $this->highlights->forAccount($account), 'groups' => $groups->of($account)]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, order: ?string, text: ?string, audience: string, highlight: ?string, highlightTitle: ?string, music: array{track: ?string, start: ?string}} $data */
+            /** @var array{media: list<UploadedFile>, order: ?string, text: ?string, audience: string, highlight: ?string, highlightTitle: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>} $data */
             $data = $form->getData();
             $highlightTitle = trim((string) $data['highlightTitle']);
             if ('__new__' === $data['highlight'] && '' === $highlightTitle) {
                 $form->get('highlightTitle')->addError(new FormError('Donnez un titre à la nouvelle story à la une.'));
             } else {
                 try {
-                    $created = $publisher->publishStories($account, ComposeSources::order($data['order']), $data['media'], $data['text'], Visibility::from($data['audience']), $music->choice($data['music']['track'], (int) $data['music']['start']));
+                    $created = $publisher->publishStories($account, ComposeSources::order($data['order']), $data['media'], $data['text'], Visibility::from($data['audience']), $music->choice($data['music']['track'], (int) $data['music']['start']), Visibility::Groups->value === $data['audience'] ? $data['audienceGroups'] : []);
                     $this->pinAll($created, $account, $data['highlight'], $highlightTitle);
                     $this->addFlash('success', 1 === \count($created) ? 'Story publiée, visible pendant 24 h.' : \sprintf('%d stories publiées, visibles pendant 24 h.', \count($created)));
 

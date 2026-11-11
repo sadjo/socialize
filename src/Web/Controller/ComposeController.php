@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
+use App\Core\Application\Social\AudienceGroups;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\AudienceGroup;
 use App\Integration\Immich\Application\ImmichPublisher;
 use App\Integration\Openverse\Application\MusicLibrary;
 use App\Integration\Openverse\Application\OpenverseException;
@@ -21,13 +23,13 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ComposeController extends AbstractController
 {
     #[Route('/publier', name: 'app_compose', methods: ['GET', 'POST'])]
-    public function __invoke(Request $request, ImmichPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources, MusicLibrary $music): Response
+    public function __invoke(Request $request, ImmichPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
     {
-        $form = $this->createForm(ComposePostType::class);
+        $form = $this->createForm(ComposePostType::class, options: ['groups' => $groups->of($currentAccount->require())]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}} $data */
+            /** @var array{media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<AudienceGroup>} $data */
             $data = $form->getData();
 
             try {
@@ -41,6 +43,7 @@ final class ComposeController extends AbstractController
                     $data['contentWarning'],
                     $data['location'],
                     $music->choice($data['music']['track'], (int) $data['music']['start']),
+                    Visibility::Groups === $data['visibility'] ? $data['audienceGroups'] : [],
                 );
                 $this->addFlash('success', $post->hasVideo()
                     ? 'Publié. La vidéo est en cours de préparation, elle apparaîtra dans quelques instants.'

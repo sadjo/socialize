@@ -60,7 +60,7 @@ final class ComposeStoryType extends AbstractType
             ->add('audience', ChoiceType::class, [
                 'label' => 'Visible par',
                 'expanded' => true,
-                'choices' => ['Tout le monde' => Visibility::Public->value, 'Mes abonnés' => Visibility::Followers->value],
+                'choices' => ['Tout le monde' => Visibility::Public->value, 'Mes abonnés' => Visibility::Followers->value, 'Mes groupes' => Visibility::Groups->value],
                 'data' => Visibility::Public->value,
             ])
             ->add('highlight', ChoiceType::class, [
@@ -76,11 +76,15 @@ final class ComposeStoryType extends AbstractType
                 'constraints' => [new Assert\Length(max: Highlight::MAX_TITLE_LENGTH)],
             ])
             ->add('music', MusicChoiceType::class);
+        /** @var list<\App\Core\Domain\Social\AudienceGroup> $groups */
+        $groups = $options['groups'];
+        AudienceGroupChoiceType::addTo($builder, 'audience', $groups);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['highlights' => []]);
+        $resolver->setDefaults(['highlights' => [], 'groups' => []]);
         $resolver->setAllowedTypes('highlights', 'array');
+        $resolver->setAllowedTypes('groups', 'array');
     }
 }

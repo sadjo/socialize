@@ -108,7 +108,7 @@ export default class extends Controller {
         this.authorTarget.replaceChildren(avatar);
         this.authorTarget.href = group.profileUrl;
         this.nameTarget.textContent = group.username;
-        this.metaTarget.textContent = `· ${story.ago}${this.dataValue.highlight ? ` · ${this.dataValue.highlight}` : ''}${story.audience === 'followers' ? ' · abonnés' : ''}`;
+        this.metaTarget.textContent = `· ${story.ago}${this.dataValue.highlight ? ` · ${this.dataValue.highlight}` : ''}${story.audience === 'followers' ? ' · abonnés' : story.audience === 'groups' ? ' · groupe' : ''}`;
 
         this.textTarget.hidden = !story.text;
         this.textTarget.textContent = story.text || '';

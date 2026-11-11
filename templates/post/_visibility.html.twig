@@ -1,0 +1,9 @@
+{# Badge de visibilité d'une publication. Pour une publication de groupe : noms des groupes pour son autrice
+   ou son auteur, « Groupe » pour les membres. Variable : post #}
+{% import '_macros.html.twig' as ui %}
+{%- set mine = app.user and post.isOwnedBy(app.user.account) -%}
+{%- if post.visibility.value == 'groups' -%}
+    <span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon('stack', 'xs') }}{{ mine ? post.audienceGroups|map(g => g.name)|join(', ') : 'Groupe' }}</span>
+{%- else -%}
+    <span class="chip imp" title="{{ post.visibility.description }}">{{ ui.icon(post.visibility.value == 'public' ? 'globe' : 'lock', 'xs') }}{{ post.visibility.label }}</span>
+{%- endif -%}

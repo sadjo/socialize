@@ -11,6 +11,7 @@ use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\AudienceGroup;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\File\File;
@@ -31,6 +32,7 @@ final readonly class PostComposer
 
     /**
      * @param list<array{file: File, alt: ?string}> $uploads
+     * @param list<AudienceGroup>                   $audienceGroups groupes d'abonnés (visibilité « Groupes »)
      */
     public function publish(
         Account $author,
@@ -40,6 +42,7 @@ final readonly class PostComposer
         ?string $contentWarning = null,
         ?string $location = null,
         ?MusicChoice $music = null,
+        array $audienceGroups = [],
     ): Post {
         if ([] === $uploads) {
             throw new MediaProcessingException('Ajoutez au moins une photo ou une vidéo.');
@@ -47,6 +50,7 @@ final readonly class PostComposer
 
         $post = new Post($author, $caption, $visibility, $contentWarning, $location);
         $post->chooseMusic($music);
+        $post->restrictTo($audienceGroups);
         $stored = [];
         try {
             foreach ($uploads as $position => $upload) {

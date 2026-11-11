@@ -1,0 +1,39 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Groupes · Réglages · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Réglages</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    {{ include('settings/_tabs.html.twig', {current: 'groups'}) }}
+
+    <section class="card">
+        <h2>Groupes d’abonnés</h2>
+        <p class="small">Réunissez des abonnés (famille, amis…) pour leur réserver une publication ou une story : choisissez « Groupes » au moment de publier. Seuls les membres encore abonnés y ont accès, y compris sur Mastodon.</p>
+        {% if groups is empty %}
+            <p class="small">Aucun groupe pour l’instant.</p>
+        {% else %}
+            <ul class="group-list">
+                {% for group in groups %}
+                    <li class="row">
+                        <span class="group-icon">{{ ui.icon('stack', 'sm') }}</span>
+                        <div class="grow"><b>{{ group.name }}</b><div class="small">{{ group.members|length }} membre{{ group.members|length > 1 ? 's' }}</div></div>
+                        <a class="btn sm" href="{{ path('app_settings_group', {id: group.publicId}) }}">Modifier</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h2>Nouveau groupe</h2>
+        {% if followers == 0 %}<p class="small">Vous n’avez pas encore d’abonnés : vous pourrez ajouter des membres dès que des comptes vous suivront.</p>{% endif %}
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.name) }}
+            <button class="btn pri">{{ ui.icon('plus', 'xs') }}Créer le groupe</button>
+        {{ form_end(form) }}
+    </section>
+</div>
+{% endblock %}
