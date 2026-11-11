@@ -1,0 +1,13 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Invitation non valable · Socialize{% endblock %}
+
+{% block content %}
+<div class="auth">
+    <section class="card">
+        <h1>Invitation non valable</h1>
+        <p class="small">Ce lien d’invitation a expiré, a déjà servi à créer un compte ou a été révoqué. Demandez une nouvelle invitation à la personne qui vous a invité.</p>
+        <a class="btn" href="{{ login_url ?? path('app_login') }}">Se connecter</a>
+    </section>
+</div>
+{% endblock %}

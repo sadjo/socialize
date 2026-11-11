@@ -11,6 +11,7 @@ use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -23,6 +24,8 @@ final class RegistrationType extends AbstractType
         $builder
             ->add('email', EmailType::class, [
                 'label' => 'Adresse e-mail',
+                // Invitation par e-mail : adresse imposée, non modifiable.
+                'disabled' => $options['email_locked'],
                 'attr' => ['autocomplete' => 'email'],
                 'constraints' => [new Assert\NotBlank(), new Assert\Email(), new Assert\Length(max: 180)],
             ])
@@ -52,5 +55,11 @@ final class RegistrationType extends AbstractType
                     new Assert\NotCompromisedPassword(skipOnError: true),
                 ],
             ]);
+    }
+
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $resolver->setDefaults(['email_locked' => false]);
+        $resolver->setAllowedTypes('email_locked', 'bool');
     }
 }
