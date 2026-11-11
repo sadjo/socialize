@@ -127,7 +127,7 @@ final class ImmichTest extends AppWebTestCase
         self::assertTrue($media[2]->isVideo());
 
         /** @var InMemoryTransport $queue */
-        $queue = self::getContainer()->get('messenger.transport.async');
+        $queue = self::getContainer()->get('messenger.transport.media');
         self::assertCount(1, array_filter($queue->getSent(), static fn (Envelope $e): bool => $e->getMessage() instanceof ProcessVideo), 'La vidéo part en conversion.');
 
         // Album « Publié sur Socialize » : créé une fois, puis réutilisé.

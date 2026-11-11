@@ -53,6 +53,21 @@ final readonly class ActorController
         return new ActivityJsonResponse($this->serializer->instanceActor());
     }
 
+    /**
+     * Boîte d'envoi de l'acteur de l'instance, annoncée dans son profil (Mastodon la lit) : il ne publie rien.
+     */
+    #[Route('/actor/outbox', name: 'ap_instance_outbox', methods: ['GET'])]
+    public function instanceOutbox(): ActivityJsonResponse
+    {
+        return new ActivityJsonResponse([
+            '@context' => 'https://www.w3.org/ns/activitystreams',
+            'id' => $this->serializer->instanceActor()['outbox'],
+            'type' => 'OrderedCollection',
+            'totalItems' => 0,
+            'orderedItems' => [],
+        ]);
+    }
+
     #[Route('/users/{username}/outbox', name: 'ap_outbox', requirements: ['username' => self::USERNAME], methods: ['GET'])]
     public function outbox(string $username, Request $request, PostRepository $posts): ActivityJsonResponse
     {

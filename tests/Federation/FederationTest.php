@@ -39,6 +39,10 @@ final class FederationTest extends AppWebTestCase
         self::assertSame('http://localhost/actor', self::dig($this->json(), 'links', 0, 'href'));
         $this->client->request('GET', '/actor', server: ['HTTP_ACCEPT' => self::AP]);
         self::assertSame('localhost', $this->json()['preferredUsername']);
+        self::assertSame('http://localhost/actor/outbox', $this->json()['outbox']);
+        $this->client->request('GET', '/actor/outbox', server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['type' => 'OrderedCollection', 'totalItems' => 0], array_intersect_key($this->json(), ['type' => 1, 'totalItems' => 1]), 'Boîte d’envoi de l’instance, vide.');
 
         $this->client->request('GET', '/users/camille', server: ['HTTP_ACCEPT' => self::AP]);
         $actor = $this->json();
