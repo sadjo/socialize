@@ -7,5 +7,6 @@
 {% block body %}
 <main class="auth-page">
     {{ include('security/_login_form.html.twig') }}
+    <p class="auth-version" title="Version de Socialize">{{ app_version }}</p>
 </main>
 {% endblock %}

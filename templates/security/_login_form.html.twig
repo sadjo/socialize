@@ -20,5 +20,5 @@
             <button class="btn pri">Se connecter</button>
         </form>
     </section>
-    {% if registration_open %}<p class="alt">Pas encore de compte ? <a class="lnk" href="{{ path('app_register') }}">Créer un compte</a></p>{% endif %}
+    {% if registration_open and not home_login_only %}<p class="alt">Pas encore de compte ? <a class="lnk" href="{{ path('app_register') }}">Créer un compte</a></p>{% endif %}
 </div>

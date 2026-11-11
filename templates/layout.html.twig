@@ -19,7 +19,7 @@
     <nav class="side" aria-label="Navigation principale">
         <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
         <a class="nav{{ current_route == 'app_home' ? ' on' }}" href="{{ path('app_home') }}"{% if current_route == 'app_home' %} aria-current="page"{% endif %}>{{ ui.icon('home') }}<span class="lbl">Accueil</span></a>
-        <a class="nav{{ current_route == 'app_feed_local' ? ' on' }}" href="{{ path('app_feed_local') }}"{% if current_route == 'app_feed_local' %} aria-current="page"{% endif %}>{{ ui.icon('compass') }}<span class="lbl">Local</span></a>
+        {% if me or not home_login_only %}<a class="nav{{ current_route == 'app_feed_local' ? ' on' }}" href="{{ path('app_feed_local') }}"{% if current_route == 'app_feed_local' %} aria-current="page"{% endif %}>{{ ui.icon('compass') }}<span class="lbl">Local</span></a>{% endif %}
         <a class="nav{{ current_route == 'app_search' ? ' on' }}" href="{{ path('app_search') }}">{{ ui.icon('search') }}<span class="lbl">Rechercher</span></a>
         {% if me %}
             <a class="nav{{ current_route == 'app_compose' ? ' on' }}" href="{{ path('app_compose') }}">{{ ui.icon('plus') }}<span class="lbl">Créer</span></a>
@@ -30,7 +30,7 @@
         {% else %}
             <div class="sep"></div>
             <a class="nav{{ current_route == 'app_login' ? ' on' }}" href="{{ path('app_login') }}">{{ ui.icon('login') }}<span class="lbl">Connexion</span></a>
-            <a class="nav{{ current_route == 'app_register' ? ' on' }}" href="{{ path('app_register') }}">{{ ui.icon('user') }}<span class="lbl">Créer un compte</span></a>
+            {% if me or not home_login_only %}<a class="nav{{ current_route == 'app_register' ? ' on' }}" href="{{ path('app_register') }}">{{ ui.icon('user') }}<span class="lbl">Créer un compte</span></a>{% endif %}
         {% endif %}
         <div class="grow"></div>
         <button class="nav" type="button" data-controller="theme" data-action="theme#toggle">{{ ui.icon('moon') }}<span class="lbl" data-theme-target="label">Changer de thème</span></button>
@@ -68,7 +68,7 @@
 
 <nav class="tabbar" aria-label="Navigation mobile">
     <a href="{{ path('app_home') }}" class="{{ current_route == 'app_home' ? 'on' }}" aria-label="Accueil">{{ ui.icon('home') }}</a>
-    <a href="{{ path('app_feed_local') }}" class="{{ current_route == 'app_feed_local' ? 'on' }}" aria-label="Fil local">{{ ui.icon('compass') }}</a>
+    {% if me or not home_login_only %}<a href="{{ path('app_feed_local') }}" class="{{ current_route == 'app_feed_local' ? 'on' }}" aria-label="Fil local">{{ ui.icon('compass') }}</a>{% endif %}
     {% if me %}
         <a href="{{ path('app_compose') }}" class="plus" aria-label="Créer une publication">{{ ui.icon('plus') }}</a>
         <a href="{{ path('app_settings') }}" class="{{ current_route == 'app_settings' ? 'on' }}" aria-label="Réglages">{{ ui.icon('sliders') }}</a>
