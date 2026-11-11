@@ -7,6 +7,7 @@ namespace App\Media\Application;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Domain\Story\Story;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -27,12 +28,13 @@ final readonly class StoryComposer
     }
 
     /**
-     * @param list<File>       $files
-     * @param MusicChoice|null $music musique de chaque story publiée
+     * @param list<File>          $files
+     * @param MusicChoice|null    $music          musique de chaque story publiée
+     * @param list<AudienceGroup> $audienceGroups groupes d'abonnés (public « Groupes »)
      *
      * @return list<Story>
      */
-    public function publish(Account $author, array $files, ?string $text = null, Visibility $audience = Visibility::Public, ?MusicChoice $music = null): array
+    public function publish(Account $author, array $files, ?string $text = null, Visibility $audience = Visibility::Public, ?MusicChoice $music = null, array $audienceGroups = []): array
     {
         if ([] === $files) {
             throw new MediaProcessingException('Ajoutez au moins une photo ou une vidéo.');
@@ -48,6 +50,7 @@ final readonly class StoryComposer
                 // Le texte va sur la première story ; chaque story suivante a une seconde de plus pour garder l'ordre.
                 $story = new Story($author, $now->modify(\sprintf('+%d seconds', $i)), 0 === $i ? $text : null, $audience);
                 $story->chooseMusic($music);
+                $story->restrictTo($audienceGroups);
                 $this->ingestor->attach($story, $file, null, 0);
                 $stories[] = $story;
             }

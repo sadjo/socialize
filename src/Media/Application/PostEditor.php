@@ -9,6 +9,7 @@ use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\AudienceGroup;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -33,9 +34,10 @@ final readonly class PostEditor
     }
 
     /**
-     * @param list<string>           $order    jetons « m-… » et « n-… », dans l'ordre voulu
-     * @param list<File>             $newFiles nouveaux fichiers, référencés par « n-<index> »
-     * @param array<string, ?string> $altTexts texte alternatif par jeton
+     * @param list<string>           $order          jetons « m-… » et « n-… », dans l'ordre voulu
+     * @param list<File>             $newFiles       nouveaux fichiers, référencés par « n-<index> »
+     * @param array<string, ?string> $altTexts       texte alternatif par jeton
+     * @param list<AudienceGroup>    $audienceGroups groupes d'abonnés (visibilité « Groupes »)
      *
      * @throws MediaProcessingException
      */
@@ -49,6 +51,7 @@ final readonly class PostEditor
         array $newFiles = [],
         array $altTexts = [],
         ?MusicChoice $music = null,
+        array $audienceGroups = [],
     ): void {
         $existing = [];
         foreach ($post->getMedia() as $media) {
@@ -70,8 +73,10 @@ final readonly class PostEditor
         }
 
         $previousVisibility = $post->getVisibility();
+        $previousAudience = $post->getAudienceMembers();
         $post->edit($caption, $visibility, $contentWarning, $location, $this->clock->now());
         $post->chooseMusic($music);
+        $post->restrictTo($audienceGroups);
 
         // Retrait des médias absents de la nouvelle liste (les fichiers sont supprimés après l'enregistrement).
         $removed = [];
@@ -115,7 +120,7 @@ final readonly class PostEditor
         }
         // Avec une nouvelle vidéo, la mise à jour est fédérée une fois la vidéo prête (ProcessVideoHandler).
         if (!$processing) {
-            $this->events->dispatch(new PostUpdated($post, $previousVisibility));
+            $this->events->dispatch(new PostUpdated($post, $previousVisibility, $previousAudience));
         }
     }
 

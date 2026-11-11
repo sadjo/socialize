@@ -4,11 +4,13 @@ Réseau photo et vidéo auto-hébergé, compatible avec le fédivers (Mastodon, 
 Socialize permet d'importer une archive Instagram sans perte, de choisir ses médias dans [Immich](https://immich.app)
 et de publier aussi sur Instagram et Facebook selon des règles réglables.
 
-> **État : jalon 6.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
+> **État : jalon 7.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
 > stories, archives, fédération ActivityPub (Mastodon, Pixelfed), import d'une archive Instagram et publication
 > depuis Immich : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
 > Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
 > (licences Creative Commons, crédit affiché), copiée sur l'instance et jouée quand la publication est à l'écran.
+> Groupes d'abonnés (famille, amis…) : publications et stories réservées à un ou plusieurs groupes, y compris pour
+> les abonnés du fédivers, et groupe par défaut à l'import Instagram. Invitations et création de comptes par l'administrateur.
 > Jalons suivants : personnes reconnues par Immich (mentions), API/MCP, crosspost.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)

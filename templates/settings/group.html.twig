@@ -1,0 +1,48 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}{{ group.name }} · Groupes · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>{{ group.name }}</h1><p>Groupe d’abonnés · {{ group.members|length }} membre{{ group.members|length > 1 ? 's' }}</p></div>
+        <a class="btn" href="{{ path('app_settings_groups') }}">Retour aux groupes</a></div>
+
+    {{ form_start(form, {attr: {class: 'form card'}}) }}
+        {{ form_errors(form) }}
+        {{ form_row(form.name) }}
+        <fieldset class="field group-members" data-controller="list-filter">
+            <legend class="lab">Membres, choisis parmi vos abonnés</legend>
+            {% if candidates is empty %}
+                <p class="small">Vous n’avez pas encore d’abonnés.</p>
+            {% else %}
+                <input type="search" class="inp" placeholder="Rechercher un abonné…" aria-label="Rechercher un abonné" data-action="input->list-filter#filter">
+                <ul class="member-choices">
+                    {% for choice in form.members %}
+                        {% set member = candidates[choice.vars.value] %}
+                        <li data-list-filter-target="item" data-text="{{ (member.acct ~ ' ' ~ member.displayName)|lower }}">
+                            <label class="row">
+                                {{ form_widget(choice) }}
+                                {{ ui.avatar(member, 32) }}
+                                <span class="grow"><b>{{ member.displayName }}</b><span class="small"> @{{ member.acct }}</span>
+                                    {% if following[choice.vars.value] is not defined %}<span class="chip">non abonné</span>{% endif %}</span>
+                            </label>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% do form.members.setRendered %}
+        </fieldset>
+        <button class="btn pri">Enregistrer</button>
+    {{ form_end(form) }}
+
+    <section class="card">
+        <h2>Supprimer le groupe</h2>
+        <p class="small">Les publications et stories réservées seulement à ce groupe deviendront privées (visibles par vous seul).</p>
+        <form method="post" action="{{ path('app_settings_group_delete', {id: group.publicId}) }}" onsubmit="return confirm('Supprimer le groupe « {{ group.name|e('js') }} » ?')">
+            <input type="hidden" name="_token" value="{{ csrf_token('group-delete-' ~ group.publicId) }}">
+            <button class="btn danger">{{ ui.icon('trash', 'xs') }}Supprimer</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

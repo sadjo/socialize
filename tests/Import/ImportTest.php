@@ -212,6 +212,58 @@ final class ImportTest extends AppWebTestCase
         self::assertCount(3, $posts->findBy(['source' => PostSource::InstagramImport]), 'La publication écartée n’est pas créée.');
     }
 
+    public function testFollowersOnlyPublicationsCanBeReservedToAGroup(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
+        $family = $groups->create($camille->getAccount(), 'Famille');
+        $friends = $groups->create($camille->getAccount(), 'Amis');
+        $import = $this->uploaded();
+
+        $crawler = $this->client->request('GET', '/import/'.$import->getPublicId());
+        self::assertSelectorExists('select[name="import_options[defaultGroup]"] option[value="'.$family->getPublicId().'"]');
+        self::assertSelectorTextContains('select[name="import_options[defaultGroup]"] option[value=""]', 'Aucun : tous les abonnés');
+        self::assertSelectorCount(4, '#publications select[name^="groupe["]');
+
+        // Tout l'import « Abonnés seulement », groupe Famille par défaut ; l'été pour « Amis », le printemps pour
+        // tous les abonnés, l'hiver public (son groupe n'a alors pas d'effet).
+        $summer = $this->item($import, InstagramArchive::SUMMER);
+        $spring = $this->item($import, InstagramArchive::SPRING);
+        $winter = $this->item($import, InstagramArchive::WINTER);
+        $this->client->submit($crawler->selectButton('Lancer l’import')->form([
+            'import_options[placement]' => 'followers',
+            'import_options[defaultGroup]' => $family->getPublicId(),
+            'groupe['.$summer->getPublicId().']' => $friends->getPublicId(),
+            'groupe['.$spring->getPublicId().']' => 'all',
+            'choix['.$winter->getPublicId().']' => 'public',
+            'groupe['.$winter->getPublicId().']' => $friends->getPublicId(),
+        ]));
+        self::assertResponseRedirects();
+
+        $names = static fn (Post $p): array => array_map(static fn (\App\Core\Domain\Social\AudienceGroup $g): string => $g->getName(), $p->getAudienceGroups());
+        $summer = $this->post($import, InstagramArchive::SUMMER);
+        self::assertSame(Visibility::Groups, $summer->getVisibility());
+        self::assertSame(['Amis'], $names($summer));
+        self::assertSame(Visibility::Followers, $this->post($import, InstagramArchive::SPRING)->getVisibility());
+        self::assertSame(Visibility::Public, $this->post($import, InstagramArchive::WINTER)->getVisibility(), 'Une publication publique ignore le groupe.');
+        $archived = $this->post($import, InstagramArchive::ARCHIVED);
+        self::assertSame(Visibility::Groups, $archived->getVisibility(), 'L’archivée garde le groupe par défaut pour le jour où elle sort des archives.');
+        self::assertSame(['Famille'], $names($archived));
+    }
+
+    public function testADefaultGroupDeletedBeforeTheImportMakesItsPublicationsPrivate(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
+        $family = $groups->create($camille->getAccount(), 'Famille');
+        $familyId = $family->getPublicId();
+        $groups->delete($family);
+        $import = $this->uploaded();
+
+        self::getContainer()->get(\App\Import\Instagram\Application\ArchiveImporter::class)->launch($import, \App\Import\Instagram\Domain\Placement::Followers, true, false, $familyId);
+        self::assertSame(Visibility::Private, $this->post($import, InstagramArchive::SUMMER)->getVisibility(), 'Jamais plus visible que voulu.');
+    }
+
     public function testTheProgressFollowsTheImportAndItsVideosAfterAReload(): void
     {
         @unlink($this->archive);

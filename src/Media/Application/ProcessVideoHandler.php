@@ -48,7 +48,7 @@ final readonly class ProcessVideoHandler
         if (null !== $post && !$post->getMedia()->exists(static fn (int $i, MediaAttachment $m): bool => MediaStatus::Processing === $m->getStatus())) {
             // Vidéo ajoutée en modifiant la publication : c'est une mise à jour, pas une nouvelle publication.
             if (null !== $post->getUpdatedAt()) {
-                $this->events->dispatch(new PostUpdated($post, $post->getVisibility()));
+                $this->events->dispatch(new PostUpdated($post, $post->getVisibility(), $post->getAudienceMembers()));
             } elseif ($post->shouldAnnounce()) {
                 // Une publication importée sans annonce reste discrète.
                 $this->events->dispatch(new PostPublished($post));

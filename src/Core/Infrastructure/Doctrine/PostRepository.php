@@ -11,6 +11,7 @@ use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\PostSource;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\PublicId;
+use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Domain\Social\Follow;
 use App\Core\Domain\Social\FollowState;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -23,6 +24,9 @@ use Symfony\Bridge\Doctrine\Types\UuidType;
  */
 final class PostRepository extends ServiceEntityRepository
 {
+    /** Le visiteur (:viewer) est membre d'un des groupes de la publication p. */
+    private const string MEMBER_OF_GROUPS = 'EXISTS (SELECT g.id FROM '.AudienceGroup::class.' g JOIN g.members gm WHERE g MEMBER OF p.audienceGroups AND gm.id = :viewer)';
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Post::class);
@@ -48,10 +52,11 @@ final class PostRepository extends ServiceEntityRepository
 
         $qb = $this->base()
             ->where('p.account = :viewer')
-            ->orWhere(\sprintf('p.account IN (%s) AND p.visibility IN (:shared)', $followed->getDQL()))
+            ->orWhere(\sprintf('p.account IN (%s) AND (p.visibility IN (:shared) OR (p.visibility = :groups AND %s))', $followed->getDQL(), self::MEMBER_OF_GROUPS))
             ->setParameter('viewer', $viewer->getId(), UuidType::NAME)
             ->setParameter('accepted', FollowState::Accepted)
-            ->setParameter('shared', [Visibility::Public, Visibility::Unlisted, Visibility::Followers]);
+            ->setParameter('shared', [Visibility::Public, Visibility::Unlisted, Visibility::Followers])
+            ->setParameter('groups', Visibility::Groups);
 
         return $this->page($qb, $cursor, $limit);
     }
@@ -87,13 +92,12 @@ final class PostRepository extends ServiceEntityRepository
      *
      * @param list<Visibility> $visible
      */
-    public function profileTimeline(Account $account, array $visible, ?Cursor $cursor, int $limit): TimelinePage
+    public function profileTimeline(Account $account, array $visible, ?Cursor $cursor, int $limit, ?Account $viewer = null): TimelinePage
     {
         $qb = $this->base()
             ->where('p.account = :account')
-            ->andWhere('p.visibility IN (:visible)')
-            ->setParameter('account', $account->getId(), UuidType::NAME)
-            ->setParameter('visible', $visible);
+            ->setParameter('account', $account->getId(), UuidType::NAME);
+        $this->visibleTo($qb, $account, $visible, $viewer);
 
         return $this->page($qb, $cursor, $limit);
     }
@@ -105,18 +109,18 @@ final class PostRepository extends ServiceEntityRepository
      *
      * @return list<Post> au plus $limit publications, de la plus récente à la plus ancienne
      */
-    public function profileNewerThan(Account $account, array $visible, Cursor $from, int $limit): array
+    public function profileNewerThan(Account $account, array $visible, Cursor $from, int $limit, ?Account $viewer = null): array
     {
-        /** @var list<Post> $posts */
-        $posts = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->addSelect('a')
             ->join('p.account', 'a')
             ->where('p.account = :account')
-            ->andWhere('p.visibility IN (:visible)')
             ->andWhere('p.archivedAt IS NULL')
             ->andWhere('p.publishedAt > :cursorDate OR (p.publishedAt = :cursorDate AND p.id > :cursorId)')
-            ->setParameter('account', $account->getId(), UuidType::NAME)
-            ->setParameter('visible', $visible)
+            ->setParameter('account', $account->getId(), UuidType::NAME);
+        $this->visibleTo($qb, $account, $visible, $viewer);
+        /** @var list<Post> $posts */
+        $posts = $qb
             ->setParameter('cursorDate', $from->publishedAt)
             ->setParameter('cursorId', $from->id, UuidType::NAME)
             ->orderBy('p.publishedAt', 'ASC')
@@ -131,16 +135,16 @@ final class PostRepository extends ServiceEntityRepository
     /**
      * @param list<Visibility> $visible
      */
-    public function countForProfile(Account $account, array $visible): int
+    public function countForProfile(Account $account, array $visible, ?Account $viewer = null): int
     {
-        return (int) $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
             ->where('p.account = :account')
-            ->andWhere('p.visibility IN (:visible)')
             ->andWhere('p.archivedAt IS NULL')
-            ->setParameter('account', $account->getId(), UuidType::NAME)
-            ->setParameter('visible', $visible)
-            ->getQuery()
+            ->setParameter('account', $account->getId(), UuidType::NAME);
+        $this->visibleTo($qb, $account, $visible, $viewer);
+
+        return (int) $qb->getQuery()
             ->getSingleScalarResult();
     }
 
@@ -190,6 +194,31 @@ final class PostRepository extends ServiceEntityRepository
             ->addOrderBy('p.id', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Restreint aux visibilités permises ; « Groupes » seulement pour l'autrice ou l'auteur, et pour un visiteur
+     * membre d'un des groupes de la publication (l'abonnement est vérifié par PostAccess::visibleFor).
+     *
+     * @param list<Visibility> $visible
+     */
+    private function visibleTo(QueryBuilder $qb, Account $author, array $visible, ?Account $viewer): void
+    {
+        $plain = array_values(array_filter($visible, static fn (Visibility $v): bool => Visibility::Groups !== $v));
+        $conditions = [] !== $plain ? ['p.visibility IN (:visible)'] : [];
+        if ([] !== $plain) {
+            $qb->setParameter('visible', $plain);
+        }
+        if (\in_array(Visibility::Groups, $visible, true) && $viewer instanceof Account) {
+            $conditions[] = $viewer->getId()->equals($author->getId())
+                ? 'p.visibility = :groups'
+                : 'p.visibility = :groups AND '.self::MEMBER_OF_GROUPS;
+            $qb->setParameter('groups', Visibility::Groups);
+            if (!$viewer->getId()->equals($author->getId())) {
+                $qb->setParameter('viewer', $viewer->getId(), UuidType::NAME);
+            }
+        }
+        $qb->andWhere([] === $conditions ? '1 = 0' : '('.implode(') OR (', $conditions).')');
     }
 
     private function base(): QueryBuilder

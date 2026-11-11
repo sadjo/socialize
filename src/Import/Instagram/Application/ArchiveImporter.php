@@ -8,7 +8,9 @@ use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Domain\Story\Story;
+use App\Core\Infrastructure\Doctrine\AudienceGroupRepository;
 use App\Import\Instagram\Domain\ImportItem;
 use App\Import\Instagram\Domain\ImportStatus;
 use App\Import\Instagram\Domain\InstagramImport;
@@ -44,13 +46,14 @@ final readonly class ArchiveImporter
         private MessageBusInterface $bus,
         private EventDispatcherInterface $events,
         private ClockInterface $clock,
+        private AudienceGroupRepository $groups,
         private Filesystem $filesystem = new Filesystem(),
     ) {
     }
 
-    public function launch(InstagramImport $import, Placement $placement, bool $keepOriginalDates, bool $importStories): void
+    public function launch(InstagramImport $import, Placement $placement, bool $keepOriginalDates, bool $importStories, ?string $defaultGroup = null): void
     {
-        $import->start($placement, $keepOriginalDates, $importStories);
+        $import->start($placement, $keepOriginalDates, $importStories, $defaultGroup);
         $import->addLog(\sprintf('Import lancé · %s', $placement->label()));
         $this->em->flush();
         $this->bus->dispatch(new ImportInstagramBatch($import->getId()->toRfc4122()));
@@ -161,6 +164,23 @@ final readonly class ArchiveImporter
     }
 
     /**
+     * Publication « Abonnés seulement » : réservée au groupe choisi pour elle, sinon au groupe par défaut de l'import
+     * (« tous les abonnés » : pas de groupe). Groupe supprimé entre-temps : la publication devient privée.
+     */
+    private function applyGroup(Post $post, InstagramImport $import, ImportItem $item): void
+    {
+        if (Visibility::Followers !== $post->getVisibility()) {
+            return;
+        }
+        $choice = $item->getGroupChoice() ?? $import->getDefaultGroup();
+        if (null === $choice || ImportItem::GROUP_ALL === $choice) {
+            return;
+        }
+        $group = $this->groups->findOwned($import->getAccount(), $choice);
+        $post->reserveTo($group instanceof AudienceGroup ? [$group] : []);
+    }
+
+    /**
      * @return array{0: ?Post, 1: int} publication créée et nombre de médias absents
      */
     private function importPost(InstagramImport $import, ImportItem $item, Placement $placement, ArchiveReader $archive): array
@@ -168,6 +188,7 @@ final readonly class ArchiveImporter
         $whole = $import->getPlacement();
         $publishedAt = $import->keepsOriginalDates() ? $item->getTakenAt() : $this->clock->now();
         $post = Post::imported($import->getAccount(), $item->getCaption(), $placement->visibility($whole), $item->getTakenAt(), $publishedAt, $placement->announces());
+        $this->applyGroup($post, $import, $item);
 
         $stored = [];
         $missing = 0;

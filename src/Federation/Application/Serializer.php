@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Federation\Application;
 
+use App\Core\Application\Post\PostAccess;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicTrack;
@@ -35,6 +36,7 @@ final readonly class Serializer
         private ApUrls $urls,
         private Signer $signer,
         private MediaUrls $media,
+        private PostAccess $access,
     ) {
     }
 
@@ -102,7 +104,7 @@ final readonly class Serializer
     public function note(Post $post): array
     {
         $author = $post->getAccount();
-        [$to, $cc] = $this->addressing($post->getVisibility(), $author);
+        [$to, $cc] = $this->addressing($post->getVisibility(), $author, $this->access->groupAudience($post));
 
         $attachments = [];
         foreach ($post->getMedia() as $media) {
@@ -147,7 +149,7 @@ final readonly class Serializer
         $post = $comment->getPost();
         $author = $comment->getAccount();
         $postAuthor = $post->getAccount();
-        [$to, $cc] = $this->addressing($post->getVisibility(), $author);
+        [$to, $cc] = $this->addressing($post->getVisibility(), $postAuthor, $this->access->groupAudience($post));
 
         return [
             'id' => $this->urls->comment($comment),
@@ -171,9 +173,11 @@ final readonly class Serializer
     /**
      * Destinataires (to, cc) selon la visibilité. Les publications privées ne sont pas fédérées.
      *
+     * @param list<Account> $audience membres abonnés des groupes (visibilité « Groupes »)
+     *
      * @return array{0: list<string>, 1: list<string>}
      */
-    public function addressing(Visibility $visibility, Account $author): array
+    public function addressing(Visibility $visibility, Account $author, array $audience = []): array
     {
         $followers = $this->urls->followers($author);
 
@@ -181,6 +185,8 @@ final readonly class Serializer
             Visibility::Public => [[ApUrls::PUBLIC], [$followers]],
             Visibility::Unlisted => [[$followers], [ApUrls::PUBLIC]],
             Visibility::Followers => [[$followers], []],
+            // Réservée à des groupes : adressée nommément à leurs membres abonnés (Mastodon la montre à eux seuls).
+            Visibility::Groups => [array_values(array_unique(array_map($this->urls->actor(...), $audience))), []],
             Visibility::Private => [[], []],
         };
     }

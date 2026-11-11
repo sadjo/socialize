@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
+use App\Core\Application\Social\AudienceGroups;
 use App\Core\Domain\Post\Post;
+use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Domain\Story\Story;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
@@ -123,29 +125,38 @@ final class ImportController extends AbstractController
     }
 
     #[Route('/import/{id}', name: 'app_import_show', requirements: ['id' => Requirement::UID_BASE58], methods: ['GET', 'POST'])]
-    public function show(string $id, Request $request, ArchiveImporter $importer, ImportItemRepository $items): Response
+    public function show(string $id, Request $request, ArchiveImporter $importer, ImportItemRepository $items, AudienceGroups $groups): Response
     {
         $import = $this->import($id);
         $form = null;
         $posts = [];
         if (ImportStatus::Ready === $import->getStatus()) {
             $posts = $items->posts($import);
+            $accountGroups = $groups->of($import->getAccount());
             $form = $this->createForm(ImportOptionsType::class, [
                 'placement' => $import->getPlacement(),
+                'defaultGroup' => $import->getDefaultGroup(),
                 'keepOriginalDates' => true,
                 'importStories' => true,
-            ]);
+            ], ['groups' => $accountGroups]);
             $form->handleRequest($request);
             if ($form->isSubmitted() && $form->isValid()) {
-                /** @var array{placement: Placement, keepOriginalDates: bool, importStories: bool} $data */
+                /** @var array{placement: Placement, defaultGroup: ?string, keepOriginalDates: bool, importStories: bool} $data */
                 $data = $form->getData();
                 // Une liste déroulante par publication : vide = la visibilité de tout l'import.
                 $choices = $request->request->all('choix');
+                // Et son groupe pour « Abonnés seulement » : vide = groupe par défaut, « all » = tous les abonnés.
+                $groupChoices = $request->request->all('groupe');
+                $groupIds = array_map(static fn (AudienceGroup $g): string => $g->getPublicId(), $accountGroups);
                 foreach ($posts as $post) {
                     $value = $choices[$post->getPublicId()] ?? null;
                     $post->choose(\is_string($value) ? Placement::tryFrom($value) : $post->getChoice());
+                    $group = $groupChoices[$post->getPublicId()] ?? null;
+                    if (\is_string($group)) {
+                        $post->chooseGroup(ImportItem::GROUP_ALL === $group || \in_array($group, $groupIds, true) ? $group : null);
+                    }
                 }
-                $importer->launch($import, $data['placement'], $data['keepOriginalDates'], $data['importStories']);
+                $importer->launch($import, $data['placement'], $data['keepOriginalDates'], $data['importStories'], $data['defaultGroup']);
 
                 return $this->redirectToRoute('app_import_show', ['id' => $id], Response::HTTP_SEE_OTHER);
             }
@@ -156,6 +167,7 @@ final class ImportController extends AbstractController
             'form' => $form,
             'posts' => $posts,
             'placements' => Placement::cases(),
+            'groups' => $form instanceof \Symfony\Component\Form\FormInterface ? $groups->of($import->getAccount()) : [],
             'progress' => $items->countByStatus($import),
             'videos' => $items->videoProgress($import),
         ]);

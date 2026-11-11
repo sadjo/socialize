@@ -61,7 +61,11 @@ final readonly class StoryFeed
      */
     public function groupOf(Account $author, ?Account $viewer): ?StoryGroup
     {
-        $stories = $this->stories->activeOf($author, $this->access->audiencesFor($author, $viewer), $this->clock->now());
+        $now = $this->clock->now();
+        $stories = array_values(array_filter(
+            $this->stories->activeOf($author, $this->access->audiencesFor($author, $viewer), $now),
+            fn (Story $s): bool => $this->access->canView($s, $viewer, $now),
+        ));
         if ([] === $stories) {
             return null;
         }

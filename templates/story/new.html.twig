@@ -21,15 +21,7 @@
             <section class="card">
                 {{ form_row(form.text, {attr: {'data-compose-target': 'caption'}}) }}
                 <div class="counter num" data-compose-target="counter" hidden></div>
-                <fieldset class="field" style="border:0;padding:0;margin:0">
-                    <legend class="lab" style="margin-bottom:6px">Visible par</legend>
-                    <div class="choices">
-                        {% for choice in form.audience %}
-                            {{ form_widget(choice) }}
-                            <label for="{{ choice.vars.id }}">{{ choice.vars.label }}<small>{{ choice.vars.value == 'public' ? 'Tous les visiteurs' : 'Seulement vos abonnés' }}</small></label>
-                        {% endfor %}
-                    </div>
-                </fieldset>
+                {{ include('compose/_audience.html.twig', {field: form.audience, groups: form.audienceGroups, legend: 'Visible par', descriptions: {public: 'Tous les visiteurs', followers: 'Seulement vos abonnés', groups: 'Vos groupes d’abonnés'}}) }}
                 {{ form_row(form.highlight) }}
                 {{ form_row(form.highlightTitle) }}
                 {{ include('compose/_music.html.twig', {field: form.music}) }}

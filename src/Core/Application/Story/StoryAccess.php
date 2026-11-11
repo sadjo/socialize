@@ -29,7 +29,8 @@ final readonly class StoryAccess
             return false;
         }
 
-        return \in_array($story->getAudience(), $this->audiencesFor($story->getAccount(), $viewer), true);
+        return \in_array($story->getAudience(), $this->audiencesFor($story->getAccount(), $viewer), true)
+            && (Visibility::Groups !== $story->getAudience() || $story->isInAudienceGroups($viewer));
     }
 
     /**
@@ -38,11 +39,12 @@ final readonly class StoryAccess
     public function audiencesFor(Account $author, ?Account $viewer): array
     {
         if ($viewer instanceof Account && $viewer->getId()->equals($author->getId())) {
-            return [Visibility::Public, Visibility::Followers];
+            return [Visibility::Public, Visibility::Followers, Visibility::Groups, Visibility::Private];
         }
 
+        // « Groupes » : réservé en plus aux membres des groupes de chaque story (voir canView).
         return $this->follows->isFollowing($viewer, $author)
-            ? [Visibility::Public, Visibility::Followers]
+            ? [Visibility::Public, Visibility::Followers, Visibility::Groups]
             : [Visibility::Public];
     }
 }

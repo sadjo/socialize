@@ -24,15 +24,7 @@
                 {{ form_row(form.caption) }}
                 <div class="counter num" data-compose-target="counter">0 / 2 200</div>
                 {{ form_row(form.location, {attr: {'data-compose-target': 'location'}}) }}
-                <fieldset class="field" style="border:0;padding:0;margin:0">
-                    <legend class="lab" style="margin-bottom:6px">Visibilité</legend>
-                    <div class="choices">
-                        {% for choice in form.visibility %}
-                            {{ form_widget(choice) }}
-                            <label for="{{ choice.vars.id }}">{{ choice.vars.label }}<small>{{ choice.vars.value == 'public' ? 'Fils publics et fédivers' : choice.vars.value == 'unlisted' ? 'Visible avec le lien' : choice.vars.value == 'followers' ? 'Vos abonnés' : 'Vous seulement' }}</small></label>
-                        {% endfor %}
-                    </div>
-                </fieldset>
+                {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Visible avec le lien', followers: 'Vos abonnés', groups: 'Vos groupes d’abonnés', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
                 {{ include('compose/_music.html.twig', {field: form.music}) }}
                 <button class="btn pri" data-compose-target="submit">Publier</button>

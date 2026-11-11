@@ -99,6 +99,53 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas dans le fédivers.');
     }
 
+    public function testAGroupPostGoesOnlyToItsRemoteMembers(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/1', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
+        $family = $groups->create($this->reloadAccount($camille), 'Famille');
+        $groups->setMembers($family, [$this->alice()->getId()->toRfc4122()]);
+        $friends = $groups->create($this->reloadAccount($camille), 'Amis');
+
+        // Groupe sans Alice : rien ne part.
+        $composer = self::getContainer()->get(PostComposer::class);
+        $author = $this->reloadAccount($camille);
+        $friends = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($friends->getId());
+        self::assertNotNull($friends);
+        $composer->publish($author, 'Entre amis', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$friends]);
+        self::assertCount(0, $this->fediverse()->delivered('Create'));
+
+        // Groupe avec Alice : adressé à elle seule, livré à sa boîte personnelle.
+        $author = $this->reloadAccount($camille);
+        $family = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($family->getId());
+        self::assertNotNull($family);
+        $post = $composer->publish($author, 'En famille', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$family]);
+        $create = $this->fediverse()->delivered('Create');
+        self::assertCount(1, $create);
+        self::assertSame([FakeFediverse::ALICE], $this->dig($create, 0, 'object', 'to'));
+        self::assertSame([], $this->dig($create, 0, 'object', 'cc'));
+        $delivery = array_values(array_filter($this->fediverse()->deliveries, static fn (array $d): bool => 'Create' === ($d['activity']['type'] ?? null)));
+        self::assertSame(FakeFediverse::ALICE.'/inbox', $delivery[0]['url'], 'Boîte personnelle, pas la boîte partagée.');
+
+        // Lecture ActivityPub sans droit : refusée.
+        $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertResponseStatusCodeSame(404);
+
+        // Changement de groupe : la publication disparaît chez Alice.
+        $post = self::getContainer()->get(PostRepository::class)->find($post->getId());
+        self::assertNotNull($post);
+        $friends = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($friends->getId());
+        self::assertNotNull($friends);
+        $media = $post->getMedia()->first();
+        self::assertInstanceOf(\App\Core\Domain\Media\MediaAttachment::class, $media);
+        self::getContainer()->get(\App\Media\Application\PostEditor::class)->edit($post, 'En famille', Visibility::Groups, null, null, [\App\Media\Application\PostEditor::token($media)], audienceGroups: [$friends]);
+        $delete = $this->fediverse()->delivered('Delete');
+        self::assertCount(1, $delete);
+        self::assertSame('http://localhost/p/'.$post->getPublicId(), $this->dig($delete, 0, 'object', 'id'));
+        self::assertCount(0, $this->fediverse()->delivered('Update'), 'Aucun destinataire restant à mettre à jour.');
+    }
+
     public function testRemovingARemoteFollowerRejectsItsFollow(): void
     {
         $camille = $this->login($this->register('camille'));

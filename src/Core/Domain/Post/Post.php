@@ -9,6 +9,7 @@ use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Media\MediaStatus;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Music\MusicTrack;
+use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -80,6 +81,17 @@ class Post
     #[ORM\OrderBy(['position' => 'ASC'])]
     private Collection $media;
 
+    /**
+     * Groupes d'abonnés auxquels l'élément est réservé (visibilité « Groupes »).
+     *
+     * @var Collection<int, AudienceGroup>
+     */
+    #[ORM\ManyToMany(targetEntity: AudienceGroup::class)]
+    #[ORM\JoinTable(name: 'post_audience_groups')]
+    #[ORM\JoinColumn(name: 'post_id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'group_id', onDelete: 'CASCADE')]
+    private Collection $audienceGroups;
+
     /** Musique jouée quand la publication est à l'écran (morceau libre d'Openverse). */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -108,6 +120,7 @@ class Post
         $this->location = $this->nullIfBlank($location);
         $this->publishedAt = new \DateTimeImmutable();
         $this->media = new ArrayCollection();
+        $this->audienceGroups = new ArrayCollection();
     }
 
     /**
@@ -295,6 +308,72 @@ class Post
         $this->contentWarning = self::nullIfBlank($contentWarning);
         $this->location = self::nullIfBlank($location);
         $this->updatedAt = $now;
+    }
+
+    /**
+     * @return list<AudienceGroup>
+     */
+    public function getAudienceGroups(): array
+    {
+        $groups = $this->audienceGroups->toArray();
+        usort($groups, static fn (AudienceGroup $a, AudienceGroup $b): int => strcasecmp($a->getName(), $b->getName()));
+
+        return $groups;
+    }
+
+    /**
+     * Groupes auxquels l'élément est réservé. Visibilité « Groupes » sans aucun groupe : il devient privé
+     * (jamais plus visible que voulu).
+     *
+     * @param list<AudienceGroup> $groups
+     */
+    public function restrictTo(array $groups): void
+    {
+        $this->audienceGroups->clear();
+        foreach ($groups as $group) {
+            if ($group->isOwnedBy($this->account) && !$this->audienceGroups->contains($group)) {
+                $this->audienceGroups->add($group);
+            }
+        }
+        if (Visibility::Groups === $this->visibility && $this->audienceGroups->isEmpty()) {
+            $this->visibility = Visibility::Private;
+        }
+    }
+
+    /**
+     * Réserve la publication à des groupes d'abonnés (visibilité « Groupes ») ; sans groupe, elle devient privée.
+     *
+     * @param list<AudienceGroup> $groups
+     */
+    public function reserveTo(array $groups): void
+    {
+        $this->visibility = Visibility::Groups;
+        $this->restrictTo($groups);
+    }
+
+    /**
+     * Le compte est-il membre d'un des groupes auxquels l'élément est réservé ?
+     */
+    public function isInAudienceGroups(?Account $account): bool
+    {
+        return $account instanceof Account && $this->audienceGroups->exists(static fn (int $i, AudienceGroup $g): bool => $g->hasMember($account));
+    }
+
+    /**
+     * Membres de ses groupes, sans doublon.
+     *
+     * @return list<Account>
+     */
+    public function getAudienceMembers(): array
+    {
+        $members = [];
+        foreach ($this->audienceGroups as $group) {
+            foreach ($group->getMembers() as $member) {
+                $members[$member->getId()->toRfc4122()] = $member;
+            }
+        }
+
+        return array_values($members);
     }
 
     public function getMusic(): ?MusicTrack

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Domain\Event;
 
+use App\Core\Domain\Account\Account;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 
@@ -12,9 +13,13 @@ use App\Core\Domain\Post\Visibility;
  */
 final readonly class PostUpdated
 {
+    /**
+     * @param list<Account> $previousAudience membres des groupes avant la modification (visibilité « Groupes »)
+     */
     public function __construct(
         public Post $post,
         public Visibility $previousVisibility,
+        public array $previousAudience = [],
     ) {
     }
 }

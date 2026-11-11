@@ -73,5 +73,15 @@ final class EditPostType extends AbstractType
                 'constraints' => [new Assert\Length(max: 500)],
             ])
             ->add('music', MusicChoiceType::class);
+        /** @var list<\App\Core\Domain\Social\AudienceGroup> $groups */
+        $groups = $options['groups'];
+        AudienceGroupChoiceType::addTo($builder, 'visibility', $groups);
+    }
+
+    public function configureOptions(\Symfony\Component\OptionsResolver\OptionsResolver $resolver): void
+    {
+        // Groupes d'abonnés du compte (visibilité « Groupes »).
+        $resolver->setDefaults(['groups' => []]);
+        $resolver->setAllowedTypes('groups', 'array');
     }
 }

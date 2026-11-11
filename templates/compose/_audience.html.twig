@@ -1,0 +1,27 @@
+{# Visibilité d'une publication ou d'une story, avec le choix des groupes d'abonnés quand « Groupes » est choisi.
+   Variables : field (champ de visibilité), groups (champ audienceGroups), legend, descriptions (valeur => texte) #}
+{% set has_groups = groups.vars.choices is not empty %}
+<fieldset class="field audience" style="border:0;padding:0;margin:0" data-controller="audience">
+    <legend class="lab" style="margin-bottom:6px">{{ legend }}</legend>
+    <div class="choices">
+        {% for choice in field %}
+            {% set is_groups = choice.vars.value == 'groups' %}
+            {{ form_widget(choice, {attr: {'data-action': 'change->audience#toggle'}|merge(is_groups and not has_groups ? {disabled: 'disabled'} : {})}) }}
+            <label for="{{ choice.vars.id }}"{{ is_groups and not has_groups ? ' class="off"' }}>{{ choice.vars.label }}<small>{{ descriptions[choice.vars.value] ?? '' }}</small></label>
+        {% endfor %}
+    </div>
+    {% if has_groups %}
+        <div class="audience-groups" data-audience-target="groups">
+            <div class="row wrap">
+                {% for group in groups %}
+                    <label class="chip-check">{{ form_widget(group) }}<span>{{ group.vars.label }}</span></label>
+                {% endfor %}
+            </div>
+            {{ form_errors(groups) }}
+            <a class="small lnk" href="{{ path('app_settings_groups') }}">Gérer mes groupes</a>
+        </div>
+    {% else %}
+        <p class="small">Pour réserver à la famille ou aux amis, <a class="lnk" href="{{ path('app_settings_groups') }}">créez un groupe d’abonnés</a>.</p>
+        {% do groups.setRendered %}
+    {% endif %}
+</fieldset>
