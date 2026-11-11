@@ -2,7 +2,8 @@
 <html lang="fr">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        {# Zoom fixe sur mobile : pas de zoom au toucher d'un champ ni au pincement (Android). Voir aussi assets/app.js (iOS). #}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
         <meta name="color-scheme" content="dark light">
         <title>{% block title %}Socialize{% endblock %}</title>
         <script>try{var t=localStorage.getItem('socialize-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
