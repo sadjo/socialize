@@ -12,6 +12,8 @@ enum Visibility: string
     case Unlisted = 'unlisted';
     /** Réservé aux abonnés. */
     case Followers = 'followers';
+    /** Réservé aux abonnés membres d'un ou de plusieurs groupes de l'autrice ou de l'auteur (Famille, Amis…). */
+    case Groups = 'groups';
     /** Réservé à l'autrice ou à l'auteur (et plus tard aux comptes mentionnés). */
     case Private = 'private';
 
@@ -21,6 +23,7 @@ enum Visibility: string
             self::Public => 'Public',
             self::Unlisted => 'Non répertorié',
             self::Followers => 'Abonnés',
+            self::Groups => 'Groupes',
             self::Private => 'Privé',
         };
     }
@@ -31,6 +34,7 @@ enum Visibility: string
             self::Public => 'Visible par tout le monde et dans les fils publics',
             self::Unlisted => 'Visible avec le lien, absent des fils publics',
             self::Followers => 'Visible uniquement par vos abonnés',
+            self::Groups => 'Visible par les abonnés de vos groupes',
             self::Private => 'Visible uniquement par vous',
         };
     }

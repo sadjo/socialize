@@ -9,7 +9,10 @@ use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Music\MusicTrack;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UuidType;
@@ -45,6 +48,17 @@ class Story
     #[ORM\Column]
     private int $viewsCount = 0;
 
+    /**
+     * Groupes d'abonnés auxquels l'élément est réservé (visibilité « Groupes »).
+     *
+     * @var Collection<int, AudienceGroup>
+     */
+    #[ORM\ManyToMany(targetEntity: AudienceGroup::class)]
+    #[ORM\JoinTable(name: 'story_audience_groups')]
+    #[ORM\JoinColumn(name: 'story_id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'group_id', onDelete: 'CASCADE')]
+    private Collection $audienceGroups;
+
     /** Musique jouée pendant la story (morceau libre d'Openverse). */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -65,10 +79,11 @@ class Story
         #[ORM\Column(length: 20, enumType: Visibility::class)]
         private Visibility $audience = Visibility::Public,
     ) {
-        if (!\in_array($audience, [Visibility::Public, Visibility::Followers], true)) {
-            throw new \DomainException('Une story est visible par tout le monde ou par les abonnés.');
+        if (!\in_array($audience, [Visibility::Public, Visibility::Followers, Visibility::Groups], true)) {
+            throw new \DomainException('Une story est visible par tout le monde, par les abonnés ou par des groupes d’abonnés.');
         }
         $this->id = Uuid::v7();
+        $this->audienceGroups = new ArrayCollection();
         $text = null !== $text ? trim($text) : null;
         $this->text = null === $text || '' === $text ? null : mb_substr($text, 0, self::MAX_TEXT_LENGTH);
         $this->expiresAt = $this->createdAt->modify(self::LIFETIME);
@@ -125,6 +140,61 @@ class Story
             throw new \DomainException('Une story contient un seul média.');
         }
         $this->media = $media;
+    }
+
+    /**
+     * @return list<AudienceGroup>
+     */
+    public function getAudienceGroups(): array
+    {
+        $groups = $this->audienceGroups->toArray();
+        usort($groups, static fn (AudienceGroup $a, AudienceGroup $b): int => strcasecmp($a->getName(), $b->getName()));
+
+        return $groups;
+    }
+
+    /**
+     * Groupes auxquels l'élément est réservé. Visibilité « Groupes » sans aucun groupe : il devient privé
+     * (jamais plus visible que voulu).
+     *
+     * @param list<AudienceGroup> $groups
+     */
+    public function restrictTo(array $groups): void
+    {
+        $this->audienceGroups->clear();
+        foreach ($groups as $group) {
+            if ($group->isOwnedBy($this->account) && !$this->audienceGroups->contains($group)) {
+                $this->audienceGroups->add($group);
+            }
+        }
+        if (Visibility::Groups === $this->audience && $this->audienceGroups->isEmpty()) {
+            $this->audience = Visibility::Private;
+        }
+    }
+
+    /**
+     * Le compte est-il membre d'un des groupes auxquels l'élément est réservé ?
+     */
+    public function isInAudienceGroups(?Account $account): bool
+    {
+        return $account instanceof Account && $this->audienceGroups->exists(static fn (int $i, AudienceGroup $g): bool => $g->hasMember($account));
+    }
+
+    /**
+     * Membres de ses groupes, sans doublon.
+     *
+     * @return list<Account>
+     */
+    public function getAudienceMembers(): array
+    {
+        $members = [];
+        foreach ($this->audienceGroups as $group) {
+            foreach ($group->getMembers() as $member) {
+                $members[$member->getId()->toRfc4122()] = $member;
+            }
+        }
+
+        return array_values($members);
     }
 
     public function getMusic(): ?MusicTrack

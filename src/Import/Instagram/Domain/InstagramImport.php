@@ -40,6 +40,13 @@ class InstagramImport
     #[ORM\Column(length: 20, enumType: Placement::class)]
     private Placement $placement = Placement::PublicQuiet;
 
+    /**
+     * Groupe d'abonnés par défaut des publications importées « Abonnés seulement » (identifiant public), ou null :
+     * tous les abonnés. Un groupe supprimé avant l'import rend ces publications privées.
+     */
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $defaultGroup = null;
+
     #[ORM\Column]
     private bool $keepOriginalDates = true;
 
@@ -154,7 +161,7 @@ class InstagramImport
         $this->status = ImportStatus::Ready;
     }
 
-    public function start(Placement $placement, bool $keepOriginalDates, bool $importStories): void
+    public function start(Placement $placement, bool $keepOriginalDates, bool $importStories, ?string $defaultGroup = null): void
     {
         if (ImportStatus::Ready !== $this->status) {
             throw new \DomainException('L’import a déjà été lancé.');
@@ -163,6 +170,7 @@ class InstagramImport
             throw new \DomainException('Choisissez une visibilité pour l’import.');
         }
         $this->placement = $placement;
+        $this->defaultGroup = null !== $defaultGroup && '' !== $defaultGroup ? $defaultGroup : null;
         $this->keepOriginalDates = $keepOriginalDates;
         $this->importStories = $importStories;
         $this->status = ImportStatus::Importing;
@@ -202,6 +210,11 @@ class InstagramImport
     public function getPlacement(): Placement
     {
         return $this->placement;
+    }
+
+    public function getDefaultGroup(): ?string
+    {
+        return $this->defaultGroup;
     }
 
     public function keepsOriginalDates(): bool

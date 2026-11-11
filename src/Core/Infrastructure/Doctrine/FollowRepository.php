@@ -82,6 +82,19 @@ final class FollowRepository extends ServiceEntityRepository
     /**
      * Abonnés acceptés d'un compte, du plus récent au plus ancien.
      */
+    /**
+     * Tous les abonnés (abonnements acceptés), pour les choisir dans un groupe.
+     *
+     * @return list<Account>
+     */
+    public function followersOf(Account $account, int $limit = 5000): array
+    {
+        /** @var list<Follow> $follows */
+        $follows = $this->findBy(['following' => $account, 'state' => FollowState::Accepted], ['createdAt' => 'DESC'], $limit);
+
+        return array_map(static fn (Follow $f): Account => $f->getFollower(), $follows);
+    }
+
     public function followersPage(Account $account, ?string $after, int $limit): FollowPage
     {
         return $this->page('following', 'follower', $account, $after, $limit);

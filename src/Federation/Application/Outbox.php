@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Federation\Application;
 
+use App\Core\Application\Post\PostAccess;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Event\AccountUnfollowed;
@@ -18,6 +19,7 @@ use App\Core\Domain\Event\PostUnarchived;
 use App\Core\Domain\Event\PostUnliked;
 use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Event\ProfileUpdated;
+use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -36,6 +38,7 @@ final readonly class Outbox
         private FollowRepository $follows,
         private MessageBusInterface $bus,
         private EntityManagerInterface $em,
+        private PostAccess $access,
     ) {
     }
 
@@ -43,12 +46,21 @@ final readonly class Outbox
     public function onPostPublished(PostPublished $event): void
     {
         $post = $event->post;
-        $author = $post->getAccount();
+        $post->getAccount();
         if (!$post->isFederable()) {
             return;
         }
+        $this->sendCreate($post, $this->recipients($post, $post->getVisibility(), $this->access->groupAudience($post)));
+    }
+
+    /**
+     * @param list<string> $inboxes
+     */
+    private function sendCreate(Post $post, array $inboxes): void
+    {
+        $author = $post->getAccount();
         $note = $this->serializer->note($post);
-        $this->deliver($author, $this->followerInboxes($author), [
+        $this->deliver($author, $inboxes, [
             'id' => $this->urls->note($post).'/activity',
             'type' => 'Create',
             'actor' => $this->urls->actor($author),
@@ -57,6 +69,26 @@ final readonly class Outbox
             'cc' => $note['cc'],
             'object' => $note,
         ]);
+    }
+
+    /**
+     * Boîtes de réception à qui livrer une publication : ses membres distants abonnés (boîte personnelle) pour une
+     * publication réservée à des groupes, sinon les abonnés distants.
+     *
+     * @param list<Account> $audience membres abonnés des groupes
+     *
+     * @return list<string>
+     */
+    private function recipients(Post $post, Visibility $visibility, array $audience): array
+    {
+        return match ($visibility) {
+            Visibility::Private => [],
+            Visibility::Groups => array_values(array_unique(array_filter(array_map(
+                static fn (Account $m): ?string => $m->isLocal() ? null : ($m->getInboxUrl() ?? $m->getDeliveryInbox()),
+                $audience,
+            )))),
+            default => $this->followerInboxes($post->getAccount()),
+        };
     }
 
     /**
@@ -74,14 +106,17 @@ final readonly class Outbox
         }
         $wasFederated = Visibility::Private !== $event->previousVisibility;
         $isFederated = Visibility::Private !== $post->getVisibility();
+        $previousAudience = array_values(array_filter($event->previousAudience, fn (Account $m): bool => $this->follows->isFollowing($m, $author)));
+        $before = $this->recipients($post, $event->previousVisibility, $previousAudience);
+        $after = $this->recipients($post, $post->getVisibility(), $this->access->groupAudience($post));
 
         if (!$wasFederated && $isFederated) {
-            $this->onPostPublished(new PostPublished($post));
+            $this->sendCreate($post, $after);
 
             return;
         }
         if ($wasFederated && !$isFederated) {
-            $this->sendDelete($post, $event->previousVisibility);
+            $this->sendDelete($post, $event->previousVisibility, $before, $previousAudience);
             $post->retireFromFediverse();
             $this->em->flush();
 
@@ -91,8 +126,12 @@ final readonly class Outbox
             return;
         }
 
+        // Destinataires qui changent (groupes, ou passage d'un groupe aux abonnés) : la publication apparaît chez
+        // les nouveaux, est mise à jour chez ceux qui l'avaient, et disparaît chez ceux qui ne doivent plus la voir.
+        $this->sendCreate($post, array_values(array_diff($after, $before)));
+        $this->sendDelete($post, $event->previousVisibility, array_values(array_diff($before, $after)), $previousAudience);
         $note = $this->serializer->note($post);
-        $this->deliver($author, $this->followerInboxes($author), [
+        $this->deliver($author, array_values(array_intersect($after, $before)), [
             'id' => $this->urls->activity($author, 'update'),
             'type' => 'Update',
             'actor' => $this->urls->actor($author),
@@ -109,7 +148,7 @@ final readonly class Outbox
         if (!$post->isFederable()) {
             return;
         }
-        $this->sendDelete($post, $post->getVisibility());
+        $this->sendCurrentDelete($post);
     }
 
     /**
@@ -122,7 +161,7 @@ final readonly class Outbox
         if (!$post->getAccount()->isLocal() || Visibility::Private === $post->getVisibility()) {
             return;
         }
-        $this->sendDelete($post, $post->getVisibility());
+        $this->sendCurrentDelete($post);
         $post->retireFromFediverse();
         $this->em->flush();
     }
@@ -133,11 +172,21 @@ final readonly class Outbox
         $this->onPostPublished(new PostPublished($event->post));
     }
 
-    private function sendDelete(\App\Core\Domain\Post\Post $post, Visibility $visibility): void
+    private function sendCurrentDelete(Post $post): void
+    {
+        $audience = $this->access->groupAudience($post);
+        $this->sendDelete($post, $post->getVisibility(), $this->recipients($post, $post->getVisibility(), $audience), $audience);
+    }
+
+    /**
+     * @param list<string>  $inboxes
+     * @param list<Account> $audience membres abonnés des groupes, pour l'adressage
+     */
+    private function sendDelete(Post $post, Visibility $visibility, array $inboxes, array $audience): void
     {
         $author = $post->getAccount();
-        [$to, $cc] = $this->serializer->addressing($visibility, $author);
-        $this->deliver($author, $this->followerInboxes($author), [
+        [$to, $cc] = $this->serializer->addressing($visibility, $author, $audience);
+        $this->deliver($author, $inboxes, [
             'id' => $this->urls->activity($author, 'delete'),
             'type' => 'Delete',
             'actor' => $this->urls->actor($author),
@@ -286,6 +335,13 @@ final readonly class Outbox
         $postAuthor = $post->getAccount();
         if (!$author->isLocal() || Visibility::Private === $post->getVisibility() || $post->isArchived()) {
             return null;
+        }
+        // Publication réservée à des groupes : le commentaire reste entre ses membres (et son auteur).
+        if (Visibility::Groups === $post->getVisibility()) {
+            return array_values(array_filter([
+                ...$this->recipients($post, Visibility::Groups, $this->access->groupAudience($post)),
+                ...($postAuthor->isLocal() ? [] : [$postAuthor->getDeliveryInbox()]),
+            ]));
         }
 
         return array_values(array_filter([

@@ -70,6 +70,7 @@ final readonly class PostEditor
         }
 
         $previousVisibility = $post->getVisibility();
+        $previousAudience = $post->getAudienceMembers();
         $post->edit($caption, $visibility, $contentWarning, $location, $this->clock->now());
         $post->chooseMusic($music);
 
@@ -115,7 +116,7 @@ final readonly class PostEditor
         }
         // Avec une nouvelle vidéo, la mise à jour est fédérée une fois la vidéo prête (ProcessVideoHandler).
         if (!$processing) {
-            $this->events->dispatch(new PostUpdated($post, $previousVisibility));
+            $this->events->dispatch(new PostUpdated($post, $previousVisibility, $previousAudience));
         }
     }
 

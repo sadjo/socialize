@@ -47,7 +47,7 @@ final class ProfileController extends AbstractController
         $account = $this->account($username, resolve: true);
         $viewer = $this->currentAccount->get();
         $visible = $access->visibleFor($account, $viewer);
-        $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres') ?: null), self::PAGE_SIZE);
+        $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres') ?: null), self::PAGE_SIZE, $viewer);
 
         $parameters = [
             'account' => $account,
@@ -62,7 +62,7 @@ final class ProfileController extends AbstractController
                 static fn (Highlight $h): bool => $stories->highlight($h, $viewer) instanceof \App\Core\Application\Story\StoryGroup,
             )),
             'stats' => [
-                'posts' => $posts->countForProfile($account, $visible),
+                'posts' => $posts->countForProfile($account, $visible, $viewer),
                 'followers' => $follows->countFollowers($account),
                 'following' => $follows->countFollowing($account),
             ],
@@ -89,22 +89,22 @@ final class ProfileController extends AbstractController
 
         // Suite du fil (publications plus anciennes), chargée dans un cadre Turbo.
         if ($request->query->has('apres')) {
-            $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres')), self::FEED_PAGE_SIZE);
+            $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres')), self::FEED_PAGE_SIZE, $viewer);
 
             return $this->render('feed/_page.html.twig', $common + ['page' => $page, 'liked' => $likes->likedAmong($viewer, $page->posts)]);
         }
 
         $post = $posts->findByPublicId($request->query->getString('depuis'));
-        if (!$post instanceof \App\Core\Domain\Post\Post || !$post->getAccount()->getId()->equals($account->getId()) || !\in_array($post->getVisibility(), $visible, true)) {
+        if (!$post instanceof \App\Core\Domain\Post\Post || !$post->getAccount()->getId()->equals($account->getId()) || !$access->canView($post, $viewer)) {
             return $this->redirectToRoute('app_profile', ['username' => $account->getAcct()]);
         }
 
-        $newer = $posts->profileNewerThan($account, $visible, Cursor::after($post), self::FEED_NEWER + 1);
+        $newer = $posts->profileNewerThan($account, $visible, Cursor::after($post), self::FEED_NEWER + 1, $viewer);
         $hasMoreNewer = \count($newer) > self::FEED_NEWER;
         if ($hasMoreNewer) {
             array_shift($newer);
         }
-        $older = $posts->profileTimeline($account, $visible, Cursor::after($post), self::FEED_PAGE_SIZE);
+        $older = $posts->profileTimeline($account, $visible, Cursor::after($post), self::FEED_PAGE_SIZE, $viewer);
 
         return $this->render('profile/feed.html.twig', $common + [
             'post' => $post,

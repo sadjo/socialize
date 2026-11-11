@@ -21,6 +21,9 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Index(name: 'idx_instagram_items_import_status', columns: ['import_id', 'status', 'taken_at'])]
 class ImportItem
 {
+    /** Choix « tous les abonnés », sans groupe (voir groupChoice). */
+    public const string GROUP_ALL = 'all';
+
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME)]
     private Uuid $id;
@@ -31,6 +34,13 @@ class ImportItem
     /** Choix fait pour cet élément ; null : celui de tout l'import. */
     #[ORM\Column(length: 20, nullable: true, enumType: Placement::class)]
     private ?Placement $choice = null;
+
+    /**
+     * Groupe d'abonnés d'une publication importée « Abonnés seulement » : null pour le groupe par défaut de l'import,
+     * GROUP_ALL pour tous les abonnés, sinon l'identifiant public d'un groupe du compte.
+     */
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $groupChoice = null;
 
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $message = null;
@@ -153,6 +163,19 @@ class ImportItem
             return;
         }
         $this->choice = $choice;
+    }
+
+    public function getGroupChoice(): ?string
+    {
+        return $this->groupChoice;
+    }
+
+    public function chooseGroup(?string $groupChoice): void
+    {
+        if (ItemStatus::Pending !== $this->status) {
+            return;
+        }
+        $this->groupChoice = null !== $groupChoice && '' !== $groupChoice ? mb_substr($groupChoice, 0, 40) : null;
     }
 
     /**
