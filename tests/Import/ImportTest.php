@@ -223,7 +223,7 @@ final class ImportTest extends AppWebTestCase
         $this->client->submit($crawler->selectButton('Lancer l’import')->form());
         // Les vidéos partent en conversion une fois tous les éléments importés, en une fois (pas entre deux lots).
         /** @var \Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport $queue */
-        $queue = self::getContainer()->get('messenger.transport.async');
+        $queue = self::getContainer()->get('messenger.transport.media');
         $videos = array_filter($queue->getSent(), static fn (\Symfony\Component\Messenger\Envelope $envelope): bool => $envelope->getMessage() instanceof \App\Media\Application\ProcessVideo);
         self::assertCount(1, $videos);
         // Les vidéos sont converties en tâche de fond (non traitées dans les tests) : l'import est fini, pas les vidéos.

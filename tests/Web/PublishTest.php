@@ -150,7 +150,7 @@ final class PublishTest extends AppWebTestCase
         $post = $composer->publish($author, 'Timelapse', [['file' => $this->mp4(), 'alt' => null], ['file' => $this->jpeg(), 'alt' => null]]);
 
         /** @var InMemoryTransport $transport */
-        $transport = self::getContainer()->get('messenger.transport.async');
+        $transport = self::getContainer()->get('messenger.transport.media');
         $sent = $transport->getSent();
         self::assertCount(1, $sent, 'Seule la vidéo part en tâche de fond.');
         $message = $sent[0]->getMessage();

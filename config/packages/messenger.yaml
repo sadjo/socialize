@@ -2,22 +2,35 @@ framework:
     messenger:
         failure_transport: failed
 
+        # Files stockées en base (transport Doctrine, même table, queue_name distinct) : aucun Redis ni RabbitMQ nécessaire.
+        # Elles sont partagées par tous les conteneurs qui consomment (web, workers). Un worker vide les transports
+        # dans l'ordre où il les reçoit (voir messenger-supervisor) : « federation » passe avant les imports et les vidéos.
         transports:
-            # File stockée en base (transport Doctrine) : aucun Redis ni RabbitMQ nécessaire.
-            async:
+            # Échanges avec le fédivers (livraisons, activités reçues) : courts et attendus tout de suite.
+            federation:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
-                retry_strategy:
+                options: { queue_name: federation }
+                retry_strategy: &retry
                     max_retries: 5
                     delay: 2000
                     multiplier: 3
                     max_delay: 3600000
+            # Tâches de fond (import Instagram, Immich, rattrapage d'un compte distant). File « default » historique.
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy: *retry
+            # Conversions vidéo : longues, confiées en priorité aux workers « media ».
+            media:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options: { queue_name: media }
+                retry_strategy: *retry
             failed: 'doctrine://default?queue_name=failed&auto_setup=0'
             sync: 'sync://'
 
         routing:
-            App\Media\Application\ProcessVideo: async
-            App\Federation\Application\DeliverActivity: async
-            App\Federation\Application\ProcessInboxActivity: async
+            App\Federation\Application\DeliverActivity: federation
+            App\Federation\Application\ProcessInboxActivity: federation
+            App\Media\Application\ProcessVideo: media
             App\Federation\Application\BackfillAccount: async
             App\Import\Instagram\Application\AnalyzeInstagramArchive: async
             App\Import\Instagram\Application\ImportInstagramBatch: async
@@ -27,7 +40,9 @@ when@test:
     framework:
         messenger:
             transports:
+                federation: 'in-memory://'
                 async: 'in-memory://'
+                media: 'in-memory://'
                 failed: 'in-memory://'
             # Les activités sont envoyées et traitées tout de suite pendant les tests.
             routing:
