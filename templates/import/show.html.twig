@@ -91,13 +91,19 @@
                         <label class="chk">{{ form_widget(choice) }}<span>{{ choice.vars.label }}</span></label>
                     {% endfor %}
                 </fieldset>
+                {% if groups is not empty %}
+                    {{ form_row(form.defaultGroup) }}
+                {% else %}
+                    {% do form.defaultGroup.setRendered %}
+                    <p class="small">Pour réserver des publications « Abonnés seulement » à la famille ou aux amis, <a class="lnk" href="{{ path('app_settings_groups') }}">créez d’abord un groupe d’abonnés</a>.</p>
+                {% endif %}
             </section>
 
             {% if posts is not empty %}
                 <section class="card stack" id="publications">
                     <div class="card-h">
                         <h2 class="grow">Visibilité de chaque publication</h2>
-                        <p>Laissez « Visibilité de l’import » ou choisissez une visibilité propre à la publication. Les publications archivées sur Instagram sont proposées dans vos archives.</p>
+                        <p>Laissez « Visibilité de l’import » ou choisissez une visibilité propre à la publication ; pour une publication « Abonnés seulement », le second choix la réserve à un groupe. Les publications archivées sur Instagram sont proposées dans vos archives.</p>
                     </div>
                     {% for item in posts %}
                         {% set label = item.takenAt|format_date('long', locale: 'fr') %}
@@ -119,6 +125,13 @@
                                     <option value=""{{ item.choice is null ? ' selected' }}>Visibilité de l’import</option>
                                     {% for placement in placements %}<option value="{{ placement.value }}"{{ item.choice is same as(placement) ? ' selected' }}>{{ placement.label }}</option>{% endfor %}
                                 </select>
+                                {% if groups is not empty %}
+                                    <select class="inp sm" name="groupe[{{ item.publicId }}]" aria-label="Groupe de la publication du {{ label }} (si « Abonnés seulement »)" title="Groupe, si la publication est « Abonnés seulement »">
+                                        <option value=""{{ item.groupChoice is null ? ' selected' }}>Groupe par défaut</option>
+                                        <option value="all"{{ item.groupChoice == 'all' ? ' selected' }}>Tous les abonnés</option>
+                                        {% for group in groups %}<option value="{{ group.publicId }}"{{ item.groupChoice == group.publicId ? ' selected' }}>{{ group.name }}</option>{% endfor %}
+                                    </select>
+                                {% endif %}
                             {% else %}
                                 <small>{{ item.message }}</small>
                             {% endif %}

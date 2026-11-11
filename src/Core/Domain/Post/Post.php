@@ -341,6 +341,17 @@ class Post
     }
 
     /**
+     * Réserve la publication à des groupes d'abonnés (visibilité « Groupes ») ; sans groupe, elle devient privée.
+     *
+     * @param list<AudienceGroup> $groups
+     */
+    public function reserveTo(array $groups): void
+    {
+        $this->visibility = Visibility::Groups;
+        $this->restrictTo($groups);
+    }
+
+    /**
      * Le compte est-il membre d'un des groupes auxquels l'élément est réservé ?
      */
     public function isInAudienceGroups(?Account $account): bool

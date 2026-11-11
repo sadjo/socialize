@@ -35,6 +35,7 @@ final readonly class ImportInstagramCommand
         private ArchiveImporter $importer,
         private InstagramImportRepository $imports,
         private EntityManagerInterface $em,
+        private \App\Core\Infrastructure\Doctrine\AudienceGroupRepository $groups,
     ) {
     }
 
@@ -48,6 +49,7 @@ final readonly class ImportInstagramCommand
         #[Option(description: 'Visibilité : public_quiet (défaut), public, followers ou private')] string $visibility = 'public_quiet',
         #[Option(description: 'Publier à la date d’aujourd’hui plutôt qu’à la date d’origine')] bool $today = false,
         #[Option(description: 'Ne pas importer les stories')] bool $withoutStories = false,
+        #[Option(description: 'Groupe d’abonnés (nom) des publications « followers »')] ?string $group = null,
     ): int {
         $user = $this->users->loadUserByIdentifier($identifier);
         $placement = Placement::tryFrom($visibility);
@@ -76,7 +78,17 @@ final readonly class ImportInstagramCommand
                 $io->warning($warning);
             }
 
-            $import->start($placement, !$today, !$withoutStories);
+            $defaultGroup = null;
+            if (null !== $group) {
+                $found = array_values(array_filter($this->groups->ownedBy($user->getAccount()), static fn (\App\Core\Domain\Social\AudienceGroup $g): bool => 0 === strcasecmp($g->getName(), $group)));
+                if ([] === $found) {
+                    $io->error(\sprintf('Aucun groupe « %s » pour ce compte.', $group));
+
+                    return Command::FAILURE;
+                }
+                $defaultGroup = $found[0]->getPublicId();
+            }
+            $import->start($placement, !$today, !$withoutStories, $defaultGroup);
             $this->em->flush();
             $id = $import->getId();
             $progress = $io->createProgressBar(array_sum(array_intersect_key($counts, ['posts' => 1, 'archived' => 1, 'stories' => 1])));
