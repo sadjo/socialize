@@ -13,7 +13,8 @@
                     <div class="player muted" data-controller="video">
                         <video playsinline muted loop preload="{{ poster ? 'none' : 'metadata' }}"{% if poster %} poster="{{ poster }}"{% endif %} data-video-target="video"
                                data-action="click->video#open"{% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
-                            <source src="{{ media_url(media, 'video') }}{{ poster ? '' : '#t=0.1' }}" type="{{ media.mimeType starts with 'video/' ? media.mimeType : 'video/mp4' }}">
+                            {# Copie convertie : toujours un MP4 (H.264), quel que soit l'original (MOV d'iPhone…). Vidéo distante : type laissé au navigateur. #}
+                            <source src="{{ media_url(media, 'video') }}{{ poster ? '' : '#t=0.1' }}"{% if not media.isRemote() %} type="video/mp4"{% endif %}>
                         </video>
                         <button type="button" class="snd" data-video-target="sound" data-action="video#toggleSound" aria-label="Activer le son" aria-pressed="false">
                             {{- ui.icon('mute', 'off') }}{{ ui.icon('volume', 'on') -}}

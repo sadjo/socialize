@@ -142,6 +142,26 @@ final class PublishTest extends AppWebTestCase
         self::assertSame('http://localhost/m/'.$video->getDerivative(MediaAttachment::DERIVATIVE_POSTER), $attachment['icon']['url'] ?? null);
     }
 
+    public function testAnIphoneMovIsServedAsTheMp4ItWasConvertedTo(): void
+    {
+        $mov = sys_get_temp_dir().'/'.uniqid('socialize-', true).'.mov';
+        exec(\sprintf('ffmpeg -v error -y -f lavfi -i testsrc=duration=1:size=320x240:rate=10 -c:v libx264 -pix_fmt yuv420p -f mov %s', escapeshellarg($mov)), $output, $code);
+        self::assertSame(0, $code);
+        $author = $this->register('camille')->getAccount();
+        /** @var PostComposer $composer */
+        $composer = self::getContainer()->get(PostComposer::class);
+        $post = $composer->publish($author, 'Col d’Ibardin', [['file' => new \Symfony\Component\HttpFoundation\File\UploadedFile($mov, 'IMG_0001.MOV', 'video/quicktime', null, true), 'alt' => null]]);
+        $video = $post->getMedia()->first();
+        self::assertInstanceOf(MediaAttachment::class, $video);
+        self::assertSame('video/quicktime', $video->getMimeType(), 'Original gardé tel quel.');
+        self::getContainer()->get(ProcessVideoHandler::class)(new ProcessVideo($video->getId()->toRfc4122()));
+
+        // Chrome et Firefox ne lisent pas une source annoncée en QuickTime : la copie est un MP4 et doit l'être aussi.
+        $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertSelectorExists('video source[type="video/mp4"][src$="-video.mp4"]');
+        self::assertSelectorNotExists('video source[type="video/quicktime"]');
+    }
+
     public function testPublishingAVideoQueuesItsTranscoding(): void
     {
         $author = $this->register('camille')->getAccount();
