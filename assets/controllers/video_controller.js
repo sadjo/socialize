@@ -29,9 +29,14 @@ export default class extends Controller {
     static targets = ['video', 'sound'];
 
     connect() {
-        // Vidéo insérée par une navigation Turbo : WebKit (Safari, iPhone) n'en lance pas le chargement et elle
-        // reste noire. load() relance la sélection de la source (sans rien télécharger tant qu'elle n'est pas lue).
-        this.videoTarget.load();
+        // Navigation Turbo : la page arrive d'un document à part (sans fenêtre), dont Safari sur iPhone garde les
+        // règles pour la vidéo (lecture seulement après un geste, chargement jamais lancé : elle reste noire ou
+        // figée). Une copie créée dans la page a les règles de la page : lecture automatique muette permise.
+        const fresh = this.videoTarget.cloneNode(true);
+        fresh.muted = true;
+        this.videoTarget.replaceWith(fresh);
+        // Sélection de la source relancée (WebKit ne la fait pas seul ici ; rien n’est téléchargé avant la lecture).
+        fresh.load();
         this.visible = false;
         this.observer = new IntersectionObserver(([entry]) => this.visibilityChanged(entry), { threshold: 0.6 });
         this.observer.observe(this.videoTarget);
