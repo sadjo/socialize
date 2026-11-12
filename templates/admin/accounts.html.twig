@@ -17,9 +17,11 @@
             {{ form_row(form.displayName) }}
             {{ form_row(form.password.first) }}
             {{ form_row(form.password.second) }}
-            {% for box in [form.publisher, form.instagramImport] %}
-                <label class="chk">{{ form_widget(box) }}<span>{{ box.vars.label }}<br><small>{{ box.vars.help }}</small></span></label>
-            {% endfor %}
+            <div class="form-group" data-controller="requires">
+                <label class="chk">{{ form_widget(form.publisher, {attr: {'data-requires-target': 'source', 'data-action': 'requires#update'}}) }}<span>{{ form.publisher.vars.label }}<br><small>{{ form.publisher.vars.help }}</small></span></label>
+                <label class="chk">{{ form_widget(form.instagramImport, {attr: {'data-requires-target': 'dependent'}}) }}<span>{{ form.instagramImport.vars.label }}<br><small>{{ form.instagramImport.vars.help }}</small></span></label>
+                {{ form_errors(form.instagramImport) }}
+            </div>
             <button class="btn pri">{{ ui.icon('plus', 'xs') }}Créer le compte</button>
         {{ form_end(form) }}
     </section>

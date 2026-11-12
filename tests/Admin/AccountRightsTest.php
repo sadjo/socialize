@@ -172,6 +172,29 @@ final class AccountRightsTest extends AppWebTestCase
         self::assertSelectorTextContains('table.accounts', 'Nécessite la publication');
     }
 
+    public function testTheImportBoxNeedsThePublishBoxOnTheNewAccountForm(): void
+    {
+        $this->login($this->register('alice'));
+        $crawler = $this->client->request('GET', '/admin/comptes');
+        self::assertSelectorExists('[data-controller="requires"] input[name="account[publisher]"][data-requires-target="source"]');
+        self::assertSelectorExists('[data-controller="requires"] input[name="account[instagramImport]"][data-requires-target="dependent"]');
+
+        // Sans JavaScript, la case reste cochable seule : le serveur refuse.
+        $form = $crawler->selectButton('Créer le compte')->form([
+            'account[email]' => 'lina@exemple.fr',
+            'account[username]' => 'lina',
+            'account[password][first]' => 'mot-de-passe-solide',
+            'account[password][second]' => 'mot-de-passe-solide',
+        ]);
+        $box = $form['account[instagramImport]'];
+        self::assertInstanceOf(ChoiceFormField::class, $box);
+        $box->tick();
+        $this->client->submit($form);
+        self::assertResponseIsUnprocessable();
+        self::assertSelectorTextContains('main', 'L’import Instagram suppose le droit de publier');
+        self::assertNull(self::getContainer()->get(UserRepository::class)->findOneByEmail('lina@exemple.fr'));
+    }
+
     private function reload(User $user): User
     {
         $fresh = self::getContainer()->get(UserRepository::class)->find($user->getId());

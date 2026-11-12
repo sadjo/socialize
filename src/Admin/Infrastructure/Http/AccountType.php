@@ -12,7 +12,9 @@ use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**
  * Compte créé par l'administrateur : mêmes règles que l'inscription, sauf la longueur minimale du mot de passe
@@ -62,8 +64,14 @@ final class AccountType extends AbstractType
             ])
             ->add('instagramImport', CheckboxType::class, [
                 'label' => 'Autoriser l’import Instagram',
-                'help' => 'Import de son archive Instagram (avec le droit de publier).',
+                'help' => 'Import de son archive Instagram. Possible seulement avec le droit de publier.',
                 'required' => false,
+                'constraints' => [new Assert\Callback(static function (bool $import, ExecutionContextInterface $context): void {
+                    $form = $context->getRoot();
+                    if ($import && $form instanceof FormInterface && true !== $form->get('publisher')->getData()) {
+                        $context->addViolation('L’import Instagram suppose le droit de publier : cochez aussi « Autoriser à publier ».');
+                    }
+                })],
             ]);
     }
 }
