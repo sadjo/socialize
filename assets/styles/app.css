@@ -682,6 +682,19 @@ label.act{cursor:pointer}
 .music-fav[aria-pressed="true"] .i{fill:var(--coral);stroke:var(--coral);animation:pop .35s}
 .music-fav-title{display:flex;align-items:center;gap:6px;margin:0}
 .music-play.loading .i{animation:pulse 1s ease-in-out infinite}
+/* Mobile : ligne compacte (lecture sur la vignette ; titre et infos sur toute la largeur du milieu ; favori et
+   « Choisir » empilés à droite) au lieu de cinq éléments côte à côte. */
+@media (max-width:767px){
+  .music-list li{display:grid;grid-template-columns:52px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;row-gap:6px;align-items:center}
+  .music-list .music-thumb{grid-column:1;grid-row:1 / 3;width:52px;height:52px}
+  .music-list .music-thumb>.i{display:none}
+  .music-list .music-play{grid-column:1;grid-row:1 / 3;place-self:center;position:relative;z-index:1;width:34px;height:34px;border-radius:50%;background:oklch(0.15 0.02 285 / .55);color:#fff}
+  .music-list .grow{grid-column:2;grid-row:1 / 3;min-width:0}
+  .music-list .music-fav{grid-column:3;grid-row:1;justify-self:center;width:34px;height:30px}
+  .music-list .btn{grid-column:3;grid-row:2}
+  .music-list b,.music-list .grow .small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .music-list b{overflow-wrap:normal;word-break:normal}
+}
 @keyframes pulse{50%{opacity:.35}}
 
 /* Administration : invitations */
