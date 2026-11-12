@@ -66,6 +66,18 @@ d'ouvrir l'instance au fédivers et ne la changez plus. Les comptes se trouvent 
 activités reçues sont vérifiées par signature HTTP. Les requêtes vers les autres instances n'atteignent
 jamais le réseau privé.
 
+Mastodon ne change jamais la visibilité ni les destinataires d'une publication déjà reçue. Quand l'auteur les
+change, la publication est donc retirée du fédivers (Delete) puis renvoyée sous un nouvel identifiant (`/p/…/v2`,
+`/v3`…). Sur Mastodon, la nouvelle version repart sans les « J'aime » ni les partages de l'ancienne ; ceux déjà
+reçus restent sur Socialize.
+Si des copies d'une publication restent sur d'autres instances (après un changement ou une suppression faits
+avant la v0.7.10) :
+
+```bash
+bin/console app:federation:resync https://socialize.example/p/1Ch1rCiDZ7zSfRdPMRVyPC            # publication existante
+bin/console app:federation:resync https://socialize.example/p/1Ch1rCiDZ7zSfRdPMRVyPC/v4 --compte=alice   # supprimée
+```
+
 ### Variables d'environnement
 
 | Variable | Par défaut | Rôle |
