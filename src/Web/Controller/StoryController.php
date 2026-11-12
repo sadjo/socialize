@@ -10,6 +10,7 @@ use App\Core\Application\Story\StoryActions;
 use App\Core\Application\Story\StoryFeed;
 use App\Core\Application\Story\StoryGroup;
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Account\User;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Story\Highlight;
 use App\Core\Domain\Story\Story;
@@ -32,6 +33,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class StoryController extends AbstractController
 {
@@ -51,6 +53,7 @@ final class StoryController extends AbstractController
     }
 
     #[Route('/stories/nouvelle', name: 'app_story_new', methods: ['GET', 'POST'])]
+    #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
     public function new(Request $request, ImmichPublisher $publisher, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
     {
         $account = $this->currentAccount->require();

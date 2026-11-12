@@ -21,6 +21,8 @@ use Symfony\Component\Uid\Uuid;
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     public const string ROLE_ADMIN = 'ROLE_ADMIN';
+    /** Droit de publier (publications, stories, imports), accordé par l'administration ; inclus pour un administrateur. */
+    public const string ROLE_PUBLISHER = 'ROLE_PUBLISHER';
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME)]
@@ -86,6 +88,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function promoteToAdmin(): void
     {
         $this->roles = array_values(array_unique([...$this->roles, self::ROLE_ADMIN]));
+    }
+
+    public function canPublish(): bool
+    {
+        return $this->isAdmin() || \in_array(self::ROLE_PUBLISHER, $this->roles, true);
+    }
+
+    public function grantPublishing(): void
+    {
+        $this->roles = array_values(array_unique([...$this->roles, self::ROLE_PUBLISHER]));
+    }
+
+    public function revokePublishing(): void
+    {
+        $this->roles = array_values(array_filter($this->roles, static fn (string $role): bool => self::ROLE_PUBLISHER !== $role));
     }
 
     public function getPassword(): string

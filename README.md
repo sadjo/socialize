@@ -10,7 +10,8 @@ et de publier aussi sur Instagram et Facebook selon des règles réglables.
 > Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
 > (licences Creative Commons, crédit affiché), copiée sur l'instance et jouée quand la publication est à l'écran.
 > Groupes d'abonnés (famille, amis…) : publications et stories réservées à un ou plusieurs groupes, y compris pour
-> les abonnés du fédivers, et groupe par défaut à l'import Instagram. Invitations et création de comptes par l'administrateur.
+> les abonnés du fédivers, et groupe par défaut à l'import Instagram. Invitations et création de comptes par l'administrateur,
+> qui choisit quels comptes peuvent publier (publications, stories, imports).
 > Jalons suivants : personnes reconnues par Immich (mentions), API/MCP, crosspost.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
@@ -82,6 +83,10 @@ prépare la file Messenger, puis lance FrankenPHP et le consommateur Messenger. 
 de l'instance au format JSON.
 
 Ouvrez ensuite l'instance et créez le premier compte depuis « Créer un compte » : il devient administrateur.
+
+Seuls les comptes autorisés peuvent publier (publications, stories, import Instagram, Immich) : un administrateur
+le peut toujours ; pour les autres, le droit s'accorde ou se retire dans Administration › Comptes (ou à la création,
+`app:user:create --publisher`). Un nouveau compte ne peut pas publier tant qu'il n'y est pas autorisé.
 
 Les photos sont converties en WebP (grande taille et miniature) par libvips, les vidéos en MP4 H.264 par ffmpeg,
 en tâche de fond. Les copies publiques sont servies sous `/m/` et ne contiennent plus de métadonnées (dont la

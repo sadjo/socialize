@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
+use App\Core\Domain\Account\User;
 use App\Integration\Immich\Application\ImmichConnections;
 use App\Integration\Immich\Application\ImmichException;
 use App\Integration\Immich\Domain\ImmichConnection;
@@ -24,7 +25,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 /**
  * Immich : connexion du compte (réglages), photothèque et vignettes pour choisir des médias à publier.
  */
-#[IsGranted('ROLE_USER')]
+#[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
 final class ImmichController extends AbstractController
 {
     public function __construct(

@@ -6,6 +6,7 @@ namespace App\Admin\Infrastructure\Http;
 
 use App\Core\Domain\Account\Account;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
@@ -17,7 +18,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Compte créé par l'administrateur : mêmes règles que l'inscription, sauf la longueur minimale du mot de passe
  * (10 caractères), que l'administrateur peut choisir de ne pas imposer.
  *
- * @extends AbstractType<array{email: string, username: string, displayName: ?string, password: string}>
+ * @extends AbstractType<array{email: string, username: string, displayName: ?string, password: string, publisher: bool}>
  */
 final class AccountType extends AbstractType
 {
@@ -53,6 +54,11 @@ final class AccountType extends AbstractType
                     new Assert\NotBlank(message: 'Saisissez un mot de passe.'),
                     new Assert\Length(max: 4096),
                 ],
+            ])
+            ->add('publisher', CheckboxType::class, [
+                'label' => 'Autoriser à publier',
+                'help' => 'Publications, stories et imports. Sans ce droit, le compte peut regarder, aimer, commenter et suivre. Modifiable ensuite dans la liste des comptes.',
+                'required' => false,
             ]);
     }
 }

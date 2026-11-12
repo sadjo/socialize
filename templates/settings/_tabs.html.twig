@@ -3,5 +3,5 @@
 <nav class="ptabs" aria-label="Réglages">
     <a href="{{ path('app_settings') }}" class="{{ current == 'profile' ? 'on' }}"{{ current == 'profile' ? ' aria-current="page"' }}>{{ ui.icon('user', 'xs') }}Profil</a>
     <a href="{{ path('app_settings_groups') }}" class="{{ current == 'groups' ? 'on' }}"{{ current == 'groups' ? ' aria-current="page"' }}>{{ ui.icon('stack', 'xs') }}Groupes</a>
-    <a href="{{ path('app_settings_immich') }}" class="{{ current == 'immich' ? 'on' }}"{{ current == 'immich' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Immich</a>
+    {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_immich') }}" class="{{ current == 'immich' ? 'on' }}"{{ current == 'immich' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Immich</a>{% endif %}
 </nav>

@@ -77,7 +77,7 @@
                 {{ ui.icon('image') }}
                 {% if is_owner %}
                     <b>Aucune publication pour l’instant</b>
-                    <a class="btn pri" href="{{ path('app_compose') }}">Publier une première photo</a>
+                    {% if is_granted('ROLE_PUBLISHER') %}<a class="btn pri" href="{{ path('app_compose') }}">Publier une première photo</a>{% endif %}
                 {% else %}
                     <b>Aucune publication visible</b>
                 {% endif %}

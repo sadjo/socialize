@@ -42,7 +42,7 @@
 <div class="page">
     <div class="page-h">
         <div class="grow"><h1>Mes stories</h1><p>Les stories restent visibles 24 h, puis rejoignent vos archives, visibles par vous seul. Mettez-les à la une pour les garder sur votre profil.</p></div>
-        <a class="btn pri" href="{{ path('app_story_new') }}">{{ ui.icon('plus', 'sm') }}Nouvelle story</a>
+        {% if is_granted('ROLE_PUBLISHER') %}<a class="btn pri" href="{{ path('app_story_new') }}">{{ ui.icon('plus', 'sm') }}Nouvelle story</a>{% endif %}
     </div>
 
     {% if highlights is not empty %}

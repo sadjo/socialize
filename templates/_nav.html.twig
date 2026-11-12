@@ -5,10 +5,10 @@
     {% if me or not home_login_only %}<a class="nav{{ current_route == 'app_feed_local' ? ' on' }}" href="{{ path('app_feed_local') }}"{% if current_route == 'app_feed_local' %} aria-current="page"{% endif %}>{{ ui.icon('compass') }}<span class="lbl">Local</span></a>{% endif %}
     {% if not visitor_closed %}<a class="nav{{ current_route == 'app_search' ? ' on' }}" href="{{ path('app_search') }}">{{ ui.icon('search') }}<span class="lbl">Rechercher</span></a>{% endif %}
     {% if me %}
-        <a class="nav{{ current_route == 'app_compose' ? ' on' }}" href="{{ path('app_compose') }}">{{ ui.icon('plus') }}<span class="lbl">Créer</span></a>
+        {% if is_granted('ROLE_PUBLISHER') %}<a class="nav{{ current_route == 'app_compose' ? ' on' }}" href="{{ path('app_compose') }}">{{ ui.icon('plus') }}<span class="lbl">Créer</span></a>{% endif %}
         <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.username}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>
         <div class="sep"></div>
-        <a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>
+        {% if is_granted('ROLE_PUBLISHER') %}<a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>{% endif %}
         <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
         {% if app.user.isAdmin() %}<a class="nav{{ (current_route ?? '') starts with 'admin_' ? ' on' }}" href="{{ path('admin_accounts') }}">{{ ui.icon('shield') }}<span class="lbl">Administration</span></a>{% endif %}
     {% else %}

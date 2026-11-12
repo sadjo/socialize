@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Web\Controller;
 
 use App\Core\Application\Social\AudienceGroups;
+use App\Core\Domain\Account\User;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\AudienceGroup;
 use App\Integration\Immich\Application\ImmichPublisher;
@@ -19,7 +20,9 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+#[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
 final class ComposeController extends AbstractController
 {
     #[Route('/publier', name: 'app_compose', methods: ['GET', 'POST'])]

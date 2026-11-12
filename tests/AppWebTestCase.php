@@ -29,12 +29,20 @@ abstract class AppWebTestCase extends WebTestCase
         $this->client = static::createClient(server: ['HTTP_ORIGIN' => 'http://localhost']);
     }
 
-    protected function register(string $username, ?string $email = null, string $password = 'mot-de-passe-solide'): User
+    /**
+     * Compte de test ; il peut publier, sauf avec $publisher = false.
+     */
+    protected function register(string $username, ?string $email = null, string $password = 'mot-de-passe-solide', bool $publisher = true): User
     {
         /** @var RegisterAccount $register */
         $register = static::getContainer()->get(RegisterAccount::class);
+        $user = $register->register($email ?? $username.'@exemple.test', $username, $password, ucfirst($username));
+        if ($publisher) {
+            $user->grantPublishing();
+            static::getContainer()->get('doctrine.orm.entity_manager')->flush();
+        }
 
-        return $register->register($email ?? $username.'@exemple.test', $username, $password, ucfirst($username));
+        return $user;
     }
 
     protected function login(User $user): User
