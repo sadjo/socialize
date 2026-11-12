@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { MediaViewer, tileEntry } from '../lib/media_viewer.js';
 
 /*
  * Sélection des médias d'une publication ou d'une story, depuis l'appareil ou une photothèque (Immich, Synology Photos).
@@ -8,6 +9,7 @@ import { Controller } from '@hotwired/stimulus';
  *   (jetons « m-<id> » pour un média existant, « n-<i> » pour le i-ème nouveau fichier, « i-… » ou « s-… » pour
  *   un média d'une photothèque).
  * Le champ fichier est reconstruit à chaque changement, dans l'ordre choisi.
+ * La loupe d'un aperçu ouvre les médias choisis en grand, dans leur ordre (MediaViewer).
  */
 export default class extends Controller {
     static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'librarySource'];
@@ -19,7 +21,7 @@ export default class extends Controller {
     };
 
     connect() {
-        this.items = this.existingValue.map((m) => ({ kind: 'existing', token: m.token, src: m.src, video: m.video, alt: m.alt || '' }));
+        this.items = this.existingValue.map((m) => ({ kind: 'existing', token: m.token, src: m.src, large: m.large || '', videoSrc: m.videoSrc || '', video: m.video, alt: m.alt || '' }));
         this.dragIndex = null;
 
         this.inputTarget.addEventListener('change', () => this.add([...this.inputTarget.files]));
@@ -92,7 +94,7 @@ export default class extends Controller {
     }
 
     /* Une vignette de photothèque ajoute le média à la sélection, ou l'en retire s'il y est déjà. */
-    toggleLibrary({ params: { token, src, video, label, description, place } }) {
+    toggleLibrary({ params: { token, src, video, label, description, place }, currentTarget }) {
         const index = this.items.findIndex((item) => item.token === token);
         if (index >= 0) {
             this.items.splice(index, 1);
@@ -100,7 +102,9 @@ export default class extends Controller {
             this.warn(`Vous pouvez ajouter ${this.maxValue} médias au plus.`);
             return;
         } else {
-            this.items.push({ kind: 'library', token, src, video: Boolean(video), label: label || '', alt: '' });
+            // Aperçu en grand de la vignette (image, vidéo, date), repris par la loupe des médias choisis.
+            const tile = currentTarget.closest('[data-library-preview-target="tile"]');
+            this.items.push({ kind: 'library', token, src, video: Boolean(video), label: label || '', alt: '', preview: tile ? tileEntry(tile) : null });
             // Légende et lieu préremplis depuis la photothèque, seulement s'ils sont encore vides.
             if (description && this.hasCaptionTarget && this.captionTarget.value.trim() === '') {
                 this.captionTarget.value = description;
@@ -119,7 +123,32 @@ export default class extends Controller {
     }
 
     disconnect() {
+        this.viewer?.close();
         this.items.forEach((item) => item.url && URL.revokeObjectURL(item.url));
+    }
+
+    /* Loupe d'un aperçu : les médias choisis en grand, dans leur ordre. */
+    zoom(event) {
+        event.stopPropagation();
+        this.viewer = new MediaViewer({
+            entries: () => this.items.map((item, i) => this.entry(item, i)),
+            index: Number(event.currentTarget.dataset.index),
+            onClose: (i) => {
+                this.viewer = null;
+                this.previewsTarget.querySelectorAll('.preview')[i]?.querySelector('.imm-zoom')?.focus({ preventScroll: true });
+            },
+        });
+        this.viewer.open();
+    }
+
+    entry(item, index) {
+        const position = `Média ${index + 1} sur ${this.items.length}`;
+        if (item.kind === 'library' && item.preview) return { ...item.preview, label: item.preview.label || position, details: [item.label, item.preview.details].filter(Boolean).join(' · ') };
+        if (item.kind === 'new') {
+            return { thumb: item.video ? '' : item.url, image: item.video ? '' : item.url, video: item.video ? item.url : '', label: position, details: item.file.name, note: '' };
+        }
+        // Média déjà publié (modification) : copie publique en grand, et sa vidéo.
+        return { thumb: item.src || '', image: item.large || item.src || '', video: item.videoSrc || '', label: position, details: item.alt || '', note: '' };
     }
 
     add(files) {
@@ -225,7 +254,15 @@ export default class extends Controller {
         const badge = document.createElement('span');
         badge.className = 'order-badge num';
         badge.textContent = String(index + 1);
-        frame.append(media, badge);
+        const zoom = document.createElement('button');
+        zoom.type = 'button';
+        zoom.className = 'imm-zoom';
+        zoom.draggable = false;
+        zoom.dataset.action = 'compose#zoom';
+        zoom.dataset.index = index;
+        zoom.setAttribute('aria-label', `Voir en grand le média ${index + 1}`);
+        zoom.innerHTML = '<svg class="i xs" aria-hidden="true"><use href="#i-zoom"/></svg>';
+        frame.append(media, badge, zoom);
         if (item.kind === 'library') {
             const source = document.createElement('span');
             source.className = 'src-badge';
