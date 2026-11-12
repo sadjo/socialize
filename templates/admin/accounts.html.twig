@@ -37,6 +37,7 @@
                     <td>
                         <a class="lnk" href="{{ path('app_profile', {username: user.account.username}) }}">@{{ user.account.username }}</a>{% if user.isAdmin() %} <span class="chip">Administrateur</span>{% endif %}
                         <span class="acct-meta small">{{ user.email }} · créé le <time datetime="{{ user.createdAt|date('c') }}">{{ user.createdAt|format_date('short', locale: 'fr') }}</time></span>
+                        <a class="btn sm ghost acct-password" href="{{ path('admin_account_password', {id: user.id}) }}" aria-label="Changer le mot de passe de @{{ user.account.username }}">{{ ui.icon('key', 'xs') }}Mot de passe</a>
                     </td>
                     <td>
                         <ul class="rights">

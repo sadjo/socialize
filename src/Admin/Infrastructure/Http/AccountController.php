@@ -11,9 +11,11 @@ use App\Core\Domain\Account\User;
 use App\Core\Infrastructure\Doctrine\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -42,7 +44,7 @@ final class AccountController extends AbstractController
                     $user->grant(AccountRight::InstagramImport);
                 }
                 $em->flush();
-                $this->addFlash('success', \sprintf('Compte @%s créé. Transmettez son mot de passe à la personne : elle pourra le changer dans ses réglages.', $user->getAccount()->getUsername()));
+                $this->addFlash('success', \sprintf('Compte @%s créé. Transmettez son mot de passe à la personne.', $user->getAccount()->getUsername()));
 
                 return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
             } catch (RegistrationException $e) {
@@ -55,6 +57,36 @@ final class AccountController extends AbstractController
             'users' => $users->recent(),
             'rights' => AccountRight::cases(),
         ]);
+    }
+
+    /**
+     * Nouveau mot de passe d'un compte, choisi par l'administrateur (sans longueur minimale).
+     */
+    #[Route('/admin/comptes/{id}/mot-de-passe', name: 'admin_account_password', requirements: ['id' => Requirement::UUID], methods: ['GET', 'POST'])]
+    public function password(string $id, Request $request, UserRepository $users, UserPasswordHasherInterface $hasher, EntityManagerInterface $em, Security $security): Response
+    {
+        $user = $users->find($id);
+        if (!$user instanceof User) {
+            throw $this->createNotFoundException();
+        }
+        $form = $this->createForm(AccountPasswordType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var array{password: string} $data */
+            $data = $form->getData();
+            $user->changePassword($hasher->hashPassword($user, $data['password']));
+            $em->flush();
+            // Changer son propre mot de passe ne doit pas déconnecter l'administrateur.
+            if ($user === $this->getUser()) {
+                $security->login($user);
+            }
+            $this->addFlash('success', \sprintf('Mot de passe de @%s changé. Transmettez-le à la personne.', $user->getAccount()->getUsername()));
+
+            return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('admin/account_password.html.twig', ['form' => $form, 'user' => $user]);
     }
 
     /**

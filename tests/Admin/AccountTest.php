@@ -117,6 +117,69 @@ final class AccountTest extends AppWebTestCase
         self::assertSelectorTextContains('main', 'au moins 10 caractères');
     }
 
+    public function testTheAdministratorChangesAPasswordWithoutMinimumLength(): void
+    {
+        $admin = $this->register('alice');
+        $hugo = $this->register('hugo');
+        $url = '/admin/comptes/'.$hugo->getId()->toRfc4122().'/mot-de-passe';
+
+        $this->login($hugo);
+        $this->client->request('GET', $url);
+        self::assertResponseStatusCodeSame(403);
+
+        $this->login($admin);
+        $crawler = $this->client->request('GET', '/admin/comptes');
+        self::assertSelectorExists(\sprintf('table.accounts a[href="%s"]', $url));
+        $crawler = $this->client->click($crawler->filter(\sprintf('table.accounts a[href="%s"]', $url))->link());
+        self::assertSelectorTextContains('h2', 'Mot de passe de @hugo');
+
+        // Les deux saisies doivent être identiques.
+        $this->client->submit($crawler->selectButton('Changer le mot de passe')->form([
+            'account_password[password][first]' => '1234',
+            'account_password[password][second]' => '4321',
+        ]));
+        self::assertResponseIsUnprocessable();
+        self::assertSelectorTextContains('main', 'Les deux mots de passe ne sont pas identiques.');
+
+        // Mot de passe court accepté.
+        $crawler = $this->client->request('GET', $url);
+        $this->client->submit($crawler->selectButton('Changer le mot de passe')->form([
+            'account_password[password][first]' => '1234',
+            'account_password[password][second]' => '1234',
+        ]));
+        self::assertResponseRedirects('/admin/comptes');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Mot de passe de @hugo changé.');
+        self::assertSame($admin->getId()->toRfc4122(), $this->currentUserId(), 'L’administrateur reste connecté sous son compte.');
+
+        // L'ancien mot de passe ne marche plus, le nouveau si.
+        $this->client->request('GET', '/deconnexion');
+        $crawler = $this->client->request('GET', '/connexion');
+        $this->client->submit($crawler->selectButton('Se connecter')->form(['identifier' => 'hugo', 'password' => 'mot-de-passe-solide']));
+        $this->client->followRedirect();
+        self::assertSelectorNotExists('nav.side a[href="/@hugo"]');
+        $crawler = $this->client->request('GET', '/connexion');
+        $this->client->submit($crawler->selectButton('Se connecter')->form(['identifier' => 'hugo', 'password' => '1234']));
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorExists('nav.side a[href="/@hugo"]');
+    }
+
+    public function testTheAdministratorStaysLoggedInAfterChangingTheirOwnPassword(): void
+    {
+        $admin = $this->register('alice');
+        $this->login($admin);
+        $crawler = $this->client->request('GET', '/admin/comptes/'.$admin->getId()->toRfc4122().'/mot-de-passe');
+        $this->client->submit($crawler->selectButton('Changer le mot de passe')->form([
+            'account_password[password][first]' => 'nouveau',
+            'account_password[password][second]' => 'nouveau',
+        ]));
+        self::assertResponseRedirects('/admin/comptes');
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.flash.success', 'Mot de passe de @alice changé.');
+    }
+
     private function currentUserId(): ?string
     {
         $user = self::getContainer()->get('security.token_storage')->getToken()?->getUser();

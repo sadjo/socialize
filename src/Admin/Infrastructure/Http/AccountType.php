@@ -49,7 +49,7 @@ final class AccountType extends AbstractType
             ])
             ->add('password', RepeatedType::class, [
                 'type' => PasswordType::class,
-                'first_options' => ['label' => 'Mot de passe', 'help' => 'Pas de longueur minimale ici (10 caractères conseillés). À transmettre à la personne, qui pourra le changer.', 'attr' => ['autocomplete' => 'new-password']],
+                'first_options' => ['label' => 'Mot de passe', 'help' => 'Pas de longueur minimale ici (10 caractères conseillés). À transmettre à la personne.', 'attr' => ['autocomplete' => 'new-password']],
                 'second_options' => ['label' => 'Confirmez le mot de passe', 'attr' => ['autocomplete' => 'new-password']],
                 'invalid_message' => 'Les deux mots de passe ne sont pas identiques.',
                 'constraints' => [
