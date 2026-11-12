@@ -6,6 +6,7 @@ namespace App\Web\Command;
 
 use App\Core\Application\Account\RegisterAccount;
 use App\Core\Application\Account\RegistrationException;
+use App\Core\Domain\Account\AccountRight;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -32,6 +33,7 @@ final readonly class CreateUserCommand
         #[Argument(description: 'Nom d’utilisateur (adresse dans le fédivers)')] string $username,
         #[Option(description: 'Donner les droits d’administration')] bool $admin = false,
         #[Option(description: 'Autoriser à publier (toujours permis à un administrateur)')] bool $publisher = false,
+        #[Option(description: 'Autoriser l’import d’une archive Instagram (avec --publisher)')] bool $instagramImport = false,
         #[Option(description: 'Nom affiché')] ?string $name = null,
         #[Option(description: 'Lire le mot de passe sur l’entrée standard (echo -n … | … --password-stdin)')] bool $passwordStdin = false,
     ): int {
@@ -49,7 +51,10 @@ final readonly class CreateUserCommand
             $user->promoteToAdmin();
         }
         if ($publisher) {
-            $user->grantPublishing();
+            $user->grant(AccountRight::Publish);
+        }
+        if ($instagramImport) {
+            $user->grant(AccountRight::InstagramImport);
         }
         $this->em->flush();
 

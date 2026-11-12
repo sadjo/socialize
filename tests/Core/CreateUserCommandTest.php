@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Core;
 
+use App\Core\Domain\Account\AccountRight;
 use App\Core\Infrastructure\Doctrine\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -36,13 +37,14 @@ final class CreateUserCommandTest extends KernelTestCase
         $tester->setInputs(['un-mot-de-passe-long', 'un-mot-de-passe-long']);
         $tester->execute(['email' => 'admin@exemple.test', 'username' => 'admin']);
 
-        foreach (['lecteur' => false, 'auteur' => true] as $username => $publisher) {
+        foreach (['lecteur' => [false, false], 'auteur' => [true, false], 'importe' => [true, true]] as $username => [$publisher, $importer]) {
             $tester->setInputs(['un-mot-de-passe-long', 'un-mot-de-passe-long']);
-            $tester->execute(['email' => $username.'@exemple.test', 'username' => $username, '--publisher' => $publisher]);
+            $tester->execute(['email' => $username.'@exemple.test', 'username' => $username, '--publisher' => $publisher, '--instagram-import' => $importer]);
             $tester->assertCommandIsSuccessful();
             $user = self::getContainer()->get(UserRepository::class)->findOneByEmail($username.'@exemple.test');
             self::assertNotNull($user);
             self::assertSame($publisher, $user->canPublish(), $username);
+            self::assertSame($importer, $user->can(AccountRight::InstagramImport), $username);
         }
     }
 

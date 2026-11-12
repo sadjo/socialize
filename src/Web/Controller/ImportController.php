@@ -45,6 +45,7 @@ use Symfony\Component\Uid\Uuid;
  * Import d'une archive Instagram : envoi par morceaux, analyse, options, choix publication par publication, import.
  */
 #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
+#[IsGranted(User::ROLE_INSTAGRAM_IMPORTER, message: 'Votre compte n’a pas le droit d’importer une archive Instagram.')]
 final class ImportController extends AbstractController
 {
     /** Jeton des envois (JavaScript) : en-tête X-CSRF-Token. */

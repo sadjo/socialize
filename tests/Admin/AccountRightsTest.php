@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Admin;
 
+use App\Core\Domain\Account\AccountRight;
 use App\Core\Domain\Account\User;
 use App\Core\Infrastructure\Doctrine\UserRepository;
 use App\Tests\AppWebTestCase;
@@ -13,7 +14,7 @@ use Symfony\Component\DomCrawler\Field\ChoiceFormField;
  * Seuls les comptes autorisés par l'administration publient (publications, stories, imports, Immich) ;
  * un administrateur le peut toujours, un nouveau compte ne le peut pas tant qu'on ne l'y a pas autorisé.
  */
-final class PublishingRightTest extends AppWebTestCase
+final class AccountRightsTest extends AppWebTestCase
 {
     private const array PUBLISHING_PAGES = ['/publier', '/stories/nouvelle', '/import', '/reglages/immich', '/immich/phototheque'];
 
@@ -83,7 +84,7 @@ final class PublishingRightTest extends AppWebTestCase
     {
         $admin = $this->register('alice');
         $hugo = $this->register('hugo', publisher: false);
-        $url = '/admin/comptes/'.$hugo->getId()->toRfc4122().'/publication';
+        $url = '/admin/comptes/'.$hugo->getId()->toRfc4122().'/droits/publication';
 
         $this->login($this->register('lina'));
         $this->client->request('POST', $url, ['allow' => '1']);
@@ -100,6 +101,7 @@ final class PublishingRightTest extends AppWebTestCase
         $this->login($this->register('alice'));
 
         foreach (['lina' => false, 'papi' => true] as $username => $allowed) {
+            // papi : publication et import cochés ; lina : rien.
             $crawler = $this->client->request('GET', '/admin/comptes');
             $form = $crawler->selectButton('Créer le compte')->form([
                 'account[email]' => $username.'@exemple.fr',
@@ -108,9 +110,11 @@ final class PublishingRightTest extends AppWebTestCase
                 'account[password][second]' => 'mot-de-passe-solide',
             ]);
             if ($allowed) {
-                $box = $form['account[publisher]'];
-                self::assertInstanceOf(ChoiceFormField::class, $box);
-                $box->tick();
+                foreach (['account[publisher]', 'account[instagramImport]'] as $name) {
+                    $box = $form[$name];
+                    self::assertInstanceOf(ChoiceFormField::class, $box);
+                    $box->tick();
+                }
             }
             $this->client->submit($form);
             self::assertResponseRedirects('/admin/comptes');
@@ -118,7 +122,54 @@ final class PublishingRightTest extends AppWebTestCase
             $user = self::getContainer()->get(UserRepository::class)->findOneByEmail($username.'@exemple.fr');
             self::assertInstanceOf(User::class, $user);
             self::assertSame($allowed, $user->canPublish(), $username);
+            self::assertSame($allowed, $user->can(AccountRight::InstagramImport), $username);
         }
+    }
+
+    public function testTheInstagramImportNeedsItsOwnRightOnTopOfPublishing(): void
+    {
+        $admin = $this->register('alice');
+        $hugo = $this->register('hugo', importer: false);
+        self::assertTrue($admin->can(AccountRight::InstagramImport), 'Un administrateur peut toujours importer.');
+
+        // Publier sans importer : création possible, import refusé et absent du menu.
+        $this->login($hugo);
+        $this->client->request('GET', '/publier');
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/import');
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('nav.side a[href="/publier"]');
+        self::assertSelectorNotExists('a[href="/import"]');
+
+        // L'administrateur l'accorde dans la colonne « Import Instagram ».
+        $this->login($admin);
+        $crawler = $this->client->request('GET', '/admin/comptes');
+        self::assertSelectorTextContains('table.accounts thead', 'Import Instagram');
+        $importForm = $crawler->filter(\sprintf('form[action="/admin/comptes/%s/droits/import-instagram"]', $hugo->getId()->toRfc4122()));
+        self::assertCount(1, $importForm);
+        $this->client->submit($importForm->selectButton('Autoriser')->form());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', '@hugo peut désormais importer son archive Instagram.');
+        self::assertTrue($this->reload($hugo)->can(AccountRight::InstagramImport));
+
+        $this->login($this->reload($hugo));
+        $this->client->request('GET', '/import');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('nav.side a[href="/import"]');
+
+        // Sans le droit de publier, le droit d'import ne suffit plus (et l'administration le signale).
+        $user = $this->reload($hugo);
+        $user->revoke(AccountRight::Publish);
+        self::getContainer()->get('doctrine.orm.entity_manager')->flush();
+        self::assertFalse($user->can(AccountRight::InstagramImport));
+        $this->login($user);
+        $this->client->request('GET', '/import');
+        self::assertResponseStatusCodeSame(403);
+
+        $this->login($this->reload($admin));
+        $this->client->request('GET', '/admin/comptes');
+        self::assertSelectorTextContains('table.accounts', 'Nécessite la publication');
     }
 
     private function reload(User $user): User

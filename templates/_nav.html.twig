@@ -8,7 +8,7 @@
         {% if is_granted('ROLE_PUBLISHER') %}<a class="nav{{ current_route == 'app_compose' ? ' on' }}" href="{{ path('app_compose') }}">{{ ui.icon('plus') }}<span class="lbl">Créer</span></a>{% endif %}
         <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.username}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>
         <div class="sep"></div>
-        {% if is_granted('ROLE_PUBLISHER') %}<a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>{% endif %}
+        {% if is_granted('ROLE_PUBLISHER') and is_granted('ROLE_INSTAGRAM_IMPORTER') %}<a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>{% endif %}
         <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
         {% if app.user.isAdmin() %}<a class="nav{{ (current_route ?? '') starts with 'admin_' ? ' on' }}" href="{{ path('admin_accounts') }}">{{ ui.icon('shield') }}<span class="lbl">Administration</span></a>{% endif %}
     {% else %}

@@ -18,7 +18,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Compte créé par l'administrateur : mêmes règles que l'inscription, sauf la longueur minimale du mot de passe
  * (10 caractères), que l'administrateur peut choisir de ne pas imposer.
  *
- * @extends AbstractType<array{email: string, username: string, displayName: ?string, password: string, publisher: bool}>
+ * @extends AbstractType<array{email: string, username: string, displayName: ?string, password: string, publisher: bool, instagramImport: bool}>
  */
 final class AccountType extends AbstractType
 {
@@ -57,7 +57,12 @@ final class AccountType extends AbstractType
             ])
             ->add('publisher', CheckboxType::class, [
                 'label' => 'Autoriser à publier',
-                'help' => 'Publications, stories et imports. Sans ce droit, le compte peut regarder, aimer, commenter et suivre. Modifiable ensuite dans la liste des comptes.',
+                'help' => 'Publications et stories. Sans ce droit, le compte peut regarder, aimer, commenter et suivre. Modifiable ensuite dans la liste des comptes.',
+                'required' => false,
+            ])
+            ->add('instagramImport', CheckboxType::class, [
+                'label' => 'Autoriser l’import Instagram',
+                'help' => 'Import de son archive Instagram (avec le droit de publier).',
                 'required' => false,
             ]);
     }
