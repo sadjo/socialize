@@ -21,6 +21,9 @@ use Symfony\Component\Uid\Uuid;
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     public const string ROLE_ADMIN = 'ROLE_ADMIN';
+    /** Droits accordés par l'administration (voir AccountRight), inclus pour un administrateur. */
+    public const string ROLE_PUBLISHER = 'ROLE_PUBLISHER';
+    public const string ROLE_INSTAGRAM_IMPORTER = 'ROLE_INSTAGRAM_IMPORTER';
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME)]
@@ -86,6 +89,45 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function promoteToAdmin(): void
     {
         $this->roles = array_values(array_unique([...$this->roles, self::ROLE_ADMIN]));
+    }
+
+    /**
+     * Le compte dispose-t-il de ce droit ? Toujours pour un administrateur ; l'import Instagram suppose aussi de
+     * pouvoir publier.
+     */
+    public function can(AccountRight $right): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+        if (AccountRight::InstagramImport === $right && !$this->can(AccountRight::Publish)) {
+            return false;
+        }
+
+        return $this->isGranted($right);
+    }
+
+    /**
+     * Droit accordé à ce compte lui-même (sans tenir compte de l'administration ni des droits requis).
+     */
+    public function isGranted(AccountRight $right): bool
+    {
+        return \in_array($right->role(), $this->roles, true);
+    }
+
+    public function canPublish(): bool
+    {
+        return $this->can(AccountRight::Publish);
+    }
+
+    public function grant(AccountRight $right): void
+    {
+        $this->roles = array_values(array_unique([...$this->roles, $right->role()]));
+    }
+
+    public function revoke(AccountRight $right): void
+    {
+        $this->roles = array_values(array_filter($this->roles, static fn (string $role): bool => $right->role() !== $role));
     }
 
     public function getPassword(): string

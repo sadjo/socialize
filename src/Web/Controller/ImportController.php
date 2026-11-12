@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Web\Controller;
 
 use App\Core\Application\Social\AudienceGroups;
+use App\Core\Domain\Account\User;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Domain\Story\Story;
@@ -43,7 +44,8 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Import d'une archive Instagram : envoi par morceaux, analyse, options, choix publication par publication, import.
  */
-#[IsGranted('ROLE_USER')]
+#[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
+#[IsGranted(User::ROLE_INSTAGRAM_IMPORTER, message: 'Votre compte n’a pas le droit d’importer une archive Instagram.')]
 final class ImportController extends AbstractController
 {
     /** Jeton des envois (JavaScript) : en-tête X-CSRF-Token. */

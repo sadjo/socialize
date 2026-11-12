@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests;
 
 use App\Core\Application\Account\RegisterAccount;
+use App\Core\Domain\Account\AccountRight;
 use App\Core\Domain\Account\User;
 use Jcupitt\Vips\Image;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -29,12 +30,23 @@ abstract class AppWebTestCase extends WebTestCase
         $this->client = static::createClient(server: ['HTTP_ORIGIN' => 'http://localhost']);
     }
 
-    protected function register(string $username, ?string $email = null, string $password = 'mot-de-passe-solide'): User
+    /**
+     * Compte de test ; il peut publier et importer son archive Instagram, sauf avec $publisher ou $importer à false.
+     */
+    protected function register(string $username, ?string $email = null, string $password = 'mot-de-passe-solide', bool $publisher = true, bool $importer = true): User
     {
         /** @var RegisterAccount $register */
         $register = static::getContainer()->get(RegisterAccount::class);
+        $user = $register->register($email ?? $username.'@exemple.test', $username, $password, ucfirst($username));
+        if ($publisher) {
+            $user->grant(AccountRight::Publish);
+        }
+        if ($importer) {
+            $user->grant(AccountRight::InstagramImport);
+        }
+        static::getContainer()->get('doctrine.orm.entity_manager')->flush();
 
-        return $register->register($email ?? $username.'@exemple.test', $username, $password, ucfirst($username));
+        return $user;
     }
 
     protected function login(User $user): User

@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-narrow admin">
-    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Créez un compte directement, même lorsque les inscriptions sont fermées, puis transmettez ses identifiants à la personne.</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Créez un compte directement, même lorsque les inscriptions sont fermées, puis transmettez ses identifiants à la personne. Seuls les comptes autorisés peuvent publier ou importer leur archive Instagram.</p></div></div>
     {{ include('admin/_tabs.html.twig', {current: 'accounts'}) }}
 
     <section class="card">
@@ -17,24 +17,55 @@
             {{ form_row(form.displayName) }}
             {{ form_row(form.password.first) }}
             {{ form_row(form.password.second) }}
+            <div class="form-group" data-controller="requires">
+                <label class="chk">{{ form_widget(form.publisher, {attr: {'data-requires-target': 'source', 'data-action': 'requires#update'}}) }}<span>{{ form.publisher.vars.label }}<br><small>{{ form.publisher.vars.help }}</small></span></label>
+                <label class="chk">{{ form_widget(form.instagramImport, {attr: {'data-requires-target': 'dependent'}}) }}<span>{{ form.instagramImport.vars.label }}<br><small>{{ form.instagramImport.vars.help }}</small></span></label>
+                {{ form_errors(form.instagramImport) }}
+            </div>
             <button class="btn pri">{{ ui.icon('plus', 'xs') }}Créer le compte</button>
         {{ form_end(form) }}
     </section>
 
     <section class="card">
         <h2>Comptes ({{ users|length }})</h2>
+        <div class="tbl-wrap">
         <table class="accounts">
-            <thead><tr><th>Compte</th><th>Adresse e-mail</th><th>Créé</th></tr></thead>
+            <thead><tr><th>Compte</th><th>Droits</th></tr></thead>
             <tbody>
             {% for user in users %}
                 <tr>
-                    <td><a class="lnk" href="{{ path('app_profile', {username: user.account.username}) }}">@{{ user.account.username }}</a>{% if user.isAdmin() %} <span class="chip">Administrateur</span>{% endif %}</td>
-                    <td>{{ user.email }}</td>
-                    <td><time datetime="{{ user.createdAt|date('c') }}">{{ user.createdAt|format_date('short', locale: 'fr') }}</time></td>
+                    <td>
+                        <a class="lnk" href="{{ path('app_profile', {username: user.account.username}) }}">@{{ user.account.username }}</a>{% if user.isAdmin() %} <span class="chip">Administrateur</span>{% endif %}
+                        <span class="acct-meta small">{{ user.email }} · créé le <time datetime="{{ user.createdAt|date('c') }}">{{ user.createdAt|format_date('short', locale: 'fr') }}</time></span>
+                    </td>
+                    <td>
+                        <ul class="rights">
+                        {% for right in rights %}
+                            <li>
+                                <span>{{ right.label }}</span>
+                                {% if user.isAdmin() %}
+                                    <span class="small">Toujours</span>
+                                {% elseif right.value == 'import-instagram' and not user.canPublish() %}
+                                    <span class="small" title="L’import crée des publications : accordez d’abord la publication.">Nécessite la publication</span>
+                                {% else %}
+                                    <form method="post" action="{{ path('admin_account_right', {id: user.id, right: right.value}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('right-' ~ user.id) }}">
+                                        {% if user.isGranted(right) %}
+                                            <button class="btn sm done" name="allow" value="0" title="{{ right.label }} : retirer le droit à @{{ user.account.username }}">Autorisé · Retirer</button>
+                                        {% else %}
+                                            <button class="btn sm pri" name="allow" value="1" title="{{ right.label }} : autoriser @{{ user.account.username }}">Autoriser</button>
+                                        {% endif %}
+                                    </form>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
+        </div>
     </section>
 </div>
 {% endblock %}

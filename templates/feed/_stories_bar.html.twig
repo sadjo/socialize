@@ -2,16 +2,24 @@
 {% import '_macros.html.twig' as ui %}
 {% set me = app.user.account %}
 {% set own_group = null %}
+{% set can_publish = is_granted('ROLE_PUBLISHER') %}
 {% for group in story_groups %}{% if group.account.id == me.id %}{% set own_group = group %}{% endif %}{% endfor %}
 <div class="stories" role="list" aria-label="Stories">
+    {# Sans droit de publier : pas de bouton d'ajout (et rien du tout sans story à soi). #}
+    {% if can_publish or own_group %}
     <div class="st" role="listitem">
         {% if own_group %}
             <a href="{{ path('app_stories', {depuis: me.username}) }}" class="add-badge" aria-label="Voir votre story">{{ ui.ring(me, 62, own_group.fullySeen) }}</a>
         {% else %}
             <a href="{{ path('app_story_new') }}" class="add-badge" aria-label="Publier une story">{{ ui.ring(me, 62, true) }}<span class="plus" aria-hidden="true">+</span></a>
         {% endif %}
-        <a class="n" href="{{ path('app_story_new') }}">{{ own_group ? 'Ajouter' : 'Votre story' }}</a>
+        {% if can_publish %}
+            <a class="n" href="{{ path('app_story_new') }}">{{ own_group ? 'Ajouter' : 'Votre story' }}</a>
+        {% else %}
+            <span class="n">Votre story</span>
+        {% endif %}
     </div>
+    {% endif %}
     {% for group in story_groups %}
         {% if group.account.id != me.id %}
             <a class="st" role="listitem" href="{{ path('app_stories', {depuis: group.account.username}) }}" aria-label="Stories de {{ group.account.displayName }}{{ group.fullySeen ? ' (vues)' : '' }}">
