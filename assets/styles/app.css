@@ -719,6 +719,7 @@ label.act{cursor:pointer}
 
 /* Administration : comptes et droits */
 .accounts td{vertical-align:top}
+.accounts .acct-password{margin-top:8px}
 .accounts .acct-meta{display:block;margin-top:4px;overflow-wrap:anywhere}
 .form-group{display:flex;flex-direction:column;gap:16px}
 .chk.off{opacity:.5;cursor:not-allowed}
