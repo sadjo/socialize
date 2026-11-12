@@ -26,6 +26,7 @@ final class FakeSynologyPhotos
     public const int PHOTO_ANCIENNE = 503;
     /** Espace partagé. */
     public const int PHOTO_FAMILLE = 601;
+    public const int VIDEO_ANNIVERSAIRE = 602;
     public const int ALBUM_VACANCES = 7;
     /** Album de 61 photos : une page pleine (60), puis une seconde page d'une photo. */
     public const int ALBUM_LONG = 8;
@@ -109,6 +110,10 @@ final class FakeSynologyPhotos
             // qui n'est pas celui de l'élément.
             \in_array($api, ['SYNO.Foto.Thumbnail', 'SYNO.FotoTeam.Thumbnail'], true) && 'get' === $call && isset(self::items($team)[$id - self::UNIT_OFFSET]) && ($fields['cache_key'] ?? '') === $id.'_1700000000' => new MockResponse($this->jpeg(120, 160), ['response_headers' => ['content-type' => 'image/jpeg']]),
             \in_array($api, ['SYNO.Foto.Thumbnail', 'SYNO.FotoTeam.Thumbnail'], true) => new MockResponse('<html>Not found</html>', ['http_code' => 404, 'response_headers' => ['content-type' => 'text/html']]),
+            // Lecture : l'API de l'espace, « type=item », et une qualité parmi les conversions de la vidéo.
+            \in_array($api, ['SYNO.Foto.Streaming', 'SYNO.FotoTeam.Streaming'], true) && 'streaming' === $call && 'item' === ($fields['type'] ?? '')
+                && \in_array($fields['quality'] ?? '', $this->qualities($team, $id), true) => $this->playback($this->original($id), $this->header($options, 'range')),
+            \in_array($api, ['SYNO.Foto.Streaming', 'SYNO.FotoTeam.Streaming'], true) => new MockResponse('<html>Not found</html>', ['http_code' => 404, 'response_headers' => ['content-type' => 'text/html']]),
             \in_array($api, ['SYNO.Foto.Download', 'SYNO.FotoTeam.Download'], true) && 'download' === $call && isset(self::items($team)[$id]) => new MockResponse($this->original($id), ['response_headers' => ['content-type' => 'application/force-download']]),
             \in_array($api, ['SYNO.Foto.Download', 'SYNO.FotoTeam.Download'], true) => $this->error(117),
             default => $this->error(102),
@@ -122,9 +127,11 @@ final class FakeSynologyPhotos
     {
         return $team ? [
             self::PHOTO_FAMILLE => self::item(self::PHOTO_FAMILLE, 'photo', 'Repas de famille.JPG', '2026-08-15 13:05:00', 0),
+            // Vidéo encore sans version lisible (seulement « flv ») : pas de lecture dans l'aperçu.
+            self::VIDEO_ANNIVERSAIRE => self::item(self::VIDEO_ANNIVERSAIRE, 'video', 'Anniversaire.AVI', '2026-06-01 18:00:00', 0, duration: 3000, converted: ['flv']),
         ] : [
             self::PHOTO_PLAGE => self::item(self::PHOTO_PLAGE, 'photo', 'IMG_5001.jpg', '2026-11-09 17:30:00', 1, ['camera' => 'iPhone 16 Pro', 'lens' => 'iPhone 16 Pro back camera 6.86mm f/1.78'], ['latitude' => 48.6493, 'longitude' => -2.0257], ['city' => 'Saint-Malo', 'country' => 'France']),
-            self::VIDEO_PORT => self::item(self::VIDEO_PORT, 'video', 'VID_5002.mp4', '2026-11-08 09:10:00', 1, duration: 4000),
+            self::VIDEO_PORT => self::item(self::VIDEO_PORT, 'video', 'VID_5002.mp4', '2026-11-08 09:10:00', 1, duration: 4000, converted: ['high', 'flv']),
             self::PHOTO_ANCIENNE => self::item(self::PHOTO_ANCIENNE, 'photo', 'IMG_0003.jpg', '2025-05-01 12:00:00', 1),
         ];
     }
@@ -133,10 +140,11 @@ final class FakeSynologyPhotos
      * @param array<string, string> $exif
      * @param array<string, float>  $gps
      * @param array<string, string> $address
+     * @param list<string>          $converted versions converties d'une vidéo (« video_convert »)
      *
      * @return array<string, mixed>
      */
-    private static function item(int $id, string $type, string $name, string $taken, int $owner, array $exif = [], array $gps = [], array $address = [], int $duration = 0): array
+    private static function item(int $id, string $type, string $name, string $taken, int $owner, array $exif = [], array $gps = [], array $address = [], int $duration = 0, array $converted = []): array
     {
         return [
             'id' => $id, 'filename' => $name, 'filesize' => 120000, 'type' => $type, 'owner_user_id' => $owner, 'folder_id' => 12,
@@ -147,7 +155,7 @@ final class FakeSynologyPhotos
                 'exif' => $exif + ['aperture' => '', 'camera' => '', 'exposure_time' => '', 'focal_length' => '', 'iso' => '', 'lens' => ''],
                 'gps' => [] !== $gps ? $gps : null,
                 'address' => [] !== $address ? $address : null,
-            ] + ($duration > 0 ? ['video_meta' => ['duration' => $duration]] : []),
+            ] + ($duration > 0 ? ['video_meta' => ['duration' => $duration], 'video_convert' => array_map(static fn (string $q): array => ['quality' => $q, 'metadata' => []], $converted)] : []),
         ];
     }
 
@@ -201,6 +209,44 @@ final class FakeSynologyPhotos
         }
 
         return $this->json(['list' => \array_slice($items, (int) ($fields['offset'] ?? 0), (int) ($fields['limit'] ?? 100))]);
+    }
+
+    /**
+     * @return list<mixed> versions converties d'une vidéo
+     */
+    private function qualities(bool $team, int $id): array
+    {
+        $additional = self::items($team)[$id]['additional'] ?? null;
+        $converted = \is_array($additional) && \is_array($additional['video_convert'] ?? null) ? $additional['video_convert'] : [];
+
+        return array_values(array_map(static fn (mixed $c): mixed => \is_array($c) ? ($c['quality'] ?? null) : null, $converted));
+    }
+
+    private function playback(string $video, ?string $range): MockResponse
+    {
+        $size = \strlen($video);
+        if (null !== $range && preg_match('/^bytes=(\d+)-(\d*)$/', $range, $m)) {
+            $to = '' === $m[2] ? $size - 1 : min((int) $m[2], $size - 1);
+            $part = substr($video, (int) $m[1], $to - (int) $m[1] + 1);
+
+            return new MockResponse($part, ['http_code' => 206, 'response_headers' => [
+                'content-type' => 'video/mp4', 'content-length' => (string) \strlen($part), 'content-range' => \sprintf('bytes %d-%d/%d', $m[1], $to, $size),
+            ]]);
+        }
+
+        return new MockResponse($video, ['response_headers' => ['content-type' => 'video/mp4', 'content-length' => (string) $size]]);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function header(array $options, string $name): ?string
+    {
+        $headers = \is_array($options['normalized_headers'] ?? null) ? $options['normalized_headers'] : [];
+        $lines = $headers[$name] ?? [];
+        $line = \is_array($lines) ? ($lines[0] ?? null) : null;
+
+        return \is_string($line) ? trim(substr($line, \strlen($name) + 1)) : null;
     }
 
     private function original(int $id): string

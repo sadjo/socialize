@@ -102,7 +102,7 @@ final readonly class SynologyPhotosClient
             'limit' => (string) self::PAGE_SIZE,
             'sort_by' => 'takentime',
             'sort_direction' => 'desc',
-            'additional' => '["thumbnail","video_meta","address"]',
+            'additional' => '["thumbnail","video_meta","video_convert","address"]',
         ];
         if (null !== $albumId) {
             // Les albums se lisent par l'API de l'espace personnel, quel que soit l'espace de leurs médias.
@@ -154,11 +154,25 @@ final readonly class SynologyPhotosClient
      *
      * @param SynologyPhotosItem::PERSONAL|SynologyPhotosItem::TEAM $space
      */
-    public function thumbnail(string $server, string $session, string $space, string $cacheKey): ResponseInterface
+    public function thumbnail(string $server, string $session, string $space, string $cacheKey, string $size = 'sm'): ResponseInterface
     {
         return $this->binary($server, $session, [
-            'api' => $this->api($space, 'Thumbnail'), 'version' => '2', 'method' => 'get', 'id' => strstr($cacheKey, '_', true) ?: '0', 'cache_key' => $cacheKey, 'type' => 'unit', 'size' => 'sm',
+            'api' => $this->api($space, 'Thumbnail'), 'version' => '2', 'method' => 'get', 'id' => strstr($cacheKey, '_', true) ?: '0', 'cache_key' => $cacheKey, 'type' => 'unit', 'size' => $size,
         ]);
+    }
+
+    /**
+     * Version convertie d'une vidéo (voir SynologyPhotosItem::STREAM_QUALITIES), à relayer telle quelle. Chaque
+     * espace a son API ; « type=item » désigne l'élément lui-même (« unit » attendrait l'identifiant d'unité).
+     *
+     * @param SynologyPhotosItem::PERSONAL|SynologyPhotosItem::TEAM $space
+     * @param array<string, string>                                 $headers en-têtes à transmettre (plage demandée)
+     */
+    public function stream(string $server, string $session, string $space, int $id, string $quality, array $headers = []): ResponseInterface
+    {
+        return $this->binary($server, $session, [
+            'api' => $this->api($space, 'Streaming'), 'version' => '2', 'method' => 'streaming', 'id' => (string) $id, 'type' => 'item', 'quality' => $quality,
+        ], ['headers' => $headers, 'timeout' => 60, 'max_duration' => 3600]);
     }
 
     /**

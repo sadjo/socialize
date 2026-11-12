@@ -11,6 +11,8 @@ use App\Integration\SynologyPhotos\Application\SynologyPhotosItem;
 use App\Integration\SynologyPhotos\Domain\SynologyPhotosConnection;
 use App\Integration\SynologyPhotos\Infrastructure\SynologyPhotosClient;
 use App\Web\Form\SynologyPhotosSettingsType;
+use App\Web\Http\ReleaseSession;
+use App\Web\Http\UpstreamRelay;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -84,6 +86,7 @@ final class SynologyPhotosController extends AbstractController
      * Une page d'un espace (ou d'un album), pour la source Synology Photos de la création d'une publication ou d'une story.
      */
     #[Route('/synology-photos/phototheque', name: 'app_synology_photos_library', methods: ['GET'])]
+    #[ReleaseSession]
     public function library(Request $request): Response
     {
         $connection = $this->connection();
@@ -127,30 +130,67 @@ final class SynologyPhotosController extends AbstractController
      * Vignette d'un média, relayée par le serveur : la session DSM ne quitte jamais Socialize.
      */
     #[Route('/synology-photos/apercu/{space}/{cacheKey}', name: 'app_synology_photos_thumbnail', requirements: ['space' => '[pt]', 'cacheKey' => '\d{1,18}_\d{1,18}'], methods: ['GET'])]
+    #[ReleaseSession]
     public function thumbnail(string $space, string $cacheKey): StreamedResponse
     {
-        $space = SynologyPhotosItem::TEAM === $space ? SynologyPhotosItem::TEAM : SynologyPhotosItem::PERSONAL;
+        return $this->image($space, $cacheKey, 'sm');
+    }
+
+    /**
+     * Image en grand d'un média, pour l'aperçu de la création.
+     */
+    #[Route('/synology-photos/grand/{space}/{cacheKey}', name: 'app_synology_photos_preview', requirements: ['space' => '[pt]', 'cacheKey' => '\d{1,18}_\d{1,18}'], methods: ['GET'])]
+    #[ReleaseSession]
+    public function preview(string $space, string $cacheKey): StreamedResponse
+    {
+        return $this->image($space, $cacheKey, 'xl');
+    }
+
+    /**
+     * Version convertie d'une vidéo, relayée par le serveur (lecture et déplacement par plages), pour l'aperçu.
+     */
+    #[Route('/synology-photos/video/{space}/{id}/{quality}', name: 'app_synology_photos_video', requirements: ['space' => '[pt]', 'id' => '\d{1,18}', 'quality' => '[a-z0-9_]{1,20}'], methods: ['GET'])]
+    #[ReleaseSession]
+    public function video(string $space, int $id, string $quality, Request $request): StreamedResponse
+    {
+        if (!\in_array($quality, SynologyPhotosItem::STREAM_QUALITIES, true)) {
+            throw new NotFoundHttpException('Version de vidéo inconnue.');
+        }
         $connection = $this->connection();
         try {
             [$server, $session] = $this->connections->session($connection);
-            $upstream = $this->client->thumbnail($server, $session, $space, $cacheKey);
+            $upstream = $this->client->stream($server, $session, $this->space($space), $id, $quality, UpstreamRelay::rangeHeaders($request));
         } catch (SynologyPhotosException $e) {
             $this->connections->noteFailure($connection, $e);
-            throw new NotFoundHttpException('Vignette introuvable dans Synology Photos.', $e);
+            throw new NotFoundHttpException('Vidéo introuvable dans Synology Photos.', $e);
         }
-        $type = $upstream->getHeaders(false)['content-type'][0] ?? 'image/jpeg';
-        $chunks = $this->client->chunks($upstream);
 
-        $response = new StreamedResponse(static function () use ($chunks): void {
-            foreach ($chunks as $chunk) {
-                echo $chunk;
-                flush();
-            }
-        }, headers: ['Content-Type' => str_starts_with($type, 'image/') ? $type : 'image/jpeg']);
-        $response->setPrivate();
-        $response->setMaxAge(86400);
+        return UpstreamRelay::respond($upstream, $this->client->chunks($upstream), 'video/', 'video/mp4', 3600);
+    }
 
-        return $response;
+    /**
+     * @param 'sm'|'xl' $size
+     */
+    private function image(string $space, string $cacheKey, string $size): StreamedResponse
+    {
+        $connection = $this->connection();
+        try {
+            [$server, $session] = $this->connections->session($connection);
+            $upstream = $this->client->thumbnail($server, $session, $this->space($space), $cacheKey, $size);
+        } catch (SynologyPhotosException $e) {
+            $this->connections->noteFailure($connection, $e);
+            throw new NotFoundHttpException('Image introuvable dans Synology Photos.', $e);
+        }
+
+        return UpstreamRelay::respond($upstream, $this->client->chunks($upstream), 'image/', 'image/jpeg');
+    }
+
+    /**
+     * @return SynologyPhotosItem::PERSONAL|SynologyPhotosItem::TEAM
+     */
+    private function space(string $space): string
+    {
+        return SynologyPhotosItem::TEAM === $space ? SynologyPhotosItem::TEAM : SynologyPhotosItem::PERSONAL;
     }
 
     private function connection(): SynologyPhotosConnection

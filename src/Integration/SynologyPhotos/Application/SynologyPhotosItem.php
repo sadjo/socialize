@@ -15,9 +15,16 @@ final readonly class SynologyPhotosItem
     public const string TEAM = 't';
 
     /**
+     * Versions converties d'une vidéo lisibles par un navigateur (H.264 en MP4), de la plus légère à la plus lourde :
+     * l'aperçu prend la première disponible. « flv » n'est pas lisible.
+     */
+    public const array STREAM_QUALITIES = ['medium', 'low', 'high', 'orig_h264', 'orig_mp4', 'convert_mp4'];
+
+    /**
      * @param self::PERSONAL|self::TEAM $space
-     * @param ?string                   $cacheKey clé de la vignette (demandée par l'API des vignettes)
-     * @param array<string, string>     $exif     métadonnées gardées dans l'original publié
+     * @param ?string                   $cacheKey      clé de la vignette (demandée par l'API des vignettes)
+     * @param array<string, string>     $exif          métadonnées gardées dans l'original publié
+     * @param ?string                   $streamQuality version convertie lue dans l'aperçu (vidéo ; null : aucune)
      */
     public function __construct(
         public int $id,
@@ -30,6 +37,7 @@ final readonly class SynologyPhotosItem
         public ?string $cacheKey,
         public ?string $place,
         public array $exif,
+        public ?string $streamQuality = null,
     ) {
     }
 
@@ -45,6 +53,7 @@ final readonly class SynologyPhotosItem
         $exif = \is_array($additional['exif'] ?? null) ? $additional['exif'] : [];
         $gps = \is_array($additional['gps'] ?? null) ? $additional['gps'] : [];
         $address = \is_array($additional['address'] ?? null) ? $additional['address'] : [];
+        $converted = array_column(array_filter(\is_array($additional['video_convert'] ?? null) ? $additional['video_convert'] : [], \is_array(...)), 'quality');
         $string = static fn (array $d, string $k): ?string => \is_scalar($d[$k] ?? null) && '' !== trim((string) $d[$k]) ? trim((string) $d[$k]) : null;
 
         $kept = [];
@@ -76,6 +85,7 @@ final readonly class SynologyPhotosItem
             cacheKey: \is_string($thumbnail['cache_key'] ?? null) && preg_match('/^\d+_\d+$/', $thumbnail['cache_key']) ? $thumbnail['cache_key'] : null,
             place: '' !== $place ? $place : null,
             exif: $kept,
+            streamQuality: array_find(self::STREAM_QUALITIES, static fn (string $quality): bool => \in_array($quality, $converted, true)),
         );
     }
 

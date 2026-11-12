@@ -18,8 +18,8 @@
     </label>
 </div>
 {% if immich %}
-    <div class="imm-source" data-compose-target="librarySource" data-source-name="immich" data-library-url="{{ path('app_immich_library') }}" hidden>
-        <p class="small">Photothèque Immich · touchez une photo pour l’ajouter ou la retirer.</p>
+    <div class="imm-source" data-controller="library-preview" data-compose-target="librarySource" data-source-name="immich" data-library-url="{{ path('app_immich_library') }}" hidden>
+        <p class="small">Photothèque Immich · touchez une photo pour la voir en grand, ou son rond pour la choisir.</p>
         <div class="row wrap imm-filters">
             <label class="sr-only" for="immich-album">Album</label>
             <select id="immich-album" class="inp sm grow" data-library-album data-action="change->compose#filterLibrary">
@@ -40,8 +40,8 @@
     </div>
 {% endif %}
 {% if synology %}
-    <div class="imm-source" data-compose-target="librarySource" data-source-name="synology" data-library-url="{{ path('app_synology_photos_library') }}" hidden>
-        <p class="small">Synology Photos · touchez une photo pour l’ajouter ou la retirer.</p>
+    <div class="imm-source" data-controller="library-preview" data-compose-target="librarySource" data-source-name="synology" data-library-url="{{ path('app_synology_photos_library') }}" hidden>
+        <p class="small">Synology Photos · touchez une photo pour la voir en grand, ou son rond pour la choisir.</p>
         <div class="row wrap imm-filters">
             <label class="sr-only" for="synology-album">Album</label>
             <select id="synology-album" class="inp sm grow" data-library-album data-action="change->compose#filterLibrary">

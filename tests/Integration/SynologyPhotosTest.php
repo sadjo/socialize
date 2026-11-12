@@ -46,7 +46,7 @@ final class SynologyPhotosTest extends AppWebTestCase
         ]));
         self::assertResponseRedirects('/reglages/synology-photos');
         $this->client->followRedirect();
-        self::assertSelectorTextContains('main', 'Synology Photos connecté (camille) : 3 éléments dans l’espace personnel, 1 dans l’espace partagé, 1 album.');
+        self::assertSelectorTextContains('main', 'Synology Photos connecté (camille) : 3 éléments dans l’espace personnel, 2 dans l’espace partagé, 1 album.');
         self::assertSelectorTextContains('.zip', 'Connecté');
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringNotContainsString(FakeSynologyPhotos::PASSWORD, $html, 'Le mot de passe n’est jamais réaffiché.');
@@ -110,18 +110,28 @@ final class SynologyPhotosTest extends AppWebTestCase
         // Espace personnel, du plus récent au plus ancien, regroupé par jour (heures du NAS affichées telles quelles).
         $crawler = $this->client->request('GET', '/synology-photos/phototheque');
         self::assertResponseIsSuccessful();
-        self::assertSame(['s-p-501', 's-p-502', 's-p-503'], $crawler->filter('.imm-tile')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-p-501', 's-p-502', 's-p-503'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
         self::assertSelectorTextContains('.imm-day', 'Lundi 9 novembre 2026 · Saint-Malo, France');
-        self::assertStringContainsString('17:30', (string) $crawler->filter('.imm-tile')->first()->attr('aria-label'));
+        self::assertStringContainsString('17:30', (string) $crawler->filter('.imm-tile .imm-open')->first()->attr('aria-label'));
         self::assertSame('/synology-photos/apercu/p/9501_1700000000', $crawler->filter('.imm-tile img')->first()->attr('src'));
 
         // Espace partagé.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?espace=t');
-        self::assertSame(['s-t-601'], $crawler->filter('.imm-tile')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-t-601', 's-t-602'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+
+        // Aperçu : image en grand ; vidéo seulement si le NAS en a une version lisible.
+        $tile = $crawler->filter('.imm-tile')->eq(1);
+        self::assertSame('/synology-photos/grand/t/9602_1700000000', $tile->attr('data-preview-image'));
+        self::assertSame('video', $tile->attr('data-preview-kind'));
+        self::assertNull($tile->attr('data-preview-video'), 'Seulement « flv » : pas de lecture.');
+        $crawler = $this->client->request('GET', '/synology-photos/phototheque');
+        $video = $crawler->filter('.imm-tile')->eq(1);
+        self::assertSame('/synology-photos/video/p/502/high', $video->attr('data-preview-video'), 'La plus légère des versions lisibles.');
+        self::assertNull($crawler->filter('.imm-tile')->first()->attr('data-preview-video'));
 
         // Un album mêle les deux espaces : chaque média garde le sien.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?album='.FakeSynologyPhotos::ALBUM_VACANCES);
-        self::assertSame(['s-p-501', 's-t-601'], $crawler->filter('.imm-tile')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-p-501', 's-t-601'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
 
         // Plus d'une page : la suite se charge au défilement (contrôleur library-more), ou par le lien du cadre.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?album='.FakeSynologyPhotos::ALBUM_LONG);
@@ -135,12 +145,30 @@ final class SynologyPhotosTest extends AppWebTestCase
 
         // Aller à une date : ce jour-là ou avant.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?date=2026-11-08');
-        self::assertSame(['s-p-502', 's-p-503'], $crawler->filter('.imm-tile')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-p-502', 's-p-503'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
 
         // Vignette relayée ; l'identifiant de session part dans le corps de la requête, jamais dans l'adresse.
         $this->client->request('GET', '/synology-photos/apercu/t/9601_1700000000');
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('Content-Type', 'image/jpeg');
+        $this->client->request('GET', '/synology-photos/grand/t/9601_1700000000');
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'image/jpeg');
+        self::assertSame('xl', array_last(FakeSynologyPhotos::requestsTo('SYNO.FotoTeam.Thumbnail', 'get'))['size'] ?? null);
+
+        // Vidéo relayée par plages, par l'API de lecture de son espace ; version inconnue ou absente : rien.
+        $this->client->request('GET', '/synology-photos/video/p/502/high', server: ['HTTP_RANGE' => 'bytes=0-99']);
+        self::assertResponseStatusCodeSame(206);
+        self::assertResponseHeaderSame('Content-Type', 'video/mp4');
+        self::assertResponseHeaderSame('Content-Length', '100');
+        self::assertResponseHeaderSame('Accept-Ranges', 'bytes', 'Ajouté : le NAS ne l’envoie pas avec une réponse partielle.');
+        $stream = array_last(FakeSynologyPhotos::requestsTo('SYNO.Foto.Streaming', 'streaming'));
+        self::assertSame(['item', 'high'], [$stream['type'] ?? null, $stream['quality'] ?? null]);
+        foreach (['/synology-photos/video/p/502/medium', '/synology-photos/video/t/602/flv', '/synology-photos/video/p/502/inconnue'] as $wrong) {
+            $this->client->request('GET', $wrong);
+            self::assertResponseStatusCodeSame(404, $wrong);
+        }
+
         // Mauvais espace, ou identifiant de l'élément au lieu de celui de l'unité : le NAS ne trouve rien.
         foreach (['/synology-photos/apercu/p/9601_1700000000', '/synology-photos/apercu/t/601_1700000000'] as $wrong) {
             $this->client->request('GET', $wrong);
@@ -250,7 +278,7 @@ final class SynologyPhotosTest extends AppWebTestCase
     {
         $this->register('alice');
         $this->login($this->register('hugo', publisher: false));
-        foreach (['/reglages/synology-photos', '/synology-photos/phototheque', '/synology-photos/apercu/p/9501_1700000000'] as $page) {
+        foreach (['/reglages/synology-photos', '/synology-photos/phototheque', '/synology-photos/apercu/p/9501_1700000000', '/synology-photos/grand/p/9501_1700000000', '/synology-photos/video/p/502/high'] as $page) {
             $this->client->request('GET', $page);
             self::assertResponseStatusCodeSame(403, $page);
         }

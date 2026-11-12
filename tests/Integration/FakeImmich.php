@@ -25,7 +25,7 @@ final class FakeImmich
     /** Serveur injoignable (erreur réseau). */
     public static bool $down = false;
 
-    /** @var list<array{method: string, path: string, body: array<string, mixed>}> */
+    /** @var list<array{method: string, path: string, body: array<string, mixed>, query: array<string, mixed>, range: ?string}> */
     public static array $requests = [];
 
     /** @var array<string, array{name: string, assets: list<string>}> */
@@ -41,7 +41,7 @@ final class FakeImmich
     }
 
     /**
-     * @return list<array{method: string, path: string, body: array<string, mixed>}>
+     * @return list<array{method: string, path: string, body: array<string, mixed>, query: array<string, mixed>, range: ?string}>
      */
     public static function requestsTo(string $method, string $pathPattern): array
     {
@@ -60,7 +60,9 @@ final class FakeImmich
         $decoded = \is_string($options['body'] ?? null) ? json_decode($options['body'], true) : null;
         /** @var array<string, mixed> $body */
         $body = \is_array($decoded) ? $decoded : [];
-        self::$requests[] = ['method' => $method, 'path' => $path, 'body' => $body];
+        parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
+        $range = $this->header($options, 'range');
+        self::$requests[] = ['method' => $method, 'path' => $path, 'body' => $body, 'query' => array_filter($query, \is_string(...), \ARRAY_FILTER_USE_KEY), 'range' => $range];
 
         if (!str_starts_with($url, self::SERVER.'/api/')) {
             return new MockResponse('', ['error' => 'Hôte inconnu']);
@@ -83,6 +85,8 @@ final class FakeImmich
             'POST' === $method && '/search/metadata' === $path => $this->search($body),
             'GET' === $method && (bool) preg_match('#^/assets/([^/]+)$#', $path, $m) && isset(self::assets()[$m[1]]) => $this->json(self::assets()[$m[1]]),
             'GET' === $method && (bool) preg_match('#^/assets/([^/]+)/thumbnail$#', $path, $m) && isset(self::assets()[$m[1]]) => new MockResponse($this->jpeg(120, 120), ['response_headers' => ['content-type' => 'image/jpeg']]),
+            // Vidéo lisible, par plages comme Immich.
+            'GET' === $method && (bool) preg_match('#^/assets/([^/]+)/video/playback$#', $path, $m) && 'VIDEO' === (self::assets()[$m[1]]['type'] ?? null) => $this->playback($this->original($m[1]), $range),
             'GET' === $method && (bool) preg_match('#^/assets/([^/]+)/original$#', $path, $m) && isset(self::assets()[$m[1]]) => new MockResponse($this->original($m[1]), ['response_headers' => ['content-type' => 'application/octet-stream']]),
             default => $this->json(['message' => 'Not found'], 404),
         };
@@ -158,6 +162,21 @@ final class FakeImmich
         }
 
         return $this->json([]);
+    }
+
+    private function playback(string $video, ?string $range): MockResponse
+    {
+        $size = \strlen($video);
+        if (null !== $range && preg_match('/^bytes=(\d+)-(\d*)$/', $range, $m)) {
+            $to = '' === $m[2] ? $size - 1 : min((int) $m[2], $size - 1);
+            $part = substr($video, (int) $m[1], $to - (int) $m[1] + 1);
+
+            return new MockResponse($part, ['http_code' => 206, 'response_headers' => [
+                'content-type' => 'video/mp4', 'accept-ranges' => 'bytes', 'content-length' => (string) \strlen($part), 'content-range' => \sprintf('bytes %d-%d/%d', $m[1], $to, $size),
+            ]]);
+        }
+
+        return new MockResponse($video, ['response_headers' => ['content-type' => 'video/mp4', 'accept-ranges' => 'bytes', 'content-length' => (string) $size]]);
     }
 
     private function original(string $id): string
