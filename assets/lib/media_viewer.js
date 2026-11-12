@@ -3,7 +3,7 @@ import { setSound, soundOn } from './sound.js';
 /*
  * Visionneuse plein écran des écrans de création : une suite de médias, vue un par un (flèches, clavier,
  * balayage), avec la date et le lieu en bas. Sert à la liste d'une photothèque (Immich, Synology Photos ;
- * bouton « Choisir ») et aux médias déjà choisis pour la publication ou la story.
+ * bouton « Choisir ») et aux médias déjà choisis pour la publication ou la story (bouton « Retirer »).
  *
  * Un média (« entrée ») : { thumb, image, video, label, details, note } ; thumb s'affiche aussitôt, agrandi,
  * puis image le remplace une fois prête ; video, si présent, est lu à la place.
@@ -34,13 +34,15 @@ export class MediaViewer {
      * @param {function} options.entries  liste des entrées, relue à chaque passage (elle peut s'allonger)
      * @param {number}   options.index    entrée affichée d'abord
      * @param {object}   [options.select] bouton « Choisir » : { chosen(index), toggle(index) → message d'erreur ou '' }
+     * @param {function} [options.remove] bouton « Retirer » : retire l'entrée (la liste raccourcit)
      * @param {function} [options.onShow] appelé avec l'index affiché
      * @param {function} [options.onClose]
      */
-    constructor({ entries, index, select = null, onShow = () => {}, onClose = () => {} }) {
+    constructor({ entries, index, select = null, remove = null, onShow = () => {}, onClose = () => {} }) {
         this.entries = entries;
         this.index = index;
         this.select = select;
+        this.remove = remove;
         this.onShow = onShow;
         this.onClose = onClose;
     }
@@ -69,6 +71,7 @@ export class MediaViewer {
             <div class="lb-bar">
                 <div class="lb-info"><b class="lb-label"></b><span class="lb-details"></span><span class="lb-note" role="status"></span></div>
                 ${this.select ? '<button type="button" class="btn lb-select" aria-pressed="false"></button>' : ''}
+                ${this.remove ? '<button type="button" class="btn lb-remove"><svg class="i xs" aria-hidden="true"><use href="#i-trash"/></svg>Retirer</button>' : ''}
             </div>`;
 
         dialog.addEventListener('click', (e) => {
@@ -76,6 +79,7 @@ export class MediaViewer {
             else if (e.target.closest('.lb-prev')) this.go(-1);
             else if (e.target.closest('.lb-next')) this.go(1);
             else if (e.target.closest('.lb-select')) this.toggle();
+            else if (e.target.closest('.lb-remove')) this.removeCurrent();
         });
         dialog.addEventListener('keydown', (e) => {
             // Les flèches restent à la vidéo quand elle a le focus (avance et recul).
@@ -175,6 +179,16 @@ export class MediaViewer {
         button.setAttribute('aria-pressed', String(chosen));
         button.classList.toggle('pri', !chosen);
         button.innerHTML = chosen ? '<svg class="i xs" aria-hidden="true"><use href="#i-check"/></svg>Choisie · Retirer' : 'Choisir';
+    }
+
+    // Retire le média affiché ; la visionneuse passe au suivant (au précédent s'il était le dernier), ou se ferme.
+    removeCurrent() {
+        if (!this.remove) return;
+        this.remove(this.index);
+        const count = this.entries().length;
+        if (count === 0) { this.close(); return; }
+        this.index = Math.min(this.index, count - 1);
+        this.render();
     }
 
     toggle() {

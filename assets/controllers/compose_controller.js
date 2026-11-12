@@ -133,6 +133,8 @@ export default class extends Controller {
         this.viewer = new MediaViewer({
             entries: () => this.items.map((item, i) => this.entry(item, i)),
             index: Number(event.currentTarget.dataset.index),
+            // Même effet que ✕ sous l'aperçu.
+            remove: (i) => this.removeAt(i),
             onClose: (i) => {
                 this.viewer = null;
                 this.previewsTarget.querySelectorAll('.preview')[i]?.querySelector('.imm-zoom')?.focus({ preventScroll: true });
@@ -165,7 +167,11 @@ export default class extends Controller {
     }
 
     remove(event) {
-        const item = this.items.splice(Number(event.currentTarget.dataset.index), 1)[0];
+        this.removeAt(Number(event.currentTarget.dataset.index));
+    }
+
+    removeAt(index) {
+        const item = this.items.splice(index, 1)[0];
         if (item?.url) URL.revokeObjectURL(item.url);
         this.render();
     }

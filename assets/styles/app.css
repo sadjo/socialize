@@ -667,6 +667,8 @@ label.act{cursor:pointer}
 .lb-info .lb-note:not(:empty){font-size:.8rem;color:oklch(0.88 0.12 75)}
 .lb-select{flex:none;min-width:120px}
 .lb-select:not(.pri){background:oklch(1 0 0 / .14);color:#fff;border-color:oklch(1 0 0 / .3)}
+.lb-remove{flex:none;background:oklch(1 0 0 / .14);color:#fff;border-color:oklch(1 0 0 / .3)}
+.lb-remove:hover{background:oklch(0.55 0.2 25 / .85);border-color:transparent}
 @media (max-width:767px){.lb-stage{padding-inline:0}.lb-media{border-radius:0}.lb-prev,.lb-next{display:none}}
 
 
