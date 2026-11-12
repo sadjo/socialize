@@ -145,7 +145,7 @@ final class AccountRightsTest extends AppWebTestCase
         // L'administrateur l'accorde dans la colonne « Import Instagram ».
         $this->login($admin);
         $crawler = $this->client->request('GET', '/admin/comptes');
-        self::assertSelectorTextContains('table.accounts thead', 'Import Instagram');
+        self::assertSelectorTextContains('table.accounts .rights', 'Import Instagram');
         $importForm = $crawler->filter(\sprintf('form[action="/admin/comptes/%s/droits/import-instagram"]', $hugo->getId()->toRfc4122()));
         self::assertCount(1, $importForm);
         $this->client->submit($importForm->selectButton('Autoriser')->form());

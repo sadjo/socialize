@@ -691,6 +691,13 @@ label.act{cursor:pointer}
 .chip.invite-pending{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .chip.invite-used{color:var(--ok)}
 
+/* Administration : comptes et droits */
+.accounts td{vertical-align:top}
+.accounts .acct-meta{display:block;margin-top:4px;overflow-wrap:anywhere}
+.rights{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rights li{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:30px}
+.rights li>span:first-child{font-weight:600}
+
 /* Menu complet sur mobile (bouton « Menu » de la barre du haut) : fenêtre au centre, comme les autres */
 .mobile-menu{border:0;padding:0;background:transparent;width:min(360px,calc(100vw - 32px));color:var(--fg)}
 .mobile-menu::backdrop{background:oklch(0.15 0.02 285 / .55);backdrop-filter:blur(4px)}
