@@ -8,9 +8,9 @@ use App\Core\Application\Social\AudienceGroups;
 use App\Core\Domain\Account\User;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\AudienceGroup;
-use App\Integration\Immich\Application\ImmichPublisher;
 use App\Integration\Openverse\Application\MusicLibrary;
 use App\Integration\Openverse\Application\OpenverseException;
+use App\Media\Application\Library\LibraryPublisher;
 use App\Media\Application\MediaProcessingException;
 use App\Web\Form\ComposePostType;
 use App\Web\Security\CurrentAccount;
@@ -26,7 +26,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ComposeController extends AbstractController
 {
     #[Route('/publier', name: 'app_compose', methods: ['GET', 'POST'])]
-    public function __invoke(Request $request, ImmichPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
+    public function __invoke(Request $request, LibraryPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
     {
         $form = $this->createForm(ComposePostType::class, options: ['groups' => $groups->of($currentAccount->require())]);
         $form->handleRequest($request);

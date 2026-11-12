@@ -17,9 +17,9 @@ use App\Core\Domain\Story\Story;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
-use App\Integration\Immich\Application\ImmichPublisher;
 use App\Integration\Openverse\Application\MusicLibrary;
 use App\Integration\Openverse\Application\OpenverseException;
+use App\Media\Application\Library\LibraryPublisher;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\StoryComposer;
 use App\Web\Form\ComposeStoryType;
@@ -54,7 +54,7 @@ final class StoryController extends AbstractController
 
     #[Route('/stories/nouvelle', name: 'app_story_new', methods: ['GET', 'POST'])]
     #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
-    public function new(Request $request, ImmichPublisher $publisher, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
+    public function new(Request $request, LibraryPublisher $publisher, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
     {
         $account = $this->currentAccount->require();
         $form = $this->createForm(ComposeStoryType::class, options: ['highlights' => $this->highlights->forAccount($account), 'groups' => $groups->of($account)]);
