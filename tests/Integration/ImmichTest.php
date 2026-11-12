@@ -77,13 +77,19 @@ final class ImmichTest extends AppWebTestCase
         self::assertSelectorExists('.src-tabs button[data-compose-source-param="immich"]');
         self::assertSelectorTextContains('#immich-album', 'Normandie (2)');
         self::assertSelectorExists('.imm-source input[type="date"][data-action*="filterLibrary"]');
+        self::assertSelectorExists('.imm-source[data-controller="library-preview"]');
 
         $this->client->request('GET', '/immich/phototheque', server: ['HTTP_TURBO_FRAME' => 'immich-library']);
         self::assertSelectorExists('turbo-frame#immich-library:not([src])');
         self::assertSelectorCount(3, '.imm-tile');
         self::assertSelectorTextContains('.imm-day', 'Lundi 9 novembre 2026 · Honfleur, France');
-        self::assertSelectorExists('.imm-tile[data-compose-id-param="'.FakeImmich::VIDEO_LAC.'"] .gi');
-        self::assertSelectorTextContains('.imm-tile[data-compose-id-param="'.FakeImmich::VIDEO_LAC.'"] .gi', '0:04');
+        $video = '.imm-tile[data-preview-video="/immich/video/'.FakeImmich::VIDEO_LAC.'"]';
+        self::assertSelectorExists($video.' .imm-pick .gi');
+        self::assertSelectorTextContains($video.' .gi', '0:04');
+        self::assertSelectorExists($video.' .imm-pick[data-compose-token-param="i-'.FakeImmich::VIDEO_LAC.'"][data-action="compose#toggleLibrary"]', 'Toucher la vignette la choisit.');
+        $photo = '.imm-tile[data-preview-image="/immich/grand/'.FakeImmich::PHOTO_ETRETAT.'"]';
+        self::assertSelectorExists($photo.'[data-preview-thumb="/immich/apercu/'.FakeImmich::PHOTO_ETRETAT.'"]:not([data-preview-video])');
+        self::assertSelectorExists($photo.' .imm-zoom[data-action="library-preview#open"]', 'La loupe ouvre l’aperçu.');
 
         $this->client->request('GET', '/immich/phototheque?album='.FakeImmich::ALBUM_NORMANDIE);
         self::assertSelectorCount(2, '.imm-tile');
@@ -92,7 +98,7 @@ final class ImmichTest extends AppWebTestCase
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08');
         self::assertSelectorCount(2, '.imm-tile');
         self::assertSelectorTextContains('.imm-day', 'Dimanche 8 novembre 2026');
-        self::assertSelectorNotExists('.imm-tile[data-compose-id-param="'.FakeImmich::PHOTO_HONFLEUR.'"]');
+        self::assertSelectorNotExists('.imm-pick[data-compose-token-param="i-'.FakeImmich::PHOTO_HONFLEUR.'"]');
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08&album='.FakeImmich::ALBUM_NORMANDIE);
         self::assertSelectorCount(1, '.imm-tile');
         $this->client->request('GET', '/immich/phototheque?date=2026-01-01');
@@ -103,10 +109,28 @@ final class ImmichTest extends AppWebTestCase
         $this->client->request('GET', '/immich/apercu/'.FakeImmich::PHOTO_ETRETAT);
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('Content-Type', 'image/jpeg');
+        self::assertSame('thumbnail', FakeImmich::requestsTo('GET', '#/thumbnail$#')[0]['query']['size'] ?? null);
+
+        // Aperçu : image en grand, et vidéo lue par plages (relayée telle quelle).
+        $this->client->request('GET', '/immich/grand/'.FakeImmich::PHOTO_ETRETAT);
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'image/jpeg');
+        self::assertSame('preview', array_last(FakeImmich::requestsTo('GET', '#/thumbnail$#'))['query']['size'] ?? null);
+        $this->client->request('GET', '/immich/video/'.FakeImmich::VIDEO_LAC, server: ['HTTP_RANGE' => 'bytes=0-99']);
+        self::assertResponseStatusCodeSame(206);
+        self::assertResponseHeaderSame('Content-Type', 'video/mp4');
+        self::assertResponseHeaderSame('Content-Length', '100');
+        self::assertMatchesRegularExpression('#^bytes 0-99/\d+$#', (string) $this->client->getResponse()->headers->get('Content-Range'));
+        self::assertSame('bytes=0-99', array_last(FakeImmich::requestsTo('GET', '#/video/playback$#'))['range'] ?? null);
+        $this->client->request('GET', '/immich/video/'.FakeImmich::VIDEO_LAC);
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Accept-Ranges', 'bytes');
 
         $this->login($this->register('hugo'));
-        $this->client->request('GET', '/immich/apercu/'.FakeImmich::PHOTO_ETRETAT);
-        self::assertResponseStatusCodeSame(404, 'Sans connexion Immich, aucune vignette.');
+        foreach (['/immich/apercu/', '/immich/grand/', '/immich/video/'] as $page) {
+            $this->client->request('GET', $page.FakeImmich::PHOTO_ETRETAT);
+            self::assertResponseStatusCodeSame(404, 'Sans connexion Immich, rien : '.$page);
+        }
         $this->client->request('GET', '/publier');
         self::assertSelectorNotExists('.src-tabs');
     }

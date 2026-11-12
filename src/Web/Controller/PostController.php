@@ -159,6 +159,9 @@ final class PostController extends AbstractController
             $existing[] = [
                 'token' => $token,
                 'src' => $urls->derivative($media, MediaAttachment::DERIVATIVE_THUMB) ?? $urls->derivative($media, MediaAttachment::DERIVATIVE_LARGE),
+                // Loupe de l'aperçu : copie en grand (affiche pour une vidéo) et vidéo.
+                'large' => $urls->derivative($media, $media->isVideo() ? MediaAttachment::DERIVATIVE_POSTER : MediaAttachment::DERIVATIVE_LARGE),
+                'videoSrc' => $media->isVideo() ? $urls->derivative($media, MediaAttachment::DERIVATIVE_VIDEO) : null,
                 'video' => $media->isVideo(),
                 'alt' => $media->getAltText(),
             ];

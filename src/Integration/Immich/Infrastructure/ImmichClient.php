@@ -96,11 +96,24 @@ final readonly class ImmichClient
     }
 
     /**
-     * Vignette d'un média, à relayer telle quelle (la clé reste sur le serveur).
+     * Vignette d'un média, à relayer telle quelle (la clé reste sur le serveur). « preview » : image en grand,
+     * pour l'aperçu.
+     *
+     * @param 'thumbnail'|'preview' $size
      */
-    public function thumbnail(string $server, string $key, string $id): ResponseInterface
+    public function thumbnail(string $server, string $key, string $id, string $size = 'thumbnail'): ResponseInterface
     {
-        return $this->send('GET', $server, $key, '/assets/'.rawurlencode($id).'/thumbnail', ['query' => ['size' => 'thumbnail']]);
+        return $this->send('GET', $server, $key, '/assets/'.rawurlencode($id).'/thumbnail', ['query' => ['size' => $size]]);
+    }
+
+    /**
+     * Vidéo lisible par un navigateur (version convertie par Immich, ou l'original), à relayer telle quelle.
+     *
+     * @param array<string, string> $headers en-têtes à transmettre (plage demandée)
+     */
+    public function playback(string $server, string $key, string $id, array $headers = []): ResponseInterface
+    {
+        return $this->send('GET', $server, $key, '/assets/'.rawurlencode($id).'/video/playback', ['headers' => $headers, 'timeout' => 60, 'max_duration' => 3600]);
     }
 
     /**

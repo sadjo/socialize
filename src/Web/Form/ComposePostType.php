@@ -25,7 +25,7 @@ final class ComposePostType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            // Ordre des médias : « n-<i> » pour le i-ème fichier de l'appareil, « i-<id> » pour un média Immich.
+            // Ordre des médias : « n-<i> » pour le i-ème fichier de l'appareil, « i-<id> » pour un média Immich, « s-<espace>-<id> » pour Synology Photos.
             ->add('order', HiddenType::class, [
                 'required' => false,
                 'attr' => ['data-compose-target' => 'order'],

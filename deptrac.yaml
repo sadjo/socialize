@@ -14,6 +14,7 @@ deptrac:
     - { name: ImportInstagram,   collectors: [{ type: classLike, value: '^App\\Import\\Instagram\\.*' }] }
     - { name: CrosspostMeta,     collectors: [{ type: classLike, value: '^App\\Crosspost\\Meta\\.*' }] }
     - { name: IntegrationImmich, collectors: [{ type: classLike, value: '^App\\Integration\\Immich\\.*' }] }
+    - { name: IntegrationSynologyPhotos, collectors: [{ type: classLike, value: '^App\\Integration\\SynologyPhotos\\.*' }] }
     - { name: IntegrationOpenverse, collectors: [{ type: classLike, value: '^App\\Integration\\Openverse\\.*' }] }
     - { name: Api,               collectors: [{ type: classLike, value: '^App\\Api\\.*' }] }
     - { name: Mcp,               collectors: [{ type: classLike, value: '^App\\Mcp\\.*' }] }
@@ -26,8 +27,9 @@ deptrac:
     ImportInstagram: [Core, Media]
     CrosspostMeta: [Core, Media]
     IntegrationImmich: [Core, Media]
+    IntegrationSynologyPhotos: [Core, Media]
     IntegrationOpenverse: [Core, Media]
-    Api: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationOpenverse]
-    Mcp: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationOpenverse]
-    Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationOpenverse]
+    Api: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
+    Mcp: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
+    Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
     Admin: [Core, Federation]

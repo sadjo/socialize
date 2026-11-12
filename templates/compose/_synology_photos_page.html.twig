@@ -1,0 +1,44 @@
+{# Une page de Synology Photos (source de la création). Variables : days, page, next, space, album, date, error, expired.
+   La première page remplace le cadre « synology-library » ; les suivantes se chargent au défilement
+   (contrôleur library-more), ou par le lien « Voir la suite ».
+   Les heures du NAS sont des heures locales exprimées en UTC : elles s'affichent en UTC. #}
+{% import '_macros.html.twig' as ui %}
+<turbo-frame id="{{ page == 1 ? 'synology-library' : 'synology-page-' ~ page }}">
+    {% if error %}
+        <p class="field-errors">{{ error }}</p>
+        {% if expired %}<p><a class="btn sm pri" href="{{ path('app_settings_synology_photos') }}" data-turbo-frame="_top">Se reconnecter à Synology Photos</a></p>{% endif %}
+    {% endif %}
+    {% for day, items in days %}
+        {% set place = items|map(i => i.place)|filter(p => p)|first %}
+        <h3 class="imm-day">{{ day|format_date('full', locale: 'fr', timezone: 'UTC')|capitalize }}{{ place ? ' · ' ~ place }}</h3>
+        <div class="imm-grid">
+            {% for item in items %}
+                {% set thumb = item.cacheKey ? path('app_synology_photos_thumbnail', {space: item.space, cacheKey: item.cacheKey}) : null %}
+                {% set label = (item.video ? 'Vidéo' : 'Photo') ~ ' du ' ~ item.takenAt|format_datetime('long', 'short', locale: 'fr', timezone: 'UTC') %}
+                {# Toucher la vignette la choisit (ou la retire) ; la loupe l'ouvre en grand (library-preview). #}
+                <div class="imm-tile" data-library-preview-target="tile" data-preview-thumb="{{ thumb }}"
+                     data-preview-image="{{ item.cacheKey ? path('app_synology_photos_preview', {space: item.space, cacheKey: item.cacheKey}) }}"
+                     {%- if item.video %} data-preview-kind="video"{% if item.streamQuality %} data-preview-video="{{ path('app_synology_photos_video', {space: item.space, id: item.id, quality: item.streamQuality}) }}"{% endif %}{% endif %}
+                     data-preview-label="{{ label }}" data-preview-details="{{ item.place }}">
+                    <button type="button" class="imm-pick" aria-pressed="false" aria-label="Choisir : {{ label }}"
+                            data-action="compose#toggleLibrary"
+                            data-compose-token-param="s-{{ item.reference }}" data-compose-label-param="Synology" data-compose-src-param="{{ thumb }}" data-compose-video-param="{{ item.video ? 'true' : 'false' }}"
+                            data-compose-place-param="{{ item.place }}">
+                        {% if thumb %}<img src="{{ thumb }}" alt="" loading="lazy" decoding="async">{% endif %}
+                        {% if item.video %}<span class="gi">{{ ui.icon('reel', 'xs') }}{{ item.durationLabel }}</span>{% endif %}
+                        <span class="sel" aria-hidden="true">{{ ui.icon('check', 'xs') }}</span>
+                    </button>
+                    <button type="button" class="imm-zoom" data-action="library-preview#open" aria-label="Voir en grand : {{ label }}">{{ ui.icon('zoom', 'xs') }}</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        {% if page == 1 and not error %}<p class="small">Aucune photo ni vidéo {{ album ? 'dans cet album' : (space == 't' ? 'dans l’espace partagé' : 'dans votre espace personnel') }}{{ date ? ' jusqu’au ' ~ date|format_date('long', locale: 'fr', timezone: 'UTC') }}.</p>{% endif %}
+    {% endfor %}
+    {% if next %}
+        {% set next_url = path('app_synology_photos_library', {page: next, espace: album ? null : space, album: album, date: date ? date|date('Y-m-d', 'UTC') : null}) %}
+        <turbo-frame id="synology-page-{{ next }}" src="{{ next_url }}" loading="lazy" data-controller="library-more">
+            <div class="imm-more"><a class="btn sm" href="{{ next_url }}">Voir la suite</a></div>
+        </turbo-frame>
+    {% endif %}
+</turbo-frame>

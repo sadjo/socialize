@@ -1,0 +1,51 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Synology Photos · Réglages · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Réglages</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    {{ include('settings/_tabs.html.twig', {current: 'synology'}) }}
+
+    <section class="card stack">
+        <h2>Connexion Synology Photos</h2>
+        <p class="small">Choisissez vos photos et vidéos directement dans Synology Photos (espace personnel, espace partagé, albums), au moment de créer une publication ou une story. L’original est copié au moment de publier.</p>
+
+        {% if connection %}
+            <div class="zip">
+                <span class="ico">{{ ui.icon('album') }}</span>
+                <span class="grow">
+                    <b>{{ connection.serverUrl }}</b><br>
+                    <small>{{ connection.userName }} · session ouverte le {{ connection.connectedAt|format_datetime('long', 'short', locale: 'fr') }}</small>
+                </span>
+                {% if connection.expired %}
+                    <span class="chip">{{ ui.icon('flag', 'xs') }}Session expirée</span>
+                {% else %}
+                    <span class="chip on">{{ ui.icon('check', 'xs') }}Connecté</span>
+                {% endif %}
+            </div>
+            {% if connection.expired %}
+                <p class="field-errors">Le NAS ne reconnaît plus la session : saisissez de nouveau votre mot de passe pour vous reconnecter.</p>
+            {% endif %}
+        {% endif %}
+
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.serverUrl) }}
+            {{ form_row(form.userName) }}
+            {{ form_row(form.password) }}
+            {{ form_row(form.otp) }}
+            <div class="note">{{ ui.icon('key', 'sm') }}<span>Le mot de passe et le code ne servent qu’à ouvrir une session sur le NAS : seule cette session est gardée, chiffrée sur ce serveur. Elle reste valable tant qu’elle sert (voir DSM › Panneau de configuration › Sécurité › Minuteur de déconnexion) ; si elle expire, il suffit de se reconnecter ici.</span></div>
+            <div class="navbtns"><span></span><button class="btn pri">{{ connection ? 'Se reconnecter' : 'Se connecter' }}</button></div>
+        {{ form_end(form) }}
+
+        {% if connection %}
+            <form method="post" action="{{ path('app_settings_synology_photos_disconnect') }}" data-turbo-confirm="Déconnecter Synology Photos ? La session enregistrée sera fermée et supprimée.">
+                <input type="hidden" name="_token" value="{{ csrf_token('synology-photos-disconnect') }}">
+                <button class="btn sm ghost danger">Déconnecter Synology Photos</button>
+            </form>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

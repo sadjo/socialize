@@ -32,7 +32,7 @@ final class ComposeStoryType extends AbstractType
         }
 
         $builder
-            // Ordre des médias : « n-<i> » pour le i-ème fichier de l'appareil, « i-<id> » pour un média Immich.
+            // Ordre des médias : « n-<i> » pour le i-ème fichier de l'appareil, « i-<id> » pour un média Immich, « s-<espace>-<id> » pour Synology Photos.
             ->add('order', HiddenType::class, [
                 'required' => false,
                 'attr' => ['data-compose-target' => 'order'],

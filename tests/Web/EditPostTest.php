@@ -29,6 +29,12 @@ final class EditPostTest extends AppWebTestCase
         $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
         self::assertResponseIsSuccessful();
         self::assertSame(implode(',', $tokens), $crawler->filter('input[name="edit_post[order]"]')->attr('value'));
+        // Loupe des médias choisis : copie en grand de chaque média (pas de vidéo ici).
+        /** @var list<array{token: string, src: ?string, large: ?string, videoSrc: ?string}> $existing */
+        $existing = json_decode((string) $crawler->filter('form[data-controller="compose"]')->attr('data-compose-existing-value'), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertCount(3, $existing);
+        self::assertStringContainsString('-large.', (string) $existing[0]['large']);
+        self::assertNull($existing[0]['videoSrc']);
 
         /** @var array{edit_post: array<string, mixed>} $values */
         $values = $crawler->selectButton('Enregistrer les modifications')->form()->getPhpValues();

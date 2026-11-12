@@ -2,11 +2,11 @@
 
 Réseau photo et vidéo auto-hébergé, compatible avec le fédivers (Mastodon, Pixelfed…) via ActivityPub.
 Socialize permet d'importer une archive Instagram sans perte, de choisir ses médias dans [Immich](https://immich.app)
-et de publier aussi sur Instagram et Facebook selon des règles réglables.
+ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règles réglables.
 
 > **État : jalon 7.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
 > stories, archives, fédération ActivityPub (Mastodon, Pixelfed), import d'une archive Instagram et publication
-> depuis Immich : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
+> depuis Immich ou Synology Photos : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
 > Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
 > (licences Creative Commons, crédit affiché), copiée sur l'instance et jouée quand la publication est à l'écran.
 > Groupes d'abonnés (famille, amis…) : publications et stories réservées à un ou plusieurs groupes, y compris pour
@@ -84,7 +84,7 @@ de l'instance au format JSON.
 
 Ouvrez ensuite l'instance et créez le premier compte depuis « Créer un compte » : il devient administrateur.
 
-Seuls les comptes autorisés peuvent publier (publications, stories, Immich) et, avec un second droit, importer leur
+Seuls les comptes autorisés peuvent publier (publications, stories, Immich, Synology Photos) et, avec un second droit, importer leur
 archive Instagram. Un administrateur a toujours ces droits ; pour les autres, ils s'accordent ou se retirent dans
 Administration › Comptes (ou à la création : `app:user:create --publisher --instagram-import`). Un nouveau compte n'a
 aucun des deux tant qu'il n'y est pas autorisé.
@@ -117,6 +117,18 @@ make help        # toutes les commandes
 
 Le code est monté dans le conteneur et FrankenPHP recharge les fichiers modifiés. Xdebug est installé mais désactivé :
 `XDEBUG_MODE=debug make up` pour l'activer.
+
+### Synology Photos
+
+Réglages › Synology Photos : le compte saisit l'adresse de son NAS (DSM 7), son identifiant et son mot de passe DSM,
+et au besoin son code à usage unique. Ils ouvrent une session sur le NAS ; seule cette session est gardée, chiffrée
+(jamais le mot de passe). À la création d'une publication ou d'une story, l'onglet « Synology Photos » montre l'espace
+personnel, l'espace partagé et les albums. La session reste valable tant qu'elle sert (DSM › Panneau de configuration ›
+Sécurité › Minuteur de déconnexion, jusqu'à 45 jours d'inactivité) ; si le NAS ne la reconnaît plus, l'instance
+propose de se reconnecter. Le NAS doit être joignable depuis le serveur (pas d'adresse QuickConnect).
+
+L'API de Synology Photos n'est pas documentée par Synology : `SynologyPhotosClient` s'appuie sur des appels vérifiés
+sur un NAS réel (DSM 7), qu'une mise à jour de DSM peut changer.
 
 ### Immich de test
 

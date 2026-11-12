@@ -10,6 +10,8 @@ use App\Integration\Immich\Application\ImmichException;
 use App\Integration\Immich\Domain\ImmichConnection;
 use App\Integration\Immich\Infrastructure\ImmichClient;
 use App\Web\Form\ImmichSettingsType;
+use App\Web\Http\ReleaseSession;
+use App\Web\Http\UpstreamRelay;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -84,6 +86,7 @@ final class ImmichController extends AbstractController
      * Une page de la photothèque (ou d'un album), pour la source Immich de la création d'une publication ou d'une story.
      */
     #[Route('/immich/phototheque', name: 'app_immich_library', methods: ['GET'])]
+    #[ReleaseSession]
     public function library(Request $request): Response
     {
         $connection = $this->connection();
@@ -122,27 +125,52 @@ final class ImmichController extends AbstractController
      * Vignette d'un média Immich, relayée par le serveur : la clé API ne quitte jamais Socialize.
      */
     #[Route('/immich/apercu/{asset}', name: 'app_immich_thumbnail', requirements: ['asset' => Requirement::UUID], methods: ['GET'])]
+    #[ReleaseSession]
     public function thumbnail(string $asset): StreamedResponse
+    {
+        return $this->image($asset, 'thumbnail');
+    }
+
+    /**
+     * Image en grand d'un média Immich, pour l'aperçu de la création.
+     */
+    #[Route('/immich/grand/{asset}', name: 'app_immich_preview', requirements: ['asset' => Requirement::UUID], methods: ['GET'])]
+    #[ReleaseSession]
+    public function preview(string $asset): StreamedResponse
+    {
+        return $this->image($asset, 'preview');
+    }
+
+    /**
+     * Vidéo d'un média Immich, relayée par le serveur (lecture et déplacement par plages), pour l'aperçu.
+     */
+    #[Route('/immich/video/{asset}', name: 'app_immich_video', requirements: ['asset' => Requirement::UUID], methods: ['GET'])]
+    #[ReleaseSession]
+    public function video(string $asset, Request $request): StreamedResponse
     {
         [$server, $key] = $this->connections->credentials($this->connection());
         try {
-            $upstream = $this->client->thumbnail($server, $key, $asset);
+            $upstream = $this->client->playback($server, $key, $asset, UpstreamRelay::rangeHeaders($request));
         } catch (ImmichException) {
-            throw new NotFoundHttpException('Vignette introuvable dans Immich.');
+            throw new NotFoundHttpException('Vidéo introuvable dans Immich.');
         }
-        $type = $upstream->getHeaders(false)['content-type'][0] ?? 'image/webp';
-        $chunks = $this->client->chunks($upstream);
 
-        $response = new StreamedResponse(static function () use ($chunks): void {
-            foreach ($chunks as $chunk) {
-                echo $chunk;
-                flush();
-            }
-        }, headers: ['Content-Type' => $type]);
-        $response->setPrivate();
-        $response->setMaxAge(86400);
+        return UpstreamRelay::respond($upstream, $this->client->chunks($upstream), 'video/', 'video/mp4', 3600);
+    }
 
-        return $response;
+    /**
+     * @param 'thumbnail'|'preview' $size
+     */
+    private function image(string $asset, string $size): StreamedResponse
+    {
+        [$server, $key] = $this->connections->credentials($this->connection());
+        try {
+            $upstream = $this->client->thumbnail($server, $key, $asset, $size);
+        } catch (ImmichException) {
+            throw new NotFoundHttpException('Image introuvable dans Immich.');
+        }
+
+        return UpstreamRelay::respond($upstream, $this->client->chunks($upstream), 'image/', 'image/webp');
     }
 
     private function connection(): ImmichConnection

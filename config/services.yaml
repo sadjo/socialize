@@ -35,6 +35,10 @@ services:
     immich.http_client:
         alias: http_client
 
+    # Client HTTP des échanges avec Synology Photos (remplacé dans les tests).
+    synology_photos.http_client:
+        alias: http_client
+
     # Client HTTP d'Openverse et des fournisseurs de musique (remplacé dans les tests) : les adresses
     # de fichiers viennent d'Openverse, le réseau privé de l'instance leur est fermé.
     openverse.http_client:
@@ -57,6 +61,12 @@ when@test:
         immich.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
             arguments: ['@App\Tests\Integration\FakeImmich']
+        # Faux Synology Photos pour les tests (voir tests/Integration).
+        App\Tests\Integration\FakeSynologyPhotos:
+            public: true
+        synology_photos.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            arguments: ['@App\Tests\Integration\FakeSynologyPhotos']
         # Faux Openverse pour les tests (voir tests/Integration).
         App\Tests\Integration\FakeOpenverse:
             public: true
