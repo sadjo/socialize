@@ -11,8 +11,8 @@
                 {% set thumb = path('app_immich_thumbnail', {asset: asset.id}) %}
                 <button type="button" class="imm-tile" aria-pressed="false"
                         aria-label="{{ asset.video ? 'Vidéo' : 'Photo' }} du {{ asset.takenAt|format_datetime('long', 'short', locale: 'fr') }}{{ asset.description ? ' : ' ~ asset.description }}"
-                        data-action="compose#toggleImmich"
-                        data-compose-id-param="{{ asset.id }}" data-compose-src-param="{{ thumb }}" data-compose-video-param="{{ asset.video ? 'true' : 'false' }}"
+                        data-action="compose#toggleLibrary"
+                        data-compose-token-param="i-{{ asset.id }}" data-compose-label-param="Immich" data-compose-src-param="{{ thumb }}" data-compose-video-param="{{ asset.video ? 'true' : 'false' }}"
                         data-compose-description-param="{{ asset.description }}" data-compose-place-param="{{ asset.place }}">
                     <img src="{{ thumb }}" alt="" loading="lazy" decoding="async">
                     {% if asset.video %}<span class="gi">{{ ui.icon('reel', 'xs') }}{{ asset.durationLabel }}</span>{% endif %}

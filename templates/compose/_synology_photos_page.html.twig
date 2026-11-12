@@ -1,0 +1,33 @@
+{# Une page de Synology Photos (source de la création). Variables : days, page, next, space, album, date, error, expired.
+   La première page remplace le cadre « synology-library » ; les suivantes se chargent au défilement.
+   Les heures du NAS sont des heures locales exprimées en UTC : elles s'affichent en UTC. #}
+{% import '_macros.html.twig' as ui %}
+<turbo-frame id="{{ page == 1 ? 'synology-library' : 'synology-page-' ~ page }}">
+    {% if error %}
+        <p class="field-errors">{{ error }}</p>
+        {% if expired %}<p><a class="btn sm pri" href="{{ path('app_settings_synology_photos') }}" data-turbo-frame="_top">Se reconnecter à Synology Photos</a></p>{% endif %}
+    {% endif %}
+    {% for day, items in days %}
+        {% set place = items|map(i => i.place)|filter(p => p)|first %}
+        <h3 class="imm-day">{{ day|format_date('full', locale: 'fr', timezone: 'UTC')|capitalize }}{{ place ? ' · ' ~ place }}</h3>
+        <div class="imm-grid">
+            {% for item in items %}
+                {% set thumb = item.cacheKey ? path('app_synology_photos_thumbnail', {space: item.space, cacheKey: item.cacheKey}) : null %}
+                <button type="button" class="imm-tile" aria-pressed="false"
+                        aria-label="{{ item.video ? 'Vidéo' : 'Photo' }} du {{ item.takenAt|format_datetime('long', 'short', locale: 'fr', timezone: 'UTC') }}"
+                        data-action="compose#toggleLibrary"
+                        data-compose-token-param="s-{{ item.reference }}" data-compose-label-param="Synology" data-compose-src-param="{{ thumb }}" data-compose-video-param="{{ item.video ? 'true' : 'false' }}"
+                        data-compose-place-param="{{ item.place }}">
+                    {% if thumb %}<img src="{{ thumb }}" alt="" loading="lazy" decoding="async">{% endif %}
+                    {% if item.video %}<span class="gi">{{ ui.icon('reel', 'xs') }}{{ item.durationLabel }}</span>{% endif %}
+                    <span class="sel" aria-hidden="true">{{ ui.icon('check', 'xs') }}</span>
+                </button>
+            {% endfor %}
+        </div>
+    {% else %}
+        {% if page == 1 and not error %}<p class="small">Aucune photo ni vidéo {{ album ? 'dans cet album' : (space == 't' ? 'dans l’espace partagé' : 'dans votre espace personnel') }}{{ date ? ' jusqu’au ' ~ date|format_date('long', locale: 'fr', timezone: 'UTC') }}.</p>{% endif %}
+    {% endfor %}
+    {% if next %}
+        <turbo-frame id="synology-page-{{ next }}" src="{{ path('app_synology_photos_library', {page: next, espace: album ? null : space, album: album, date: date ? date|date('Y-m-d', 'UTC') : null}) }}" loading="lazy"></turbo-frame>
+    {% endif %}
+</turbo-frame>

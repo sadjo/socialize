@@ -82,8 +82,8 @@ final class ImmichTest extends AppWebTestCase
         self::assertSelectorExists('turbo-frame#immich-library:not([src])');
         self::assertSelectorCount(3, '.imm-tile');
         self::assertSelectorTextContains('.imm-day', 'Lundi 9 novembre 2026 · Honfleur, France');
-        self::assertSelectorExists('.imm-tile[data-compose-id-param="'.FakeImmich::VIDEO_LAC.'"] .gi');
-        self::assertSelectorTextContains('.imm-tile[data-compose-id-param="'.FakeImmich::VIDEO_LAC.'"] .gi', '0:04');
+        self::assertSelectorExists('.imm-tile[data-compose-token-param="i-'.FakeImmich::VIDEO_LAC.'"] .gi');
+        self::assertSelectorTextContains('.imm-tile[data-compose-token-param="i-'.FakeImmich::VIDEO_LAC.'"] .gi', '0:04');
 
         $this->client->request('GET', '/immich/phototheque?album='.FakeImmich::ALBUM_NORMANDIE);
         self::assertSelectorCount(2, '.imm-tile');
@@ -92,7 +92,7 @@ final class ImmichTest extends AppWebTestCase
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08');
         self::assertSelectorCount(2, '.imm-tile');
         self::assertSelectorTextContains('.imm-day', 'Dimanche 8 novembre 2026');
-        self::assertSelectorNotExists('.imm-tile[data-compose-id-param="'.FakeImmich::PHOTO_HONFLEUR.'"]');
+        self::assertSelectorNotExists('.imm-tile[data-compose-token-param="i-'.FakeImmich::PHOTO_HONFLEUR.'"]');
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08&album='.FakeImmich::ALBUM_NORMANDIE);
         self::assertSelectorCount(1, '.imm-tile');
         $this->client->request('GET', '/immich/phototheque?date=2026-01-01');

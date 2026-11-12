@@ -1,15 +1,16 @@
 import { Controller } from '@hotwired/stimulus';
 
 /*
- * Sélection des médias d'une publication ou d'une story, depuis l'appareil ou la photothèque Immich.
+ * Sélection des médias d'une publication ou d'une story, depuis l'appareil ou une photothèque (Immich, Synology Photos).
  * - Chaque nouvelle sélection s'ajoute aux médias déjà choisis.
  * - Les médias se retirent (✕) et se réordonnent (glisser-déposer, ou ◀ ▶ au clavier et sur mobile).
  * - En modification, les médias existants sont dans la liste ; l'ordre final part dans un champ caché
- *   (jetons « m-<id> » pour un média existant, « n-<i> » pour le i-ème nouveau fichier).
+ *   (jetons « m-<id> » pour un média existant, « n-<i> » pour le i-ème nouveau fichier, « i-… » ou « s-… » pour
+ *   un média d'une photothèque).
  * Le champ fichier est reconstruit à chaque changement, dans l'ordre choisi.
  */
 export default class extends Controller {
-    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'immichSource', 'library', 'album', 'date', 'dateFilter'];
+    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'librarySource'];
     static values = {
         max: { type: Number, default: 20 },
         altName: { type: String, default: '' },
@@ -40,14 +41,14 @@ export default class extends Controller {
             this.submitTarget.textContent = 'Envoi en cours…';
         });
 
-        // Nouvelles vignettes Immich (page suivante, autre album) : leur état coché suit la sélection.
+        // Nouvelles vignettes d'une photothèque (page suivante, autre album) : leur état coché suit la sélection.
         this.element.addEventListener('turbo:frame-load', () => this.markTiles());
 
         this.count();
         this.render();
     }
 
-    /* Onglets « Appareil » et « Immich ». */
+    /* Onglets « Appareil », « Immich », « Synology Photos ». */
     source({ params: { source } }) {
         this.sourceTabTargets.forEach((tab) => {
             const on = tab.dataset.composeSourceParam === source;
@@ -55,34 +56,43 @@ export default class extends Controller {
             tab.setAttribute('aria-selected', String(on));
         });
         if (this.hasDeviceSourceTarget) this.deviceSourceTarget.hidden = source !== 'device';
-        if (this.hasImmichSourceTarget) this.immichSourceTarget.hidden = source !== 'immich';
+        this.librarySourceTargets.forEach((library) => { library.hidden = library.dataset.sourceName !== source; });
     }
 
     /*
-     * Photothèque Immich : un album (affiché en entier), ou toute la photothèque, ouverte à une date
-     * (médias pris ce jour-là ou avant). La date n'est proposée que sans album.
+     * Photothèque (celle de l'onglet d'où vient l'événement) : un album, affiché en entier, ou toute la photothèque
+     * (pour Synology Photos : un de ses deux espaces), ouverte à une date : médias pris ce jour-là ou avant.
+     * La date et l'espace ne sont proposés que sans album.
      */
-    filterLibrary() {
-        if (!this.hasLibraryTarget || !this.hasImmichSourceTarget) return;
-        const album = this.hasAlbumTarget ? this.albumTarget.value : '';
-        if (this.hasDateFilterTarget) this.dateFilterTarget.hidden = album !== '';
-        if (album !== '' && this.hasDateTarget) this.dateTarget.value = '';
+    filterLibrary({ currentTarget }) {
+        const library = currentTarget.closest('[data-library-url]');
+        const frame = library?.querySelector('turbo-frame');
+        if (!frame) return;
+        const album = library.querySelector('[data-library-album]');
+        const date = library.querySelector('[data-library-date]');
+        const space = library.querySelector('[data-library-space]');
+        const inAlbum = Boolean(album && album.value !== '');
+        library.querySelectorAll('[data-library-without-album]').forEach((element) => { element.hidden = inAlbum; });
+        if (inAlbum && date) date.value = '';
         const params = new URLSearchParams();
-        if (album !== '') params.set('album', album);
-        else if (this.hasDateTarget && this.dateTarget.value) params.set('date', this.dateTarget.value);
+        if (inAlbum) params.set('album', album.value);
+        else {
+            if (space && space.value) params.set('espace', space.value);
+            if (date && date.value) params.set('date', date.value);
+        }
         const query = params.toString();
-        this.libraryTarget.src = this.immichSourceTarget.dataset.libraryUrl + (query ? `?${query}` : '');
-        this.libraryTarget.closest('.imm-scroll')?.scrollTo({ top: 0 });
+        frame.src = library.dataset.libraryUrl + (query ? `?${query}` : '');
+        frame.closest('.imm-scroll')?.scrollTo({ top: 0 });
     }
 
-    resetLibrary() {
-        if (this.hasDateTarget) this.dateTarget.value = '';
-        this.filterLibrary();
+    resetLibrary(event) {
+        const date = event.currentTarget.closest('[data-library-url]')?.querySelector('[data-library-date]');
+        if (date) date.value = '';
+        this.filterLibrary(event);
     }
 
-    /* Une vignette Immich ajoute le média à la sélection, ou l'en retire si elle y est déjà. */
-    toggleImmich({ params: { id, src, video, description, place } }) {
-        const token = `i-${id}`;
+    /* Une vignette de photothèque ajoute le média à la sélection, ou l'en retire s'il y est déjà. */
+    toggleLibrary({ params: { token, src, video, label, description, place } }) {
         const index = this.items.findIndex((item) => item.token === token);
         if (index >= 0) {
             this.items.splice(index, 1);
@@ -90,8 +100,8 @@ export default class extends Controller {
             this.warn(`Vous pouvez ajouter ${this.maxValue} médias au plus.`);
             return;
         } else {
-            this.items.push({ kind: 'immich', token, src, video: Boolean(video), alt: '' });
-            // Légende et lieu préremplis depuis Immich, seulement s'ils sont encore vides.
+            this.items.push({ kind: 'library', token, src, video: Boolean(video), label: label || '', alt: '' });
+            // Légende et lieu préremplis depuis la photothèque, seulement s'ils sont encore vides.
             if (description && this.hasCaptionTarget && this.captionTarget.value.trim() === '') {
                 this.captionTarget.value = description;
                 this.count();
@@ -103,8 +113,8 @@ export default class extends Controller {
 
     markTiles() {
         const selected = new Set(this.items.map((item) => item.token));
-        this.element.querySelectorAll('[data-compose-id-param]').forEach((tile) => {
-            tile.setAttribute('aria-pressed', String(selected.has(`i-${tile.dataset.composeIdParam}`)));
+        this.element.querySelectorAll('[data-compose-token-param]').forEach((tile) => {
+            tile.setAttribute('aria-pressed', String(selected.has(tile.dataset.composeTokenParam)));
         });
     }
 
@@ -206,7 +216,7 @@ export default class extends Controller {
 
         const frame = document.createElement('div');
         frame.className = 'th';
-        // Média déjà publié ou Immich : sa vignette (une image, même pour une vidéo) ; nouveau fichier : aperçu local.
+        // Média déjà publié ou d'une photothèque : sa vignette (une image, même pour une vidéo) ; nouveau fichier : aperçu local.
         const asVideo = item.video && item.kind === 'new';
         const media = document.createElement(asVideo ? 'video' : 'img');
         if (item.src) media.src = item.src; // vidéo encore en préparation : pas encore de vignette
@@ -216,10 +226,10 @@ export default class extends Controller {
         badge.className = 'order-badge num';
         badge.textContent = String(index + 1);
         frame.append(media, badge);
-        if (item.kind === 'immich') {
+        if (item.kind === 'library') {
             const source = document.createElement('span');
             source.className = 'src-badge';
-            source.textContent = item.video ? 'Immich · vidéo' : 'Immich';
+            source.textContent = item.video ? `${item.label} · vidéo` : item.label;
             frame.appendChild(source);
         }
         node.appendChild(frame);
