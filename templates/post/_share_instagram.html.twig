@@ -1,0 +1,8 @@
+{# « Partager vers Instagram » (auteur) : menu de partage du téléphone avec les fichiers, légende copiée.
+   Variables : files (liste {url, name, type}), caption, class, label #}
+{% import '_macros.html.twig' as ui %}
+<button type="button" class="{{ class|default('') }}"{% if label|default(false) %} role="menuitem"{% endif %}
+        data-controller="share-to-instagram"
+        data-share-to-instagram-files-value="{{ files|json_encode }}"
+        data-share-to-instagram-caption-value="{{ caption }}"
+        data-action="share-to-instagram#share">{{ ui.icon('image', 'sm') }}Partager vers Instagram</button>

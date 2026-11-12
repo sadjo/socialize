@@ -31,6 +31,9 @@
                 <button class="btn sm pri">Mettre à la une</button>
             </form>
         {% endif %}
+        {% if media and media.ready %}
+            {{ include('post/_share_instagram.html.twig', {files: [{url: path('app_story_share_file', {id: story.publicId}), name: 'socialize-story-' ~ story.publicId ~ (media.video ? '.mp4' : '.jpg'), type: media.video ? 'video/mp4' : 'image/jpeg'}], caption: story.text ?? '', class: 'btn sm'}) }}
+        {% endif %}
         <form method="post" action="{{ path('app_story_delete', {id: story.publicId}) }}" data-turbo-confirm="Supprimer définitivement cette story ?">
             <input type="hidden" name="_token" value="{{ csrf_token('story-delete-' ~ story.publicId) }}">
             <button class="btn sm ghost danger">{{ ui.icon('trash', 'xs') }}Supprimer</button>

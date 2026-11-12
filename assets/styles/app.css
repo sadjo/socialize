@@ -776,3 +776,5 @@ label.act{cursor:pointer}
 .crosspost-warn{color:var(--accent);margin:0}
 .crosspost-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem}
 .crosspost-status form{display:inline}
+.share-ig .sheet{gap:10px;padding:14px 16px 16px}
+.share-ig-files{margin:0;padding-left:18px;display:grid;gap:4px;font-size:.88rem;overflow-wrap:anywhere}

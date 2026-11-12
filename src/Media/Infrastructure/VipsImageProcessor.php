@@ -60,6 +60,23 @@ final class VipsImageProcessor
         }
     }
 
+    /**
+     * Copie JPEG d'une image (les applications comme Instagram ne reçoivent pas toutes le WebP).
+     */
+    public function jpeg(string $bytes): string
+    {
+        try {
+            $image = Image::newFromBuffer($bytes);
+            if ($image->hasAlpha()) {
+                $image = $image->flatten(['background' => [255, 255, 255]]);
+            }
+
+            return $image->colourspace('srgb')->writeToBuffer('.jpg', ['Q' => 90, 'keep' => 'none']);
+        } catch (VipsException $e) {
+            throw new MediaProcessingException('Cette image n’a pas pu être convertie.', $e->getCode(), previous: $e);
+        }
+    }
+
     private function webp(Image $image): string
     {
         return $image->colourspace('srgb')->writeToBuffer('.webp', ['Q' => self::WEBP_QUALITY, 'keep' => 'none']);
