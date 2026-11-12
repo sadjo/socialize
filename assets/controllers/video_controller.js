@@ -32,10 +32,14 @@ export default class extends Controller {
         // Navigation Turbo : la page arrive d'un document à part (sans fenêtre), dont Safari sur iPhone garde les
         // règles pour la vidéo (lecture seulement après un geste, chargement jamais lancé : elle reste noire ou
         // figée). Une copie créée dans la page a les règles de la page : lecture automatique muette permise.
+        // Première vidéo de la page (en haut du fil, d'une publication) : préchargée dès l'affichage, elle démarre
+        // sans attendre son téléchargement. Les suivantes ne chargent rien avant d'être lues.
+        const first = document.querySelector('.player video') === this.videoTarget;
         const fresh = this.videoTarget.cloneNode(true);
         fresh.muted = true;
+        if (first) fresh.preload = 'auto';
         this.videoTarget.replaceWith(fresh);
-        // Sélection de la source relancée (WebKit ne la fait pas seul ici ; rien n’est téléchargé avant la lecture).
+        // Sélection de la source relancée (WebKit ne la fait pas seul ici).
         fresh.load();
         this.visible = false;
         this.observer = new IntersectionObserver(([entry]) => this.visibilityChanged(entry), { threshold: 0.6 });
