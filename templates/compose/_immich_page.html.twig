@@ -11,19 +11,20 @@
             {% for asset in assets %}
                 {% set thumb = path('app_immich_thumbnail', {asset: asset.id}) %}
                 {% set label = (asset.video ? 'Vidéo' : 'Photo') ~ ' du ' ~ asset.takenAt|format_datetime('long', 'short', locale: 'fr') %}
-                {# La photo ouvre l'aperçu (library-preview) ; le rond l'ajoute à la publication, ou l'en retire. #}
+                {# Toucher la vignette la choisit (ou la retire) ; la loupe l'ouvre en grand (library-preview). #}
                 <div class="imm-tile" data-library-preview-target="tile" data-preview-thumb="{{ thumb }}"
                      data-preview-image="{{ path('app_immich_preview', {asset: asset.id}) }}"
                      {%- if asset.video %} data-preview-video="{{ path('app_immich_video', {asset: asset.id}) }}"{% endif %}
                      data-preview-label="{{ label }}" data-preview-details="{{ [asset.place, asset.description]|filter(v => v)|join(' · ') }}">
-                    <button type="button" class="imm-open" data-action="library-preview#open" aria-label="Voir en grand : {{ label }}{{ asset.description ? ' : ' ~ asset.description }}">
-                        <img src="{{ thumb }}" alt="" loading="lazy" decoding="async">
-                        {% if asset.video %}<span class="gi">{{ ui.icon('reel', 'xs') }}{{ asset.durationLabel }}</span>{% endif %}
-                    </button>
-                    <button type="button" class="sel" aria-pressed="false" aria-label="Choisir : {{ label }}"
+                    <button type="button" class="imm-pick" aria-pressed="false" aria-label="Choisir : {{ label }}{{ asset.description ? ' : ' ~ asset.description }}"
                             data-action="compose#toggleLibrary"
                             data-compose-token-param="i-{{ asset.id }}" data-compose-label-param="Immich" data-compose-src-param="{{ thumb }}" data-compose-video-param="{{ asset.video ? 'true' : 'false' }}"
-                            data-compose-description-param="{{ asset.description }}" data-compose-place-param="{{ asset.place }}">{{ ui.icon('check', 'xs') }}</button>
+                            data-compose-description-param="{{ asset.description }}" data-compose-place-param="{{ asset.place }}">
+                        <img src="{{ thumb }}" alt="" loading="lazy" decoding="async">
+                        {% if asset.video %}<span class="gi">{{ ui.icon('reel', 'xs') }}{{ asset.durationLabel }}</span>{% endif %}
+                        <span class="sel" aria-hidden="true">{{ ui.icon('check', 'xs') }}</span>
+                    </button>
+                    <button type="button" class="imm-zoom" data-action="library-preview#open" aria-label="Voir en grand : {{ label }}">{{ ui.icon('zoom', 'xs') }}</button>
                 </div>
             {% endfor %}
         </div>

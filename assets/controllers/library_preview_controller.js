@@ -3,8 +3,8 @@ import { setSound, soundOn } from '../lib/sound.js';
 
 /*
  * Aperçu d'une photothèque (Immich, Synology Photos) à la création d'une publication ou d'une story :
- * toucher une photo l'ouvre en grand ; on passe à la précédente ou à la suivante (flèches, clavier, balayage),
- * et « Choisir » l'ajoute à la publication, ou l'en retire, comme le rond de sa vignette.
+ * la loupe d'une vignette l'ouvre en grand (toucher la vignette elle-même la choisit) ; on passe à la précédente ou à la suivante (flèches, clavier, balayage),
+ * et « Choisir » l'ajoute à la publication, ou l'en retire, comme un toucher sur sa vignette.
  *
  * Chaque vignette (cible « tile ») décrit son aperçu : data-preview-thumb (vignette, affichée aussitôt),
  * data-preview-image (image en grand), data-preview-video (vidéo relayée, si lisible), data-preview-kind
@@ -75,7 +75,7 @@ export default class extends Controller {
             dialog.querySelectorAll('video').forEach((video) => { video.pause(); video.removeAttribute('src'); video.load(); });
             dialog.remove();
             this.dialog = null;
-            this.tileTargets[this.index]?.querySelector('.imm-open')?.focus({ preventScroll: true });
+            this.tileTargets[this.index]?.querySelector('.imm-zoom')?.focus({ preventScroll: true });
         });
 
         return dialog;
@@ -152,7 +152,7 @@ export default class extends Controller {
     }
 
     renderSelect() {
-        const chosen = this.tile.querySelector('.sel')?.getAttribute('aria-pressed') === 'true';
+        const chosen = this.tile.querySelector('.imm-pick')?.getAttribute('aria-pressed') === 'true';
         const button = this.dialog.querySelector('.lb-select');
         button.setAttribute('aria-pressed', String(chosen));
         button.classList.toggle('pri', !chosen);
@@ -161,9 +161,9 @@ export default class extends Controller {
             : 'Choisir';
     }
 
-    // Même effet que le rond de la vignette (contrôleur compose) : la sélection reste unique.
+    // Même effet qu'un toucher sur la vignette (contrôleur compose) : la sélection reste unique.
     toggle() {
-        const sel = this.tile.querySelector('.sel');
+        const sel = this.tile.querySelector('.imm-pick');
         if (!sel) return;
         const before = sel.getAttribute('aria-pressed') === 'true';
         sel.click();

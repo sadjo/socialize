@@ -440,15 +440,17 @@ pre.code{margin:0;padding:14px 16px;border-radius:14px;background:var(--bg);bord
 .imm-day{font-size:.8rem;font-weight:700;color:var(--muted);margin:12px 0 6px;text-transform:none}
 .imm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:4px}
 .imm-tile{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--surface-2);padding:0;border:0}
-.imm-open{display:block;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in}
+.imm-pick{display:block;width:100%;height:100%;padding:0;border:0;background:none;cursor:pointer}
 .imm-tile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
 .imm-tile .gi{position:absolute;left:5px;bottom:4px;display:flex;align-items:center;gap:3px;font-size:.7rem;font-weight:700;color:var(--on-media);text-shadow:0 1px 3px oklch(0 0 0 / .6)}
-.imm-tile .sel{position:absolute;top:5px;right:5px;z-index:1;width:24px;height:24px;padding:0;border-radius:50%;border:2px solid var(--on-media);background:oklch(0 0 0 / .3);display:grid;place-items:center;color:transparent;cursor:pointer}
-/* Zone de toucher plus grande que le rond. */
-.imm-tile .sel::after{content:'';position:absolute;inset:-9px}
-.imm-tile:has(.sel[aria-pressed="true"]){outline:3px solid var(--accent);outline-offset:-3px}
-.imm-tile:has(.sel[aria-pressed="true"]) img{transform:scale(.9);border-radius:6px}
-.imm-tile .sel[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-grad)}
+.imm-tile .sel{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:2px solid var(--on-media);background:oklch(0 0 0 / .25);display:grid;place-items:center;color:transparent}
+/* Loupe : ouvre l'aperçu en grand ; zone de toucher plus grande que l'icône. */
+.imm-zoom{position:absolute;right:4px;bottom:4px;z-index:1;width:28px;height:28px;padding:0;border:0;border-radius:8px;display:grid;place-items:center;background:oklch(0 0 0 / .45);color:var(--on-media);cursor:zoom-in}
+.imm-zoom::after{content:'';position:absolute;inset:-8px}
+.imm-zoom:hover,.imm-zoom:focus-visible{background:oklch(0 0 0 / .7)}
+.imm-tile:has(.imm-pick[aria-pressed="true"]){outline:3px solid var(--accent);outline-offset:-3px}
+.imm-tile:has(.imm-pick[aria-pressed="true"]) img{transform:scale(.9);border-radius:6px}
+.imm-pick[aria-pressed="true"] .sel{background:var(--accent);border-color:var(--accent);color:var(--on-grad)}
 .preview .src-badge{position:absolute;left:6px;bottom:6px;font-size:.68rem;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--media-shade);color:var(--on-media)}
 
 /* ---------- Import ---------- */

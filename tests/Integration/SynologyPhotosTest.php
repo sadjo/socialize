@@ -110,14 +110,15 @@ final class SynologyPhotosTest extends AppWebTestCase
         // Espace personnel, du plus récent au plus ancien, regroupé par jour (heures du NAS affichées telles quelles).
         $crawler = $this->client->request('GET', '/synology-photos/phototheque');
         self::assertResponseIsSuccessful();
-        self::assertSame(['s-p-501', 's-p-502', 's-p-503'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-p-501', 's-p-502', 's-p-503'], $crawler->filter('.imm-tile .imm-pick')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
         self::assertSelectorTextContains('.imm-day', 'Lundi 9 novembre 2026 · Saint-Malo, France');
-        self::assertStringContainsString('17:30', (string) $crawler->filter('.imm-tile .imm-open')->first()->attr('aria-label'));
+        self::assertStringContainsString('17:30', (string) $crawler->filter('.imm-tile .imm-pick')->first()->attr('aria-label'));
+        self::assertStringStartsWith('Voir en grand : Photo du', (string) $crawler->filter('.imm-tile .imm-zoom[data-action="library-preview#open"]')->first()->attr('aria-label'));
         self::assertSame('/synology-photos/apercu/p/9501_1700000000', $crawler->filter('.imm-tile img')->first()->attr('src'));
 
         // Espace partagé.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?espace=t');
-        self::assertSame(['s-t-601', 's-t-602'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-t-601', 's-t-602'], $crawler->filter('.imm-tile .imm-pick')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
 
         // Aperçu : image en grand ; vidéo seulement si le NAS en a une version lisible.
         $tile = $crawler->filter('.imm-tile')->eq(1);
@@ -131,7 +132,7 @@ final class SynologyPhotosTest extends AppWebTestCase
 
         // Un album mêle les deux espaces : chaque média garde le sien.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?album='.FakeSynologyPhotos::ALBUM_VACANCES);
-        self::assertSame(['s-p-501', 's-t-601'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-p-501', 's-t-601'], $crawler->filter('.imm-tile .imm-pick')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
 
         // Plus d'une page : la suite se charge au défilement (contrôleur library-more), ou par le lien du cadre.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?album='.FakeSynologyPhotos::ALBUM_LONG);
@@ -145,7 +146,7 @@ final class SynologyPhotosTest extends AppWebTestCase
 
         // Aller à une date : ce jour-là ou avant.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?date=2026-11-08');
-        self::assertSame(['s-p-502', 's-p-503'], $crawler->filter('.imm-tile .sel')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
+        self::assertSame(['s-p-502', 's-p-503'], $crawler->filter('.imm-tile .imm-pick')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
 
         // Vignette relayée ; l'identifiant de session part dans le corps de la requête, jamais dans l'adresse.
         $this->client->request('GET', '/synology-photos/apercu/t/9601_1700000000');

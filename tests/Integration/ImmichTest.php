@@ -84,12 +84,12 @@ final class ImmichTest extends AppWebTestCase
         self::assertSelectorCount(3, '.imm-tile');
         self::assertSelectorTextContains('.imm-day', 'Lundi 9 novembre 2026 · Honfleur, France');
         $video = '.imm-tile[data-preview-video="/immich/video/'.FakeImmich::VIDEO_LAC.'"]';
-        self::assertSelectorExists($video.' .imm-open .gi');
+        self::assertSelectorExists($video.' .imm-pick .gi');
         self::assertSelectorTextContains($video.' .gi', '0:04');
-        self::assertSelectorExists($video.' .sel[data-compose-token-param="i-'.FakeImmich::VIDEO_LAC.'"][data-action="compose#toggleLibrary"]');
+        self::assertSelectorExists($video.' .imm-pick[data-compose-token-param="i-'.FakeImmich::VIDEO_LAC.'"][data-action="compose#toggleLibrary"]', 'Toucher la vignette la choisit.');
         $photo = '.imm-tile[data-preview-image="/immich/grand/'.FakeImmich::PHOTO_ETRETAT.'"]';
         self::assertSelectorExists($photo.'[data-preview-thumb="/immich/apercu/'.FakeImmich::PHOTO_ETRETAT.'"]:not([data-preview-video])');
-        self::assertSelectorExists($photo.' .imm-open[data-action="library-preview#open"]');
+        self::assertSelectorExists($photo.' .imm-zoom[data-action="library-preview#open"]', 'La loupe ouvre l’aperçu.');
 
         $this->client->request('GET', '/immich/phototheque?album='.FakeImmich::ALBUM_NORMANDIE);
         self::assertSelectorCount(2, '.imm-tile');
@@ -98,7 +98,7 @@ final class ImmichTest extends AppWebTestCase
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08');
         self::assertSelectorCount(2, '.imm-tile');
         self::assertSelectorTextContains('.imm-day', 'Dimanche 8 novembre 2026');
-        self::assertSelectorNotExists('.sel[data-compose-token-param="i-'.FakeImmich::PHOTO_HONFLEUR.'"]');
+        self::assertSelectorNotExists('.imm-pick[data-compose-token-param="i-'.FakeImmich::PHOTO_HONFLEUR.'"]');
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08&album='.FakeImmich::ALBUM_NORMANDIE);
         self::assertSelectorCount(1, '.imm-tile');
         $this->client->request('GET', '/immich/phototheque?date=2026-01-01');
