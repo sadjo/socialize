@@ -770,3 +770,9 @@ label.act{cursor:pointer}
 .chip-check{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);font-size:.88rem;font-weight:600;cursor:pointer}
 .chip-check:has(input:checked){background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .choices label.off{opacity:.5;cursor:not-allowed}
+
+/* Crosspost Instagram : case à la création, état sur la publication, réglages */
+.crosspost{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.crosspost-warn{color:var(--accent);margin:0}
+.crosspost-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem}
+.crosspost-status form{display:inline}

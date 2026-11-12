@@ -11,18 +11,21 @@ use App\Core\Application\Story\StoryFeed;
 use App\Core\Application\Story\StoryGroup;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Account\User;
+use App\Core\Domain\Post\CrosspostTarget;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Story\Highlight;
 use App\Core\Domain\Story\Story;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
+use App\Crosspost\Meta\Application\InstagramConnections;
 use App\Integration\Openverse\Application\MusicLibrary;
 use App\Integration\Openverse\Application\OpenverseException;
 use App\Media\Application\Library\LibraryPublisher;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\StoryComposer;
 use App\Web\Form\ComposeStoryType;
+use App\Web\Form\CrosspostField;
 use App\Web\Security\CurrentAccount;
 use App\Web\Twig\StoryViewerData;
 use Psr\Clock\ClockInterface;
@@ -54,21 +57,22 @@ final class StoryController extends AbstractController
 
     #[Route('/stories/nouvelle', name: 'app_story_new', methods: ['GET', 'POST'])]
     #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
-    public function new(Request $request, LibraryPublisher $publisher, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups): Response
+    public function new(Request $request, LibraryPublisher $publisher, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups, InstagramConnections $instagram): Response
     {
         $account = $this->currentAccount->require();
-        $form = $this->createForm(ComposeStoryType::class, options: ['highlights' => $this->highlights->forAccount($account), 'groups' => $groups->of($account)]);
+        $instagramConnection = $instagram->usable($account);
+        $form = $this->createForm(ComposeStoryType::class, options: ['highlights' => $this->highlights->forAccount($account), 'groups' => $groups->of($account), 'instagram' => $instagramConnection]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, order: ?string, text: ?string, audience: string, highlight: ?string, highlightTitle: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>} $data */
+            /** @var array{media: list<UploadedFile>, order: ?string, text: ?string, audience: string, highlight: ?string, highlightTitle: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>, crosspostInstagram?: bool} $data */
             $data = $form->getData();
             $highlightTitle = trim((string) $data['highlightTitle']);
             if ('__new__' === $data['highlight'] && '' === $highlightTitle) {
                 $form->get('highlightTitle')->addError(new FormError('Donnez un titre à la nouvelle story à la une.'));
             } else {
                 try {
-                    $created = $publisher->publishStories($account, ComposeSources::order($data['order']), $data['media'], $data['text'], Visibility::from($data['audience']), $music->choice($data['music']['track'], (int) $data['music']['start']), Visibility::Groups->value === $data['audience'] ? $data['audienceGroups'] : []);
+                    $created = $publisher->publishStories($account, ComposeSources::order($data['order']), $data['media'], $data['text'], Visibility::from($data['audience']), $music->choice($data['music']['track'], (int) $data['music']['start']), Visibility::Groups->value === $data['audience'] ? $data['audienceGroups'] : [], true === ($data[CrosspostField::NAME] ?? false) ? [CrosspostTarget::Instagram] : []);
                     $this->pinAll($created, $account, $data['highlight'], $highlightTitle);
                     $this->addFlash('success', 1 === \count($created) ? 'Story publiée, visible pendant 24 h.' : \sprintf('%d stories publiées, visibles pendant 24 h.', \count($created)));
 
@@ -81,7 +85,7 @@ final class StoryController extends AbstractController
             }
         }
 
-        return $this->render('story/new.html.twig', ['form' => $form] + $sources->forCurrentAccount());
+        return $this->render('story/new.html.twig', ['form' => $form, 'instagram' => $instagramConnection, 'crosspost_defaults' => CrosspostField::defaults($instagramConnection, true)] + $sources->forCurrentAccount());
     }
 
     /**

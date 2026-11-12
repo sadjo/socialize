@@ -1,0 +1,18 @@
+{# État de l'envoi vers Instagram (auteur seul). Variables : crosspost #}
+{% import '_macros.html.twig' as ui %}
+{% if crosspost %}
+    <div class="crosspost-status small">
+        {% if crosspost.status.value == 'published' %}
+            {{ ui.icon('check', 'xs') }}Publiée sur Instagram{% if crosspost.permalink %} · <a class="lnk" href="{{ crosspost.permalink }}" target="_blank" rel="noopener">voir sur Instagram</a>{% endif %}
+            · <span title="Instagram ne permet pas de modifier ni de supprimer une publication de l’extérieur">les modifications et la suppression se font sur Instagram</span>
+        {% elseif crosspost.status.value == 'failed' %}
+            {{ ui.icon('flag', 'xs') }}<span>Échec de l’envoi vers Instagram : {{ crosspost.error }}</span>
+            <form method="post" action="{{ path('app_instagram_retry', {id: crosspost.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('instagram-retry-' ~ crosspost.id) }}">
+                <button class="btn sm">Réessayer</button>
+            </form>
+        {% else %}
+            {{ ui.icon('upload', 'xs') }}Envoi vers Instagram en cours…
+        {% endif %}
+    </div>
+{% endif %}

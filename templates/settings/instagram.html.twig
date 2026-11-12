@@ -1,0 +1,66 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Instagram · Réglages · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Réglages</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    {{ include('settings/_tabs.html.twig', {current: 'instagram'}) }}
+
+    <section class="card stack">
+        <h2>Publier aussi sur Instagram</h2>
+        <p class="small">Vos publications et stories peuvent partir aussi sur votre compte Instagram <b>professionnel</b> (Créateur ou Entreprise), au moment de les publier. Instagram ne permet pas de modifier ni de supprimer ces copies depuis Socialize : cela se fait dans l’application Instagram.</p>
+
+        {% if not available %}
+            <div class="note">{{ ui.icon('plug', 'sm') }}<span>Le crosspost automatique n’est pas configuré sur cette instance (application Meta absente). Le bouton « Partager vers Instagram » des publications reste disponible, pour tout compte Instagram.</span></div>
+        {% elseif connection %}
+            <div class="zip">
+                <span class="ico">{{ ui.icon('image') }}</span>
+                <span class="grow">
+                    <b>@{{ connection.username }}</b><br>
+                    <small>connecté le {{ connection.connectedAt|format_datetime('long', 'short', locale: 'fr') }} · autorisation valable jusqu’au {{ connection.tokenExpiresAt|format_date('long', locale: 'fr') }}, renouvelée automatiquement</small>
+                </span>
+                {% if expired %}
+                    <span class="chip">{{ ui.icon('flag', 'xs') }}À reconnecter</span>
+                {% else %}
+                    <span class="chip on">{{ ui.icon('check', 'xs') }}Connecté</span>
+                {% endif %}
+            </div>
+            {% if expired %}<p class="field-errors">Instagram n’accepte plus l’autorisation : reconnectez votre compte.</p>{% endif %}
+
+            {% if form %}
+                {{ form_start(form, {attr: {class: 'form'}}) }}
+                    <fieldset class="field">
+                        <legend class="lab">{{ form.visibilities.vars.label }}</legend>
+                        <div class="choices">
+                            {% for box in form.visibilities %}
+                                <label class="chk">{{ form_widget(box) }}<span>{{ box.vars.label }}</span></label>
+                            {% endfor %}
+                        </div>
+                        <p class="help">La case reste modifiable à chaque publication. Sur Instagram, un compte professionnel est public : une publication réservée à vos abonnés y sera visible de tous.</p>
+                    </fieldset>
+                    <label class="chk">{{ form_widget(form.stories) }}<span>{{ form.stories.vars.label }}</span></label>
+                    <div class="navbtns"><span></span><button class="btn pri">Enregistrer les règles</button></div>
+                {{ form_end(form) }}
+            {% endif %}
+        {% endif %}
+
+        {% if available %}
+            <div class="row wrap">
+                <form method="post" action="{{ path('app_settings_instagram_connect') }}" data-turbo="false">
+                    <input type="hidden" name="_token" value="{{ csrf_token('instagram-connect') }}">
+                    <button class="btn {{ connection ? '' : 'pri' }}">{{ ui.icon('image', 'xs') }}{{ connection ? 'Reconnecter Instagram' : 'Se connecter à Instagram' }}</button>
+                </form>
+                {% if connection %}
+                    <form method="post" action="{{ path('app_settings_instagram_disconnect') }}" data-turbo-confirm="Déconnecter Instagram ? Les publications déjà envoyées restent sur Instagram.">
+                        <input type="hidden" name="_token" value="{{ csrf_token('instagram-disconnect') }}">
+                        <button class="btn ghost danger">Déconnecter</button>
+                    </form>
+                {% endif %}
+            </div>
+            <p class="small">Tant que l’application Meta de l’instance n’est pas validée par Meta, seuls les comptes Instagram ajoutés comme testeurs par l’administrateur peuvent se connecter. Adresse de retour à déclarer : <code>{{ redirect_uri }}</code></p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

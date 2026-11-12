@@ -25,6 +25,7 @@
                 {{ form_row(form.highlight) }}
                 {{ form_row(form.highlightTitle) }}
                 {{ include('compose/_music.html.twig', {field: form.music}) }}
+                {{ include('compose/_crosspost.html.twig', {visibility_field: 'audience'}) }}
                 <button class="btn pri" data-compose-target="submit">Partager la story</button>
             </section>
         </div>
