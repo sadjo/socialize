@@ -41,7 +41,11 @@ export default class extends Controller {
         this.listener.preload = 'none';
         this.listener.addEventListener('timeupdate', () => { if (this.listener.currentTime >= this.excerptValue) this.stopListening(); });
         this.listener.addEventListener('ended', () => this.stopListening());
-        this.listener.addEventListener('playing', () => this.listening?.classList.remove('loading'));
+        // Son lancé : égaliseur animé sur la vignette du morceau écouté.
+        this.listener.addEventListener('playing', () => {
+            this.listening?.classList.remove('loading');
+            this.listening?.closest('li')?.classList.add('playing');
+        });
         this.listener.addEventListener('error', () => {
             if (this.listening) this.showError('Ce morceau ne peut pas être écouté pour le moment.');
             this.stopListening();
@@ -222,6 +226,7 @@ export default class extends Controller {
         if (button) {
             this.setIcon(button, false);
             button.classList.remove('loading');
+            button.closest('li')?.classList.remove('playing');
         }
         this.listener.pause();
         if (this.listener.getAttribute('src')) {
