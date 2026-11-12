@@ -92,8 +92,15 @@ final readonly class Outbox
     }
 
     /**
-     * Modification : Update pour les abonnés ; Create si la publication sort du privé,
-     * Delete si elle y entre (elle disparaît alors du fédivers).
+     * Modification d'une publication.
+     *
+     * Mastodon, comme la plupart des logiciels du fédivers, ne change jamais la visibilité ni les destinataires d'une
+     * publication déjà reçue : une mise à jour (Update) n'y touche que le texte et les médias. Et une même instance
+     * peut recevoir la publication par plusieurs boîtes (partagée, personnelles) : un écart calculé boîte par boîte
+     * y mélangerait ajout et retrait du même objet. Donc :
+     * - même visibilité, mêmes destinataires : Update ;
+     * - sinon : retrait sous l'identifiant actuel (Delete), puis envoi sous un nouvel identifiant (Create, /v2…)
+     *   aux nouveaux destinataires ; en privé, seulement le retrait.
      */
     #[AsEventListener]
     public function onPostUpdated(PostUpdated $event): void
@@ -104,41 +111,50 @@ final readonly class Outbox
         if (!$author->isLocal() || $post->isArchived()) {
             return;
         }
-        $wasFederated = Visibility::Private !== $event->previousVisibility;
-        $isFederated = Visibility::Private !== $post->getVisibility();
+        $previous = $event->previousVisibility;
+        $current = $post->getVisibility();
+        $wasFederated = Visibility::Private !== $previous;
+        $isFederated = Visibility::Private !== $current;
+        if (!$wasFederated && !$isFederated) {
+            return;
+        }
         $previousAudience = array_values(array_filter($event->previousAudience, fn (Account $m): bool => $this->follows->isFollowing($m, $author)));
-        $before = $this->recipients($post, $event->previousVisibility, $previousAudience);
-        $after = $this->recipients($post, $post->getVisibility(), $this->access->groupAudience($post));
+        $audience = $this->access->groupAudience($post);
 
-        if (!$wasFederated && $isFederated) {
-            $this->sendCreate($post, $after);
+        if ($wasFederated && $isFederated && $previous === $current && $this->ids($previousAudience) === $this->ids($audience)) {
+            $note = $this->serializer->note($post);
+            $this->deliver($author, $this->recipients($post, $current, $audience), [
+                'id' => $this->urls->activity($author, 'update'),
+                'type' => 'Update',
+                'actor' => $this->urls->actor($author),
+                'to' => $note['to'],
+                'cc' => $note['cc'],
+                'object' => $note,
+            ]);
 
             return;
         }
-        if ($wasFederated && !$isFederated) {
-            $this->sendDelete($post, $event->previousVisibility, $before, $previousAudience);
+        if ($wasFederated) {
+            $this->sendDeletes($post, $previous, $previousAudience, $this->recipients($post, $previous, $previousAudience));
             $post->retireFromFediverse();
             $this->em->flush();
-
-            return;
         }
-        if (!$isFederated) {
-            return;
+        if ($isFederated) {
+            $this->sendCreate($post, $this->recipients($post, $current, $audience));
         }
+    }
 
-        // Destinataires qui changent (groupes, ou passage d'un groupe aux abonnés) : la publication apparaît chez
-        // les nouveaux, est mise à jour chez ceux qui l'avaient, et disparaît chez ceux qui ne doivent plus la voir.
-        $this->sendCreate($post, array_values(array_diff($after, $before)));
-        $this->sendDelete($post, $event->previousVisibility, array_values(array_diff($before, $after)), $previousAudience);
-        $note = $this->serializer->note($post);
-        $this->deliver($author, array_values(array_intersect($after, $before)), [
-            'id' => $this->urls->activity($author, 'update'),
-            'type' => 'Update',
-            'actor' => $this->urls->actor($author),
-            'to' => $note['to'],
-            'cc' => $note['cc'],
-            'object' => $note,
-        ]);
+    /**
+     * @param list<Account> $accounts
+     *
+     * @return list<string>
+     */
+    private function ids(array $accounts): array
+    {
+        $ids = array_map(static fn (Account $a): string => $a->getId()->toRfc4122(), $accounts);
+        sort($ids);
+
+        return $ids;
     }
 
     #[AsEventListener]
@@ -175,25 +191,32 @@ final readonly class Outbox
     private function sendCurrentDelete(Post $post): void
     {
         $audience = $this->access->groupAudience($post);
-        $this->sendDelete($post, $post->getVisibility(), $this->recipients($post, $post->getVisibility(), $audience), $audience);
+        $this->sendDeletes($post, $post->getVisibility(), $audience, $this->recipients($post, $post->getVisibility(), $audience));
     }
 
     /**
-     * @param list<string>  $inboxes
+     * Retire la publication du fédivers : un Delete par identifiant qu'elle a eu (l'actuel, et les précédents au cas où
+     * un retrait aurait été perdu ou ignoré), livré à ses destinataires et à tous les abonnés distants. Un Delete ne
+     * porte que l'identifiant : une instance qui ne connaît pas la publication l'ignore.
+     *
      * @param list<Account> $audience membres abonnés des groupes, pour l'adressage
+     * @param list<string>  $inboxes  destinataires de la publication
      */
-    private function sendDelete(Post $post, Visibility $visibility, array $inboxes, array $audience): void
+    private function sendDeletes(Post $post, Visibility $visibility, array $audience, array $inboxes): void
     {
         $author = $post->getAccount();
         [$to, $cc] = $this->serializer->addressing($visibility, $author, $audience);
-        $this->deliver($author, $inboxes, [
-            'id' => $this->urls->activity($author, 'delete'),
-            'type' => 'Delete',
-            'actor' => $this->urls->actor($author),
-            'to' => $to,
-            'cc' => $cc,
-            'object' => ['id' => $this->urls->note($post), 'type' => 'Tombstone'],
-        ]);
+        $inboxes = array_values(array_unique([...$inboxes, ...$this->followerInboxes($author)]));
+        foreach ($this->urls->noteRevisions($post) as $noteId) {
+            $this->deliver($author, $inboxes, [
+                'id' => $this->urls->activity($author, 'delete'),
+                'type' => 'Delete',
+                'actor' => $this->urls->actor($author),
+                'to' => $to,
+                'cc' => $cc,
+                'object' => ['id' => $noteId, 'type' => 'Tombstone'],
+            ]);
+        }
     }
 
     #[AsEventListener]

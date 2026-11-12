@@ -140,10 +140,127 @@ final class FederationTest extends AppWebTestCase
         $media = $post->getMedia()->first();
         self::assertInstanceOf(\App\Core\Domain\Media\MediaAttachment::class, $media);
         self::getContainer()->get(\App\Media\Application\PostEditor::class)->edit($post, 'En famille', Visibility::Groups, null, null, [\App\Media\Application\PostEditor::token($media)], audienceGroups: [$friends]);
+        // Retirée chez Alice (boîte personnelle et boîte partagée de son instance), sans renvoi : plus aucun membre.
         $delete = $this->fediverse()->delivered('Delete');
-        self::assertCount(1, $delete);
-        self::assertSame('http://localhost/p/'.$post->getPublicId(), $this->dig($delete, 0, 'object', 'id'));
-        self::assertCount(0, $this->fediverse()->delivered('Update'), 'Aucun destinataire restant à mettre à jour.');
+        self::assertCount(2, $delete);
+        self::assertSame(['http://localhost/p/'.$post->getPublicId()], array_values(array_unique(array_map(fn (array $d): string => $this->text($d, 'object', 'id'), $delete))));
+        self::assertCount(0, $this->fediverse()->delivered('Create'), 'Aucun nouveau destinataire.');
+        self::assertCount(0, $this->fediverse()->delivered('Update'));
+    }
+
+    /**
+     * Mastodon ne change jamais la visibilité ni les destinataires d'une publication déjà reçue : chaque changement
+     * la retire (Delete, de tous ses identifiants) puis la renvoie sous un nouvel identifiant (Create).
+     */
+    public function testChangingWhoCanSeeAPostRemovesItThenSendsItUnderANewId(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/7', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
+        $family = $groups->create($this->reloadAccount($camille), 'Famille');
+        $groups->setMembers($family, [$this->alice()->getId()->toRfc4122()]);
+        $post = $this->publish($this->reloadAccount($camille), 'Concert', Visibility::Public);
+        $family = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($family->getId());
+        self::assertNotNull($family);
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        $editor = self::getContainer()->get(\App\Media\Application\PostEditor::class);
+        $order = array_values(array_map(\App\Media\Application\PostEditor::token(...), $post->getMedia()->toArray()));
+        $public = 'https://www.w3.org/ns/activitystreams#Public';
+
+        // Public → abonnés : retirée, puis renvoyée réservée aux abonnés.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Concert', Visibility::Followers, null, null, $order));
+        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
+        self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Create'));
+        $create = $this->ofType($sent, 'Create')[0];
+        self::assertNotContains($public, [...(array) $this->dig($create, 'object', 'to'), ...(array) $this->dig($create, 'object', 'cc')], 'Plus publique.');
+        self::assertSame([], $this->ofType($sent, 'Update'), 'Un Update ne changerait pas la visibilité chez Mastodon.');
+
+        // Simple retouche du texte : même visibilité, mêmes destinataires, Update sous le même identifiant.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Followers, null, null, $order));
+        self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Update'));
+        self::assertSame([], $this->ofType($sent, 'Delete'));
+
+        // Abonnés → groupe Famille : retirée de partout (tous ses identifiants), renvoyée à Alice seule.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Groups, null, null, $order, audienceGroups: [$family]));
+        self::assertSame([$noteId, $noteId.'/v2'], $this->objectIds($sent, 'Delete'));
+        self::assertSame([$noteId.'/v3'], $this->objectIds($sent, 'Create'));
+        self::assertSame([FakeFediverse::ALICE.'/inbox'], array_column($this->ofDeliveries($sent, 'Create'), 'url'), 'Boîte personnelle d’Alice.');
+        self::assertSame([FakeFediverse::ALICE], $this->dig($this->ofType($sent, 'Create')[0], 'object', 'to'));
+
+        // Groupe → privé : retirée, aussi de la boîte partagée de l'instance d'Alice ; rien de renvoyé.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Private, null, null, $order));
+        self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3'], $this->objectIds($sent, 'Delete'));
+        self::assertEqualsCanonicalizing([FakeFediverse::ALICE.'/inbox', 'https://remote.test/inbox'], array_values(array_unique(array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Delete')))));
+        self::assertSame([], $this->ofType($sent, 'Create'));
+
+        // Privé → groupe : renvoyée sous un nouvel identifiant, sans retrait.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Groups, null, null, $order, audienceGroups: [$family]));
+        self::assertSame([$noteId.'/v4'], $this->objectIds($sent, 'Create'));
+        self::assertSame([], $this->ofType($sent, 'Delete'));
+
+        // Suppression : retrait de tous les identifiants qu'elle a eus.
+        $sent = $this->during(static fn () => self::getContainer()->get(PostComposer::class)->delete($post));
+        self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3', $noteId.'/v4'], $this->objectIds($sent, 'Delete'));
+    }
+
+    /**
+     * Livraisons faites pendant $change.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function during(callable $change): array
+    {
+        $start = \count($this->fediverse()->deliveries);
+        $change();
+
+        return \array_slice($this->fediverse()->deliveries, $start);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $deliveries
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function ofDeliveries(array $deliveries, string $type): array
+    {
+        return array_values(array_filter($deliveries, fn (array $d): bool => $type === $this->dig($d, 'activity', 'type')));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $deliveries
+     *
+     * @return list<array<mixed>> activités
+     */
+    private function ofType(array $deliveries, string $type): array
+    {
+        $activities = [];
+        foreach ($this->ofDeliveries($deliveries, $type) as $delivery) {
+            $activity = $delivery['activity'] ?? null;
+            self::assertIsArray($activity);
+            $activities[] = $activity;
+        }
+
+        return $activities;
+    }
+
+    /**
+     * Identifiants des objets visés, sans doublon, dans l'ordre d'envoi.
+     *
+     * @param list<array<string, mixed>> $deliveries
+     *
+     * @return list<string>
+     */
+    private function objectIds(array $deliveries, string $type): array
+    {
+        return array_values(array_unique(array_map(fn (array $a): string => $this->text($a, 'object', 'id'), $this->ofType($deliveries, $type))));
+    }
+
+    private function text(mixed $data, string|int ...$path): string
+    {
+        $value = $this->dig($data, ...$path);
+        self::assertIsString($value);
+
+        return $value;
     }
 
     public function testRemovingARemoteFollowerRejectsItsFollow(): void
