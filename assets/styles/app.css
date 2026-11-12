@@ -436,6 +436,7 @@ pre.code{margin:0;padding:14px 16px;border-radius:14px;background:var(--bg);bord
 .imm-date{display:flex;align-items:center;gap:6px}
 .imm-scroll{max-height:440px;overflow-y:auto;border-radius:14px;padding-right:4px}
 .imm-scroll turbo-frame{display:block}
+.imm-more{display:flex;justify-content:center;padding:12px 0}
 .imm-day{font-size:.8rem;font-weight:700;color:var(--muted);margin:12px 0 6px;text-transform:none}
 .imm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:4px}
 .imm-tile{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--surface-2);padding:0;border:0}

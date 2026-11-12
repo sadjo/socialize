@@ -1,5 +1,6 @@
 {# Une page de Synology Photos (source de la création). Variables : days, page, next, space, album, date, error, expired.
-   La première page remplace le cadre « synology-library » ; les suivantes se chargent au défilement.
+   La première page remplace le cadre « synology-library » ; les suivantes se chargent au défilement
+   (contrôleur library-more), ou par le lien « Voir la suite ».
    Les heures du NAS sont des heures locales exprimées en UTC : elles s'affichent en UTC. #}
 {% import '_macros.html.twig' as ui %}
 <turbo-frame id="{{ page == 1 ? 'synology-library' : 'synology-page-' ~ page }}">
@@ -28,6 +29,9 @@
         {% if page == 1 and not error %}<p class="small">Aucune photo ni vidéo {{ album ? 'dans cet album' : (space == 't' ? 'dans l’espace partagé' : 'dans votre espace personnel') }}{{ date ? ' jusqu’au ' ~ date|format_date('long', locale: 'fr', timezone: 'UTC') }}.</p>{% endif %}
     {% endfor %}
     {% if next %}
-        <turbo-frame id="synology-page-{{ next }}" src="{{ path('app_synology_photos_library', {page: next, espace: album ? null : space, album: album, date: date ? date|date('Y-m-d', 'UTC') : null}) }}" loading="lazy"></turbo-frame>
+        {% set next_url = path('app_synology_photos_library', {page: next, espace: album ? null : space, album: album, date: date ? date|date('Y-m-d', 'UTC') : null}) %}
+        <turbo-frame id="synology-page-{{ next }}" src="{{ next_url }}" loading="lazy" data-controller="library-more">
+            <div class="imm-more"><a class="btn sm" href="{{ next_url }}">Voir la suite</a></div>
+        </turbo-frame>
     {% endif %}
 </turbo-frame>

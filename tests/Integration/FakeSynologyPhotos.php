@@ -27,6 +27,8 @@ final class FakeSynologyPhotos
     /** Espace partagé. */
     public const int PHOTO_FAMILLE = 601;
     public const int ALBUM_VACANCES = 7;
+    /** Album de 61 photos : une page pleine (60), puis une seconde page d'une photo. */
+    public const int ALBUM_LONG = 8;
     /** Écart entre l'identifiant d'un élément et celui de son unité (clé de cache des vignettes). */
     public const int UNIT_OFFSET = 9000;
 
@@ -187,7 +189,12 @@ final class FakeSynologyPhotos
         $items = array_values(self::items($team));
         if (isset($fields['album_id'])) {
             // Un album peut mêler les deux espaces ; il se lit par l'API de l'espace personnel.
-            $items = !$team && self::ALBUM_VACANCES === (int) $fields['album_id'] ? [self::items(false)[self::PHOTO_PLAGE], self::items(true)[self::PHOTO_FAMILLE]] : [];
+            $items = match (true) {
+                $team => [],
+                self::ALBUM_VACANCES === (int) $fields['album_id'] => [self::items(false)[self::PHOTO_PLAGE], self::items(true)[self::PHOTO_FAMILLE]],
+                self::ALBUM_LONG === (int) $fields['album_id'] => array_map(static fn (int $i): array => self::item(1000 + $i, 'photo', \sprintf('IMG_%04d.jpg', $i), '2024-01-01 12:00:00', 1), range(1, 61)),
+                default => [],
+            };
         }
         if (isset($fields['end_time'])) {
             $items = array_values(array_filter($items, static fn (array $item): bool => $item['time'] <= (int) $fields['end_time']));

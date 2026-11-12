@@ -123,6 +123,16 @@ final class SynologyPhotosTest extends AppWebTestCase
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?album='.FakeSynologyPhotos::ALBUM_VACANCES);
         self::assertSame(['s-p-501', 's-t-601'], $crawler->filter('.imm-tile')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
 
+        // Plus d'une page : la suite se charge au défilement (contrôleur library-more), ou par le lien du cadre.
+        $crawler = $this->client->request('GET', '/synology-photos/phototheque?album='.FakeSynologyPhotos::ALBUM_LONG);
+        self::assertCount(60, $crawler->filter('.imm-tile'));
+        $next = $crawler->filter('turbo-frame#synology-page-2[data-controller="library-more"]');
+        self::assertCount(1, $next);
+        self::assertSame($next->attr('src'), $next->filter('a')->attr('href'), 'Lien « Voir la suite » de secours.');
+        $crawler = $this->client->request('GET', (string) $next->attr('src'));
+        self::assertCount(1, $crawler->filter('turbo-frame#synology-page-2 .imm-tile'));
+        self::assertSelectorNotExists('turbo-frame#synology-page-3');
+
         // Aller à une date : ce jour-là ou avant.
         $crawler = $this->client->request('GET', '/synology-photos/phototheque?date=2026-11-08');
         self::assertSame(['s-p-502', 's-p-503'], $crawler->filter('.imm-tile')->each(static fn ($tile): ?string => $tile->attr('data-compose-token-param')));
