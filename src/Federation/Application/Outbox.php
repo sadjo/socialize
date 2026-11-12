@@ -188,6 +188,49 @@ final readonly class Outbox
         $this->onPostPublished(new PostPublished($event->post));
     }
 
+    /**
+     * Remet le fédivers d'accord avec la publication (commande app:federation:resync) : retrait de tous les
+     * identifiants qu'elle a eus, puis, si elle y est visible, renvoi sous un nouvel identifiant.
+     */
+    public function resync(Post $post): void
+    {
+        $author = $post->getAccount();
+        if (!$author->isLocal()) {
+            return;
+        }
+        $audience = $this->access->groupAudience($post);
+        $this->sendDeletes($post, $post->getVisibility(), $audience, $this->recipients($post, $post->getVisibility(), $audience));
+        $post->retireFromFediverse();
+        $this->em->flush();
+        if ($post->isFederable()) {
+            $this->sendCreate($post, $this->recipients($post, $post->getVisibility(), $audience));
+        }
+    }
+
+    /**
+     * Retire du fédivers une publication déjà supprimée : un Delete par identifiant qu'elle a pu avoir, livré à tous
+     * les abonnés distants de son auteur (commande app:federation:resync).
+     *
+     * @return int nombre d'identifiants retirés
+     */
+    public function retractDeleted(Account $author, string $publicId, int $revisions): int
+    {
+        [$to, $cc] = $this->serializer->addressing(Visibility::Followers, $author, []);
+        $ids = $this->urls->noteIds($publicId, $revisions);
+        foreach ($ids as $noteId) {
+            $this->deliver($author, $this->followerInboxes($author), [
+                'id' => $this->urls->activity($author, 'delete'),
+                'type' => 'Delete',
+                'actor' => $this->urls->actor($author),
+                'to' => $to,
+                'cc' => $cc,
+                'object' => ['id' => $noteId, 'type' => 'Tombstone'],
+            ]);
+        }
+
+        return \count($ids);
+    }
+
     private function sendCurrentDelete(Post $post): void
     {
         $audience = $this->access->groupAudience($post);

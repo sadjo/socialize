@@ -103,9 +103,20 @@ final readonly class ApUrls
         if (null !== $post->getApUri()) {
             return [$post->getApUri()];
         }
-        $base = $this->base.'/p/'.$post->getPublicId();
 
-        return array_map(static fn (int $revision): string => 1 === $revision ? $base : $base.'/v'.$revision, range(1, max(1, $post->getApRevision())));
+        return $this->noteIds($post->getPublicId(), $post->getApRevision());
+    }
+
+    /**
+     * Identifiants d'une publication locale, de la première révision à $revisions (/p/{id}, /p/{id}/v2…).
+     *
+     * @return list<string>
+     */
+    public function noteIds(string $publicId, int $revisions): array
+    {
+        $base = $this->base.'/p/'.$publicId;
+
+        return array_map(static fn (int $revision): string => 1 === $revision ? $base : $base.'/v'.$revision, range(1, max(1, $revisions)));
     }
 
     public function comment(Comment $comment): string

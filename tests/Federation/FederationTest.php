@@ -13,6 +13,7 @@ use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Infrastructure\HttpSignature;
 use App\Media\Application\PostComposer;
 use App\Tests\AppWebTestCase;
+use Symfony\Component\Console\Command\Command;
 
 final class FederationTest extends AppWebTestCase
 {
@@ -201,6 +202,35 @@ final class FederationTest extends AppWebTestCase
         // Suppression : retrait de tous les identifiants qu'elle a eus.
         $sent = $this->during(static fn () => self::getContainer()->get(PostComposer::class)->delete($post));
         self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3', $noteId.'/v4'], $this->objectIds($sent, 'Delete'));
+    }
+
+    public function testTheResyncCommandRemovesLeftoverCopies(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/8', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $post = $this->publish($this->reloadAccount($camille), 'Restée sur Mastodon', Visibility::Public);
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:resync'));
+
+        // Publication visible : anciennes copies retirées, puis renvoi sous un nouvel identifiant.
+        $sent = $this->during(static fn (): int => $command->execute(['publication' => 'https://socialize.example/p/'.$post->getPublicId()]));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
+        self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Create'));
+
+        // Publication supprimée : il faut le compte ; tous les identifiants jusqu'à celui de l'adresse sont retirés.
+        $publicId = $post->getPublicId();
+        $post = self::getContainer()->get(PostRepository::class)->findByPublicId($publicId);
+        self::assertInstanceOf(Post::class, $post);
+        self::getContainer()->get(PostComposer::class)->delete($post);
+        self::assertSame(Command::FAILURE, $command->execute(['publication' => $publicId]));
+        self::assertStringContainsString('--compte', $command->getDisplay());
+        $sent = $this->during(static fn (): int => $command->execute(['publication' => 'https://socialize.example/p/'.$publicId.'/v3', '--compte' => 'camille']));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3'], $this->objectIds($sent, 'Delete'));
+        self::assertSame(['https://remote.test/inbox'], array_values(array_unique(array_map(fn (array $d): string => $this->text($d, 'url'), $sent))), 'Vers la boîte partagée des abonnés.');
+
+        self::assertSame(Command::FAILURE, $command->execute(['publication' => 'pas une adresse']));
     }
 
     /**
