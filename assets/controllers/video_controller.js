@@ -42,6 +42,7 @@ export default class extends Controller {
     }
 
     disconnect() {
+        this.visible = false;
         this.observer.disconnect();
         window.removeEventListener(SOUND_EVENT, this.onSound);
         this.videoTarget.removeEventListener('play', this.onPlay);
@@ -49,13 +50,16 @@ export default class extends Controller {
     }
 
     visibilityChanged(entry) {
-        this.visible = entry.isIntersecting;
+        this.visible = entry.isIntersecting && this.videoTarget.isConnected;
         if (!this.visible) {
             this.videoTarget.pause();
             return;
         }
         // Pas de lecture automatique derrière un avertissement de contenu ou si l'utilisateur limite les animations.
         if (reducedMotion.matches || this.element.closest('.media')?.querySelector('.cw-veil')) return;
+        // Copie de la page en cache affichée par Turbo le temps du chargement : elle va être remplacée, rien n'y joue
+        // (une vidéo lancée là continuerait hors de la page et priverait la vraie du décodeur sur iPhone).
+        if (document.documentElement.hasAttribute('data-turbo-preview')) return;
         this.play();
     }
 
@@ -68,7 +72,9 @@ export default class extends Controller {
         const video = this.videoTarget;
         video.muted = this.silent || !soundOn();
         this.render();
-        video.play().catch(() => {
+        video.play().catch((error) => {
+            // Lecture interrompue (vidéo retirée de la page, mise en pause) : surtout pas de nouvelle tentative.
+            if ('AbortError' === error?.name || !video.isConnected || !this.visible) return;
             // Le navigateur refuse le son sans geste de l'utilisateur sur cette vidéo : lecture muette.
             video.muted = true;
             this.render();
