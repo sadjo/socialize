@@ -8,6 +8,7 @@ use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Music\MusicTrack;
+use App\Core\Domain\Post\CrosspostTarget;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
@@ -67,6 +68,14 @@ class Story
     /** Début de l'extrait joué, en secondes. */
     #[ORM\Column(options: ['default' => 0])]
     private int $musicStart = 0;
+
+    /**
+     * Réseaux vers lesquels l'auteur a demandé de l'envoyer aussi (valeurs de CrosspostTarget) ; null : aucun.
+     *
+     * @var list<string>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $crosspostTargets = null;
 
     public function __construct(
         #[ORM\ManyToOne]
@@ -211,6 +220,20 @@ class Story
     {
         $this->music = $choice?->track;
         $this->musicStart = $choice->start ?? 0;
+    }
+
+    /**
+     * @param list<CrosspostTarget> $targets
+     */
+    public function requestCrosspost(array $targets): void
+    {
+        $values = array_values(array_unique(array_map(static fn (CrosspostTarget $t): string => $t->value, $targets)));
+        $this->crosspostTargets = [] === $values ? null : $values;
+    }
+
+    public function wantsCrosspost(CrosspostTarget $target): bool
+    {
+        return \in_array($target->value, $this->crosspostTargets ?? [], true);
     }
 
     public function getHighlight(): ?Highlight

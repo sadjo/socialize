@@ -7,6 +7,7 @@ namespace App\Media\Application\Library;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicChoice;
+use App\Core\Domain\Post\CrosspostTarget;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\AudienceGroup;
@@ -46,8 +47,9 @@ final readonly class LibraryPublisher
      * @param list<File>             $files          fichiers envoyés depuis l'appareil
      * @param array<string, ?string> $alts           texte alternatif par jeton
      * @param list<AudienceGroup>    $audienceGroups groupes d'abonnés (visibilité « Groupes »)
+     * @param list<CrosspostTarget>  $crosspost      réseaux où l'envoyer aussi (Instagram…)
      */
-    public function publishPost(Account $author, array $order, array $files, array $alts, string $caption, Visibility $visibility, ?string $contentWarning, ?string $location, ?MusicChoice $music = null, array $audienceGroups = []): Post
+    public function publishPost(Account $author, array $order, array $files, array $alts, string $caption, Visibility $visibility, ?string $contentWarning, ?string $location, ?MusicChoice $music = null, array $audienceGroups = [], array $crosspost = []): Post
     {
         $items = $this->resolve($author, $order, $files, Post::MAX_MEDIA);
         try {
@@ -60,6 +62,7 @@ final readonly class LibraryPublisher
                 $location,
                 $music,
                 $audienceGroups,
+                $crosspost,
             );
             $this->complete($author, array_values($post->getMedia()->toArray()), $items);
 
@@ -70,17 +73,18 @@ final readonly class LibraryPublisher
     }
 
     /**
-     * @param list<string>        $order
-     * @param list<File>          $files
-     * @param list<AudienceGroup> $audienceGroups groupes d'abonnés (public « Groupes »)
+     * @param list<string>          $order
+     * @param list<File>            $files
+     * @param list<AudienceGroup>   $audienceGroups groupes d'abonnés (public « Groupes »)
+     * @param list<CrosspostTarget> $crosspost      réseaux où envoyer aussi chaque story (Instagram…)
      *
      * @return list<Story>
      */
-    public function publishStories(Account $author, array $order, array $files, ?string $text, Visibility $audience, ?MusicChoice $music = null, array $audienceGroups = []): array
+    public function publishStories(Account $author, array $order, array $files, ?string $text, Visibility $audience, ?MusicChoice $music = null, array $audienceGroups = [], array $crosspost = []): array
     {
         $items = $this->resolve($author, $order, $files, Story::MAX_PER_UPLOAD);
         try {
-            $stories = $this->stories->publish($author, array_column($items, 'file'), $text, $audience, $music, $audienceGroups);
+            $stories = $this->stories->publish($author, array_column($items, 'file'), $text, $audience, $music, $audienceGroups, $crosspost);
             $this->complete($author, array_map(static fn (Story $s): ?MediaAttachment => $s->getMedia(), $stories), $items);
 
             return $stories;

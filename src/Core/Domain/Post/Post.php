@@ -70,6 +70,14 @@ class Post
     #[ORM\Column(options: ['default' => true])]
     private bool $announce = true;
 
+    /**
+     * Réseaux vers lesquels l'auteur a demandé de l'envoyer aussi (valeurs de CrosspostTarget) ; null : aucun.
+     *
+     * @var list<string>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $crosspostTargets = null;
+
     #[ORM\Column]
     private int $likesCount = 0;
 
@@ -384,6 +392,20 @@ class Post
     public function getMusicStart(): int
     {
         return $this->musicStart;
+    }
+
+    /**
+     * @param list<CrosspostTarget> $targets
+     */
+    public function requestCrosspost(array $targets): void
+    {
+        $values = array_values(array_unique(array_map(static fn (CrosspostTarget $t): string => $t->value, $targets)));
+        $this->crosspostTargets = [] === $values ? null : $values;
+    }
+
+    public function wantsCrosspost(CrosspostTarget $target): bool
+    {
+        return \in_array($target->value, $this->crosspostTargets ?? [], true);
     }
 
     /**

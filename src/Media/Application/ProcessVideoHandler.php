@@ -6,6 +6,7 @@ namespace App\Media\Application;
 
 use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\PostUpdated;
+use App\Core\Domain\Event\StoryPublished;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Media\MediaStatus;
 use App\Core\Infrastructure\Doctrine\MediaAttachmentRepository;
@@ -53,6 +54,11 @@ final readonly class ProcessVideoHandler
                 // Une publication importée sans annonce reste discrète.
                 $this->events->dispatch(new PostPublished($post));
             }
+        }
+        // Story vidéo : annoncée une fois la vidéo prête.
+        $story = $media->getStory();
+        if (null !== $story && $media->isReady()) {
+            $this->events->dispatch(new StoryPublished($story));
         }
     }
 }
