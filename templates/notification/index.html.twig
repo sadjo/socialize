@@ -1,0 +1,64 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Notifications · Socialize{% endblock %}
+
+{% block content %}
+{% set token = csrf_token('notifications') %}
+{% set unread = notifications|filter(n => not n.read)|length %}
+<div class="page-narrow">
+    <div class="page-h">
+        <div class="grow"><h1>Notifications</h1><p>Les « J’aime » et commentaires reçus sur vos publications. {{ unread ? unread ~ ' non lue' ~ (unread > 1 ? 's') ~ '.' : 'Tout est lu.' }}</p></div>
+        {% if notifications is not empty %}
+            <div class="row wrap">
+                {% if unread %}
+                    <form method="post" action="{{ path('app_notifications_read_all') }}">
+                        <input type="hidden" name="_token" value="{{ token }}">
+                        <button class="btn sm">{{ ui.icon('check', 'xs') }}Tout marquer comme lu</button>
+                    </form>
+                {% endif %}
+                <form method="post" action="{{ path('app_notifications_delete_all') }}" data-turbo-confirm="Supprimer toutes vos notifications ?">
+                    <input type="hidden" name="_token" value="{{ token }}">
+                    <button class="btn sm ghost danger">{{ ui.icon('trash', 'xs') }}Tout supprimer</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if notifications is empty %}
+        <section class="card empty-notifs">{{ ui.icon('bell') }}<p>Aucune notification. Les « J’aime » et commentaires sur vos publications apparaîtront ici.</p></section>
+    {% else %}
+        <ul class="notifs">
+            {% for n in notifications %}
+                {% set who = n.actor %}
+                {% set cover = n.post.media|first %}
+                <li class="notif{{ n.read ? '' : ' unread' }}" id="notification-{{ n.id }}">
+                    {# Toute la ligne ouvre la publication et marque la notification comme lue. #}
+                    <form method="post" action="{{ path('app_notification_open', {id: n.id}) }}" class="notif-open">
+                        <input type="hidden" name="_token" value="{{ token }}">
+                        <button>
+                            <span class="notif-av">{{ ui.avatar(who, 44) }}<span class="notif-kind {{ n.type.value }}">{{ ui.icon(n.type.value == 'like' ? 'heart' : 'comment', 'xs') }}</span></span>
+                            <span class="notif-text">
+                                <span><b>{{ who.displayName }}</b>{% if not who.local %} <small>@{{ who.domain }}</small>{% endif %}
+                                {%- if n.type.value == 'like' %} a aimé votre publication.{% else %} a commenté votre publication{% if n.comment %} : « {{ n.comment.content|length > 120 ? n.comment.content|slice(0, 120) ~ '…' : n.comment.content }} »{% else %}.{% endif %}{% endif %}</span>
+                                <small><time datetime="{{ n.createdAt|date('c') }}">{{ n.createdAt|ago }}</time>{% if not n.read %} · <span class="notif-new">nouvelle</span>{% endif %}</small>
+                            </span>
+                            {% if cover and cover.ready and media_url(cover, 'thumb') %}<img class="notif-th" src="{{ media_url(cover, 'thumb') }}" alt="" loading="lazy">{% endif %}
+                        </button>
+                    </form>
+                    <div class="notif-acts">
+                        <form method="post" action="{{ path('app_notification_toggle', {id: n.id}) }}">
+                            <input type="hidden" name="_token" value="{{ token }}">
+                            <button class="ib" aria-label="{{ n.read ? 'Marquer comme non lue' : 'Marquer comme lue' }}" title="{{ n.read ? 'Marquer comme non lue' : 'Marquer comme lue' }}">{{ ui.icon(n.read ? 'eye' : 'check', 'sm') }}</button>
+                        </form>
+                        <form method="post" action="{{ path('app_notification_delete', {id: n.id}) }}">
+                            <input type="hidden" name="_token" value="{{ token }}">
+                            <button class="ib" aria-label="Supprimer la notification" title="Supprimer">{{ ui.icon('x', 'sm') }}</button>
+                        </form>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>
+{% endblock %}

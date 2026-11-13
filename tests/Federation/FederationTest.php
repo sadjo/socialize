@@ -657,17 +657,30 @@ final class FederationTest extends AppWebTestCase
 
         $this->inbox('/inbox', ['id' => FakeFediverse::ALICE.'#likes/1', 'type' => 'Like', 'actor' => FakeFediverse::ALICE, 'object' => $url]);
         self::assertSame(1, $this->reloadPost($post)->getLikesCount());
+        self::assertSame([\App\Core\Domain\Notification\NotificationType::Like], $this->notificationTypes(), 'Camille est notifiée du J’aime venu du fédivers.');
 
         $this->inbox('/inbox', ['id' => FakeFediverse::ALICE.'#undo/1', 'type' => 'Undo', 'actor' => FakeFediverse::ALICE, 'object' => ['id' => FakeFediverse::ALICE.'#likes/1', 'type' => 'Like', 'actor' => FakeFediverse::ALICE, 'object' => $url]]);
         self::assertSame(0, $this->reloadPost($post)->getLikesCount());
+        self::assertSame([], $this->notificationTypes(), 'J’aime retiré : notification retirée.');
 
         $reply = $this->remoteNote('https://remote.test/notes/2', '<p><span class="h-card"><a href="http://localhost/@camille">@camille</a></span> Superbe lumière</p>', $url, withImage: false);
         $this->inbox('/inbox', ['id' => 'https://remote.test/notes/2/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE, 'object' => $reply]);
         self::assertSame(1, $this->reloadPost($post)->getCommentsCount());
+        self::assertSame([\App\Core\Domain\Notification\NotificationType::Comment], $this->notificationTypes());
 
         $this->client->request('GET', '/p/'.$post->getPublicId());
         self::assertSelectorTextContains('.cmts', 'Superbe lumière');
         self::assertSelectorTextContains('.cmts', '@remote.test');
+    }
+
+    /**
+     * @return list<\App\Core\Domain\Notification\NotificationType>
+     */
+    private function notificationTypes(): array
+    {
+        self::getContainer()->get('doctrine')->getManager()->clear();
+
+        return array_map(static fn (\App\Core\Domain\Notification\Notification $n): \App\Core\Domain\Notification\NotificationType => $n->getType(), self::getContainer()->get(\App\Core\Infrastructure\Doctrine\NotificationRepository::class)->findAll());
     }
 
     /**

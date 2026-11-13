@@ -32,6 +32,7 @@ final readonly class SocialActions
         private FollowRepository $follows,
         private LikeRepository $likes,
         private EventDispatcherInterface $events,
+        private \App\Core\Application\Notification\Notifications $notifications,
     ) {
     }
 
@@ -84,6 +85,7 @@ final readonly class SocialActions
             $post->decrementLikes();
             $this->em->flush();
             $this->events->dispatch(new PostUnliked($account, $post, $apUri));
+            $this->notifications->unliked($account, $post);
 
             return false;
         }
@@ -93,6 +95,7 @@ final readonly class SocialActions
         $post->incrementLikes();
         $this->em->flush();
         $this->events->dispatch(new PostLiked($like));
+        $this->notifications->liked($account, $post);
 
         return true;
     }
@@ -116,6 +119,7 @@ final readonly class SocialActions
         $post->incrementComments();
         $this->em->flush();
         $this->events->dispatch(new CommentAdded($comment));
+        $this->notifications->commented($comment);
 
         return $comment;
     }
