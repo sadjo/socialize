@@ -9,9 +9,11 @@ use App\Core\Domain\Post\Visibility;
 use App\Crosspost\Meta\Application\InstagramConnections;
 use App\Crosspost\Meta\Application\InstagramException;
 use App\Crosspost\Meta\Application\InstagramPublishing;
+use App\Crosspost\Meta\Domain\InstagramAppSettings;
 use App\Crosspost\Meta\Domain\InstagramConnection;
 use App\Crosspost\Meta\Domain\InstagramCrosspost;
 use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramCrosspostRepository;
+use App\Web\Form\InstagramAppType;
 use App\Web\Form\InstagramRulesType;
 use App\Web\Security\CurrentAccount;
 use Psr\Clock\ClockInterface;
@@ -62,11 +64,31 @@ final class InstagramController extends AbstractController
             }
         }
 
+        // Application Meta propre au compte (sinon celle de l'instance, si elle en a une).
+        $own = $this->connections->ownApp($account);
+        $appForm = $this->createForm(InstagramAppType::class, ['appId' => $own?->getAppId()], ['has_secret' => $own instanceof InstagramAppSettings]);
+        $appForm->handleRequest($request);
+        if ($appForm->isSubmitted() && $appForm->isValid()) {
+            /** @var array{appId: string, secret: ?string} $data */
+            $data = $appForm->getData();
+            try {
+                $this->connections->saveApp($account, $data['appId'], $data['secret']);
+                $this->addFlash('success', 'Application Meta enregistrée.');
+
+                return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
+            } catch (InstagramException $e) {
+                $appForm->get('secret')->addError(new \Symfony\Component\Form\FormError($e->getMessage()));
+            }
+        }
+
         return $this->render('settings/instagram.html.twig', [
             'account' => $account,
             'connection' => $connection,
             'expired' => $connection?->isExpired($this->clock->now()) ?? false,
-            'available' => $this->connections->isAvailable(),
+            'available' => $this->connections->isAvailable($account),
+            'own_app' => $own,
+            'instance_app' => $this->connections->hasInstanceApp(),
+            'app_form' => $appForm,
             'redirect_uri' => $this->redirectUri(),
             'form' => $form,
         ]);
@@ -81,15 +103,16 @@ final class InstagramController extends AbstractController
         if (!$this->isCsrfTokenValid('instagram-connect', $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
         }
-        if (!$this->connections->isAvailable()) {
-            $this->addFlash('error', 'Le crosspost Instagram n’est pas configuré sur cette instance.');
+        $account = $this->currentAccount->require();
+        if (!$this->connections->isAvailable($account)) {
+            $this->addFlash('error', 'Réglez d’abord l’application Meta à utiliser.');
 
             return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
         }
         $state = bin2hex(random_bytes(16));
         $request->getSession()->set(self::STATE, $state);
 
-        return new RedirectResponse($this->connections->authorizeUrl($this->redirectUri(), $state), Response::HTTP_SEE_OTHER);
+        return new RedirectResponse($this->connections->authorizeUrl($account, $this->redirectUri(), $state), Response::HTTP_SEE_OTHER);
     }
 
     /**
@@ -118,6 +141,18 @@ final class InstagramController extends AbstractController
         } catch (InstagramException $e) {
             $this->addFlash('error', $e->getMessage());
         }
+
+        return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/reglages/instagram/application/retirer', name: 'app_settings_instagram_app_remove', methods: ['POST'])]
+    public function removeApp(Request $request): RedirectResponse
+    {
+        if (!$this->isCsrfTokenValid('instagram-app-remove', $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
+        }
+        $this->connections->removeApp($this->currentAccount->require());
+        $this->addFlash('success', 'Application Meta retirée.');
 
         return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
     }

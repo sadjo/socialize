@@ -6,7 +6,9 @@ namespace App\Crosspost\Meta\Application;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Post\Visibility;
+use App\Crosspost\Meta\Domain\InstagramAppSettings;
 use App\Crosspost\Meta\Domain\InstagramConnection;
+use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramAppSettingsRepository;
 use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramConnectionRepository;
 use App\Crosspost\Meta\Infrastructure\InstagramClient;
 use App\Crosspost\Meta\Infrastructure\InstagramVault;
@@ -26,14 +28,72 @@ final readonly class InstagramConnections
         private InstagramClient $client,
         private InstagramVault $vault,
         private InstagramApp $app,
+        private InstagramAppSettingsRepository $apps,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
     ) {
     }
 
-    public function isAvailable(): bool
+    /**
+     * Le compte peut-il connecter son Instagram ? (application Meta à lui, ou celle de l'instance).
+     */
+    public function isAvailable(?Account $account): bool
+    {
+        return $this->appFor($account) instanceof InstagramApp;
+    }
+
+    public function hasInstanceApp(): bool
     {
         return $this->app->isConfigured();
+    }
+
+    /**
+     * Application Meta utilisée pour connecter le compte : la sienne si elle est réglée, sinon celle de l'instance.
+     */
+    public function appFor(?Account $account): ?InstagramApp
+    {
+        $own = $this->apps->forAccount($account);
+        if ($own instanceof InstagramAppSettings) {
+            return new InstagramApp($own->getAppId(), $this->vault->decrypt($own->getSecretEncrypted()));
+        }
+
+        return $this->app->isConfigured() ? $this->app : null;
+    }
+
+    public function ownApp(?Account $account): ?InstagramAppSettings
+    {
+        return $this->apps->forAccount($account);
+    }
+
+    /**
+     * Application Meta propre au compte. Clé secrète vide : celle déjà enregistrée est gardée.
+     */
+    public function saveApp(Account $account, string $appId, #[\SensitiveParameter] ?string $secret): void
+    {
+        $appId = trim($appId);
+        $secret = null === $secret || '' === trim($secret) ? null : trim($secret);
+        $own = $this->apps->forAccount($account);
+        if (!$own instanceof InstagramAppSettings) {
+            if (null === $secret) {
+                throw new InstagramException('Indiquez la clé secrète de l’application.');
+            }
+            $this->em->persist(new InstagramAppSettings($account, $appId, $this->vault->encrypt($secret), $this->clock->now()));
+        } else {
+            $own->change($appId, null === $secret ? null : $this->vault->encrypt($secret), $this->clock->now());
+        }
+        $this->em->flush();
+    }
+
+    /**
+     * Application propre retirée : la connexion déjà faite reste valable (le jeton ne dépend pas de la clé secrète).
+     */
+    public function removeApp(Account $account): void
+    {
+        $own = $this->apps->forAccount($account);
+        if ($own instanceof InstagramAppSettings) {
+            $this->em->remove($own);
+            $this->em->flush();
+        }
     }
 
     public function of(?Account $account): ?InstagramConnection
@@ -48,12 +108,15 @@ final readonly class InstagramConnections
     {
         $connection = $this->of($account);
 
-        return $this->isAvailable() && $connection instanceof InstagramConnection && !$connection->isExpired($this->clock->now()) ? $connection : null;
+        // Le jeton suffit pour publier : la connexion reste utilisable même sans application réglée.
+        return $connection instanceof InstagramConnection && !$connection->isExpired($this->clock->now()) ? $connection : null;
     }
 
-    public function authorizeUrl(string $redirectUri, string $state): string
+    public function authorizeUrl(Account $account, string $redirectUri, string $state): string
     {
-        return $this->client->authorizeUrl($this->app->id, $redirectUri, $state);
+        $app = $this->appFor($account) ?? throw new InstagramException('Aucune application Meta n’est réglée pour ce compte.');
+
+        return $this->client->authorizeUrl($app->id, $redirectUri, $state);
     }
 
     /**
@@ -61,15 +124,13 @@ final readonly class InstagramConnections
      */
     public function connect(Account $account, #[\SensitiveParameter] string $code, string $redirectUri): InstagramConnection
     {
-        if (!$this->isAvailable()) {
-            throw new InstagramException('Le crosspost Instagram n’est pas configuré sur cette instance.');
-        }
-        $short = $this->client->exchangeCode($this->app->id, $this->app->secret, $redirectUri, $code);
+        $app = $this->appFor($account) ?? throw new InstagramException('Aucune application Meta n’est réglée pour ce compte.');
+        $short = $this->client->exchangeCode($app->id, $app->secret, $redirectUri, $code);
         $missing = array_diff(InstagramClient::SCOPES, $short['permissions']);
         if ([] !== $short['permissions'] && [] !== $missing) {
             throw new InstagramException('Autorisation incomplète : acceptez la publication de contenu lors de la connexion à Instagram.');
         }
-        $long = $this->client->longLived($this->app->secret, $short['token']);
+        $long = $this->client->longLived($app->secret, $short['token']);
         $me = $this->client->me($long['token']);
         $userId = '' !== $me['userId'] ? $me['userId'] : $short['userId'];
         if ('' === $userId) {
