@@ -204,6 +204,32 @@ final class FederationTest extends AppWebTestCase
         self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3', $noteId.'/v4'], $this->objectIds($sent, 'Delete'));
     }
 
+    /**
+     * Date de publication changée par un administrateur : Mastodon garde la date d'un statut reçu, la publication
+     * est donc retirée puis renvoyée à sa nouvelle date, sous un nouvel identifiant.
+     */
+    public function testRedatingAPostSendsItAgainAtItsNewDate(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/8', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $post = $this->publish($this->reloadAccount($camille), 'Souvenir', Visibility::Public);
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        $editor = self::getContainer()->get(\App\Media\Application\PostEditor::class);
+        $order = array_values(array_map(\App\Media\Application\PostEditor::token(...), $post->getMedia()->toArray()));
+
+        $date = new \DateTimeImmutable('2025-07-14 18:30:00 UTC');
+        $sent = $this->during(static fn () => $editor->edit($post, 'Souvenir', Visibility::Public, null, null, $order, publishedAt: $date));
+        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
+        self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Create'));
+        self::assertSame([], $this->ofType($sent, 'Update'), 'Un Update ne changerait pas la date chez Mastodon.');
+        self::assertSame('2025-07-14T18:30:00+00:00', $this->dig($this->ofType($sent, 'Create')[0], 'object', 'published'));
+
+        // Même date : simple mise à jour.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Souvenir d’été', Visibility::Public, null, null, $order, publishedAt: $date));
+        self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Update'));
+        self::assertSame([], $this->ofType($sent, 'Delete'));
+    }
+
     public function testTheResyncCommandRemovesLeftoverCopies(): void
     {
         $camille = $this->register('camille')->getAccount();
