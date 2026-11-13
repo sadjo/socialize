@@ -7,7 +7,7 @@
 {% set first = post.media|filter(m => m.width and m.height)|first %}
 {% set ratio = first ? max(0.8, min(1.91, first.width / first.height)) : 0.8 %}
 {% set music = post.music %}
-<div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="dblclick->like#doubleTap dblclick->lightbox#cancel" data-carousel-count-value="{{ count }}"
+<div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="click->like#tap" data-carousel-count-value="{{ count }}"
      {%- if music %} data-music data-music-start-value="{{ post.musicStart }}" data-music-excerpt-value="{{ constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') }}"{% endif %}>
     <div class="frame" style="--ratio: {{ ratio|number_format(4, '.', '') }}">
     <div class="track" data-carousel-target="track">
