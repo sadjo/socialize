@@ -29,7 +29,7 @@ final class LightboxTest extends AppWebTestCase
 
         $this->client->request('GET', '/p/'.$post->getPublicId());
         self::assertResponseIsSuccessful();
-        self::assertSelectorExists('.media[data-controller~="lightbox"][data-action~="dblclick->lightbox#cancel"]', 'Un double-clic (J’aime) n’ouvre pas la visionneuse.');
+        self::assertSelectorExists('.media[data-controller~="lightbox"][data-action~="click->like#tap"]', 'Un double-clic (J’aime) n’ouvre pas la visionneuse.');
         self::assertSelectorCount(3, '.slide[data-lightbox-target="item"][data-action="click->lightbox#open"]');
         self::assertSelectorExists('.slide[data-lightbox-type="image"][data-lightbox-width="1200"][data-lightbox-height="800"][data-lightbox-alt="Plage au lever du soleil"][data-lightbox-src$=".webp"]');
         self::assertSelectorExists('.slide[data-lightbox-type="video"][data-lightbox-src$="-video.mp4"][data-lightbox-poster$=".webp"]');
