@@ -194,13 +194,12 @@ tr:last-child td{border-bottom:0}
 .fed{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:10px}
 .imp{height:22px;font-size:.7rem;padding:0 8px}
 .media{position:relative;max-width:100%;user-select:none}
-/* Cadre aux proportions du premier média (4:5 à 1,91:1, voir post/_media.html.twig) ; chaque média y est entier. */
-.media .frame{position:relative;aspect-ratio:var(--ratio,4/5);overflow:hidden;background:var(--surface-2);max-height:max(320px,calc(100dvh - 140px))}
-/* Mobile : même cadre 4:5 pour toutes les publications (le média y reste entier). */
-@media (max-width:767px){.media .frame{aspect-ratio:4/5}}
+/* Même cadre 4:5 pour toutes les publications. */
+.media .frame{position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--surface-2);max-height:max(320px,calc(100dvh - 140px))}
 .track{display:flex;height:100%;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
 .slide{flex:0 0 100%;height:100%;position:relative}
-.slide img,.slide video{width:100%;height:100%;object-fit:contain;display:block}
+/* Le média couvre tout le cadre (rogné sur les bords au besoin) ; la visionneuse le montre en entier. */
+.slide img,.slide video{width:100%;height:100%;object-fit:cover;display:block}
 /* Vidéo façon Instagram : affiche, lecture muette à l'écran, bouton son en bas à gauche */
 .player{position:relative;height:100%}
 .player video{cursor:pointer}
@@ -220,9 +219,13 @@ tr:last-child td{border-bottom:0}
 .media:hover .nb,.media:focus-within .nb{opacity:1}
 .nb.prev{left:10px}.nb.next{right:10px}
 /* Position dans le carrousel : sous le média, pas dessus. */
-.dots{display:flex;justify-content:center;gap:5px;padding:9px 0 3px}
-.dots i{width:6px;height:6px;border-radius:3px;background:var(--faint);opacity:.6;transition:all .3s}
-.dots i.on{opacity:1;width:16px;background:var(--accent)}
+.dots{display:flex;justify-content:center;gap:0;padding:3px 0 0}
+/* Points cliquables : zone de clic plus grande que le point. */
+.dots button{display:grid;place-items:center;padding:6px 3px;border:0;background:none;cursor:pointer}
+.dots i{display:block;width:6px;height:6px;border-radius:3px;background:var(--faint);opacity:.6;transition:all .3s}
+.dots button:hover i{opacity:1}
+.dots button.on i{opacity:1;width:16px;background:var(--accent)}
+.dots button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:6px}
 .burst{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
 .burst svg{width:110px;height:110px;fill:var(--on-media);stroke:none;filter:drop-shadow(0 8px 24px oklch(0.6 0.2 20 / .6));animation:burst .9s ease-out forwards}
 @keyframes burst{0%{transform:scale(.2);opacity:0}25%{transform:scale(1.15);opacity:1}45%{transform:scale(.95)}80%{opacity:1}100%{transform:scale(1.1) translateY(-20px);opacity:0}}
