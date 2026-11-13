@@ -8,8 +8,8 @@ use App\Media\Application\PostComposer;
 use App\Tests\AppWebTestCase;
 
 /**
- * Médias d'une publication montrés en entier : cadre aux proportions du premier média (4:5 à 1,91:1), points du
- * carrousel sous le cadre.
+ * Médias d'une publication montrés en entier : cadre aux proportions du premier média (4:5 à 1,91:1) sur ordinateur,
+ * 4:5 pour toutes sur mobile ; points du carrousel sous le cadre.
  */
 final class PostMediaFrameTest extends AppWebTestCase
 {
@@ -23,7 +23,7 @@ final class PostMediaFrameTest extends AppWebTestCase
         ]);
 
         $crawler = $this->client->request('GET', '/p/'.$landscape->getPublicId());
-        self::assertSame('aspect-ratio: 1.3333', $crawler->filter('.media > .frame')->attr('style'));
+        self::assertSame('--ratio: 1.3333', $crawler->filter('.media > .frame')->attr('style'), 'Proportions du premier média, sur ordinateur (mobile : 4:5, en CSS).');
         self::assertCount(2, $crawler->filter('.media > .frame .slide'));
         self::assertCount(2, $crawler->filter('.media > .dots i'), 'Points sous le cadre, pas dedans.');
         self::assertCount(0, $crawler->filter('.frame .dots'));
@@ -33,7 +33,7 @@ final class PostMediaFrameTest extends AppWebTestCase
         foreach ([[400, 1000, '0.8000'], [1500, 500, '1.9100']] as [$width, $height, $ratio]) {
             $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadAccount($camille), 'Format', [['file' => $this->jpeg($width, $height), 'alt' => null]]);
             $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
-            self::assertSame('aspect-ratio: '.$ratio, $crawler->filter('.media > .frame')->attr('style'), $width.'×'.$height);
+            self::assertSame('--ratio: '.$ratio, $crawler->filter('.media > .frame')->attr('style'), $width.'×'.$height);
             self::assertCount(0, $crawler->filter('.media .dots'), 'Un seul média : pas de points.');
         }
     }
