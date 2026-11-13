@@ -12,8 +12,8 @@
         <h2>Publier aussi sur Instagram</h2>
         <p class="small">Vos publications et stories peuvent partir aussi sur votre compte Instagram <b>professionnel</b> (Créateur ou Entreprise), au moment de les publier. Instagram ne permet pas de modifier ni de supprimer ces copies depuis Socialize : cela se fait dans l’application Instagram.</p>
 
-        {% if not available %}
-            <div class="note">{{ ui.icon('plug', 'sm') }}<span>Le crosspost automatique n’est pas configuré sur cette instance (application Meta absente). Le bouton « Partager vers Instagram » des publications reste disponible, pour tout compte Instagram.</span></div>
+        {% if not available and not connection %}
+            <div class="note">{{ ui.icon('plug', 'sm') }}<span>Pour publier automatiquement, réglez ci-dessous l’application Meta à utiliser. En attendant, le bouton « Partager vers Instagram » des publications reste disponible, pour tout compte Instagram.</span></div>
         {% elseif connection %}
             <div class="zip">
                 <span class="ico">{{ ui.icon('image') }}</span>
@@ -59,7 +59,28 @@
                     </form>
                 {% endif %}
             </div>
-            <p class="small">Tant que l’application Meta de l’instance n’est pas validée par Meta, seuls les comptes Instagram ajoutés comme testeurs par l’administrateur peuvent se connecter. Adresse de retour à déclarer : <code>{{ redirect_uri }}</code></p>
+            <p class="small">{{ own_app ? 'Connexion avec votre application Meta.' : 'Connexion avec l’application Meta de l’instance.' }} Tant qu’elle n’est pas validée par Meta, seuls les comptes Instagram ajoutés comme testeurs de l’application peuvent se connecter.</p>
+        {% endif %}
+    </section>
+
+    <section class="card stack" id="application-meta">
+        <h2>Application Meta</h2>
+        <p class="small">La connexion à Instagram passe par une application Meta (developers.facebook.com, cas d’utilisation « API Instagram avec connexion Instagram »). Vous pouvez utiliser la vôtre{{ instance_app ? ' à la place de celle de l’instance' }}. Déclarez-y l’adresse de retour <code>{{ redirect_uri }}</code> et ajoutez votre compte Instagram comme testeur tant que l’application n’est pas validée.</p>
+        {% if own_app %}
+            <p class="small">{{ ui.icon('check', 'xs') }} Votre application <b>{{ own_app.appId }}</b>, enregistrée le {{ own_app.updatedAt|format_datetime('long', 'short', locale: 'fr') }}.</p>
+        {% elseif instance_app %}
+            <p class="small">Aucune application à vous : celle de l’instance est utilisée.</p>
+        {% endif %}
+        {{ form_start(app_form, {attr: {class: 'form'}}) }}
+            {{ form_row(app_form.appId) }}
+            {{ form_row(app_form.secret) }}
+            <div class="navbtns"><span></span><button class="btn pri">Enregistrer l’application</button></div>
+        {{ form_end(app_form) }}
+        {% if own_app %}
+            <form method="post" action="{{ path('app_settings_instagram_app_remove') }}" data-turbo-confirm="Retirer votre application Meta ? Votre connexion Instagram actuelle reste valable{{ instance_app ? ' ; une nouvelle connexion utilisera l’application de l’instance' }}.">
+                <input type="hidden" name="_token" value="{{ csrf_token('instagram-app-remove') }}">
+                <button class="btn ghost danger">Retirer mon application</button>
+            </form>
         {% endif %}
     </section>
 </div>

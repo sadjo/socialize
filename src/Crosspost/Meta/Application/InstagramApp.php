@@ -7,8 +7,9 @@ namespace App\Crosspost\Meta\Application;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Application Meta de l'instance (INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET). Sans elle, le crosspost Instagram est
- * absent ; le partage manuel reste possible.
+ * Application Meta : celle de l'instance (service, INSTAGRAM_APP_ID et INSTAGRAM_APP_SECRET, facultatifs) ou celle
+ * d'un compte (Réglages › Instagram, voir InstagramConnections::appFor()). Sans application, pas de connexion
+ * possible ; le partage manuel reste disponible.
  */
 final readonly class InstagramApp
 {

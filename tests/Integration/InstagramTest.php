@@ -13,8 +13,10 @@ use App\Crosspost\Meta\Application\InstagramConnections;
 use App\Crosspost\Meta\Application\RefreshInstagramTokens;
 use App\Crosspost\Meta\Application\RefreshInstagramTokensHandler;
 use App\Crosspost\Meta\Domain\CrosspostStatus;
+use App\Crosspost\Meta\Domain\InstagramAppSettings;
 use App\Crosspost\Meta\Domain\InstagramConnection;
 use App\Crosspost\Meta\Domain\InstagramCrosspost;
+use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramAppSettingsRepository;
 use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramConnectionRepository;
 use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramCrosspostRepository;
 use App\Crosspost\Meta\Infrastructure\InstagramVault;
@@ -92,6 +94,61 @@ final class InstagramTest extends AppWebTestCase
         $this->client->followRedirect();
         $this->client->submit($this->client->getCrawler()->selectButton('Déconnecter')->form());
         self::assertNull($this->connection());
+    }
+
+    public function testEachAccountCanUseItsOwnMetaApp(): void
+    {
+        $this->login($this->register('camille'));
+        $crawler = $this->client->request('GET', '/reglages/instagram');
+        self::assertSelectorTextContains('#application-meta', 'celle de l’instance est utilisée');
+
+        // Sans clé secrète, une première application est refusée.
+        $form = $crawler->selectButton('Enregistrer l’application')->form();
+        $form['instagram_app[appId]'] = '555000111';
+        $this->client->submit($form);
+        self::assertSelectorTextContains('#application-meta', 'Indiquez la clé secrète');
+        self::assertNull($this->ownApp());
+
+        $form['instagram_app[secret]'] = 'secret-a-moi';
+        $this->client->submit($form);
+        self::assertResponseRedirects('/reglages/instagram');
+        $own = $this->ownApp();
+        self::assertInstanceOf(InstagramAppSettings::class, $own);
+        self::assertSame('555000111', $own->getAppId());
+        self::assertStringNotContainsString('secret-a-moi', $own->getSecretEncrypted(), 'Clé secrète chiffrée.');
+        $crawler = $this->client->followRedirect();
+        self::assertSame('', $crawler->filter('input[name="instagram_app[secret]"]')->attr('value') ?? '', 'Jamais réaffichée.');
+        self::assertSelectorTextContains('#application-meta', '555000111');
+
+        // Connexion avec son application : son identifiant vers Instagram, sa clé secrète à l'échange du code.
+        $this->client->submit($crawler->selectButton('Se connecter à Instagram')->form());
+        parse_str((string) parse_url((string) $this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
+        self::assertSame('555000111', $query['client_id'] ?? null);
+        FakeInstagram::$secret = 'secret-a-moi';
+        $this->client->request('GET', '/reglages/instagram/retour', ['code' => FakeInstagram::CODE, 'state' => $query['state'] ?? '']);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Instagram connecté');
+        $exchange = array_values(array_filter(FakeInstagram::$requests, static fn (array $r): bool => '/oauth/access_token' === $r['path']));
+        self::assertSame('secret-a-moi', $exchange[0]['params']['client_secret'] ?? null);
+
+        // Nouvel identifiant, clé laissée vide : la clé enregistrée est gardée.
+        $form = $this->client->getCrawler()->selectButton('Enregistrer l’application')->form();
+        $form['instagram_app[appId]'] = '555000222';
+        $this->client->submit($form);
+        $own = $this->ownApp();
+        self::assertInstanceOf(InstagramAppSettings::class, $own);
+        self::assertSame('555000222', $own->getAppId());
+        self::assertSame('secret-a-moi', self::getContainer()->get(InstagramVault::class)->decrypt($own->getSecretEncrypted()));
+
+        // Application retirée : la connexion reste, une nouvelle connexion passe par l'application de l'instance.
+        $crawler = $this->client->followRedirect();
+        $this->client->submit($crawler->selectButton('Retirer mon application')->form());
+        self::assertNull($this->ownApp());
+        self::assertInstanceOf(InstagramConnection::class, $this->connection());
+        $crawler = $this->client->followRedirect();
+        $this->client->submit($crawler->selectButton('Reconnecter Instagram')->form());
+        parse_str((string) parse_url((string) $this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
+        self::assertSame('1234567890', $query['client_id'] ?? null);
     }
 
     public function testThePublishBoxFollowsTheRulesAndOnlyAppearsWhenConnected(): void
@@ -281,6 +338,14 @@ final class InstagramTest extends AppWebTestCase
     private function publish(User $author, string $caption): Post
     {
         return self::getContainer()->get(PostComposer::class)->publish($this->reloadUser($author)->getAccount(), $caption, [['file' => $this->jpeg(), 'alt' => null]], Visibility::Public, crosspost: [CrosspostTarget::Instagram]);
+    }
+
+    private function ownApp(): ?InstagramAppSettings
+    {
+        self::getContainer()->get('doctrine')->getManager()->clear();
+        $all = self::getContainer()->get(InstagramAppSettingsRepository::class)->findAll();
+
+        return $all[0] ?? null;
     }
 
     private function connection(): ?InstagramConnection

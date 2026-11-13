@@ -143,11 +143,13 @@ médias, story. L'état apparaît sur la page de la publication, avec « Réessa
 **ni de modifier ni de supprimer** une publication par son API : ces copies se gèrent dans l'application Instagram.
 Le jeton (60 jours) est renouvelé automatiquement.
 
-Configuration de l'instance (une fois) : créer une application sur [developers.facebook.com](https://developers.facebook.com)
-(type Business, cas d'usage « API Instagram avec connexion Instagram »), déclarer l'adresse de retour
-`https://<instance>/reglages/instagram/retour`, puis renseigner `INSTAGRAM_APP_ID` (variable) et `INSTAGRAM_APP_SECRET`
-(secret). Sans validation de l'application par Meta (accès standard), seuls les comptes Instagram ajoutés comme
-**testeurs** de l'application peuvent se connecter.
+Application Meta : créer une application sur [developers.facebook.com](https://developers.facebook.com) (type
+Business, cas d'usage « API Instagram avec connexion Instagram ») et y déclarer l'adresse de retour
+`https://<instance>/reglages/instagram/retour`. Chaque compte qui peut publier renseigne la sienne dans Réglages ›
+Instagram › Application Meta (identifiant et clé secrète, chiffrée en base, jamais réaffichée). L'instance peut aussi
+en fournir une par défaut, pour les comptes qui n'en ont pas : `INSTAGRAM_APP_ID` (variable) et `INSTAGRAM_APP_SECRET`
+(secret), facultatifs. Sans validation de l'application par Meta (accès standard), seuls les comptes Instagram ajoutés
+comme **testeurs** de l'application peuvent se connecter.
 
 Sans application Meta, ou pour un compte Instagram personnel : « Partager vers Instagram » (menu « … » d'une
 publication, page Mes stories) ouvre le menu de partage du téléphone avec les photos en JPEG et les vidéos, et copie

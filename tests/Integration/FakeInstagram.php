@@ -35,6 +35,9 @@ final class FakeInstagram
     /** @var list<array{method: string, path: string, params: array<string, string>}> */
     public static array $requests = [];
 
+    /** Clé secrète de l'application Meta attendue à l'échange du code. */
+    public static string $secret = 'secret-de-test';
+
     private static int $next = 0;
 
     public static function reset(): void
@@ -48,6 +51,7 @@ final class FakeInstagram
         self::$published = [];
         self::$requests = [];
         self::$next = 0;
+        self::$secret = 'secret-de-test';
     }
 
     /**
@@ -67,7 +71,7 @@ final class FakeInstagram
         $host = (string) parse_url($url, \PHP_URL_HOST);
 
         if ('api.instagram.com' === $host && 'POST' === $method && '/oauth/access_token' === $path) {
-            return self::CODE === ($params['code'] ?? null) && 'secret-de-test' === ($params['client_secret'] ?? null) && 'authorization_code' === ($params['grant_type'] ?? null)
+            return self::CODE === ($params['code'] ?? null) && self::$secret === ($params['client_secret'] ?? null) && 'authorization_code' === ($params['grant_type'] ?? null)
                 ? $this->json(['data' => [['access_token' => 'jeton-court', 'user_id' => self::USER_ID, 'permissions' => 'instagram_business_basic,instagram_business_content_publish']]])
                 : $this->error(400, 'Invalid authorization code', 36);
         }
