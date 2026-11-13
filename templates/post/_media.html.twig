@@ -59,6 +59,9 @@
     {% endif %}
     </div>
     {% if count > 1 %}
-        <div class="dots" aria-hidden="true">{% for i in 1..count %}<i class="{{ loop.first ? 'on' }}" data-carousel-target="dot"></i>{% endfor %}</div>
+        {# Points cliquables : chacun mène au média correspondant. #}
+        <div class="dots" role="group" aria-label="Médias de la publication">
+            {%- for i in 1..count %}<button type="button" class="{{ loop.first ? 'on' }}" data-carousel-target="dot" data-action="carousel#show" data-carousel-index-param="{{ loop.index0 }}" aria-label="Média {{ i }} sur {{ count }}"{% if loop.first %} aria-current="true"{% endif %}><i></i></button>{% endfor -%}
+        </div>
     {% endif %}
 </div>
