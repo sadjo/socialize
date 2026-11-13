@@ -234,6 +234,51 @@ final class FederationTest extends AppWebTestCase
     }
 
     /**
+     * Membres d'un groupe modifiés : ses publications sont retirées puis renvoyées aux membres actuels du fédivers ;
+     * un membre de cette instance ajouté ou retiré ne change rien au fédivers (son accès est vérifié à l'affichage).
+     */
+    public function testChangingTheMembersOfAGroupUpdatesItsPostsOnTheFediverse(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $hugo = $this->register('hugo')->getAccount();
+        $author = $this->reloadAccount($camille);
+        $follower = self::getContainer()->get(AccountRepository::class)->find($hugo->getId());
+        self::assertNotNull($follower);
+        self::getContainer()->get(\App\Core\Application\Social\SocialActions::class)->follow($follower, $author);
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/11', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
+        $family = $groups->create($this->reloadAccount($camille), 'Famille');
+        $alice = $this->alice()->getId()->toRfc4122();
+        $groups->setMembers($family, [$alice]);
+        $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadAccount($camille), 'En famille', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$this->family($family)]);
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        self::assertSame([$noteId], $this->objectIds($this->fediverse()->deliveries, 'Create'));
+
+        // Alice retirée du groupe : la publication est retirée chez elle, et envoyée à personne.
+        $sent = $this->during(fn () => $groups->setMembers($this->family($family), []));
+        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
+        self::assertContains(FakeFediverse::ALICE.'/inbox', array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Delete')));
+        self::assertSame([], $this->ofType($sent, 'Create'));
+
+        // Alice de retour : la publication lui est renvoyée sous un nouvel identifiant.
+        $sent = $this->during(fn () => $groups->setMembers($this->family($family), [$alice]));
+        self::assertSame([$noteId.'/v3'], $this->objectIds($sent, 'Create'));
+        self::assertSame([FakeFediverse::ALICE.'/inbox'], array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Create')));
+
+        // Hugo (membre de cette instance) ajouté : rien ne part.
+        $sent = $this->during(fn () => $groups->setMembers($this->family($family), [$alice, $hugo->getId()->toRfc4122()]));
+        self::assertSame([], $sent);
+    }
+
+    private function family(\App\Core\Domain\Social\AudienceGroup $group): \App\Core\Domain\Social\AudienceGroup
+    {
+        $fresh = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($group->getId());
+        self::assertNotNull($fresh);
+
+        return $fresh;
+    }
+
+    /**
      * Livraisons faites pendant $change.
      *
      * @return list<array<string, mixed>>
