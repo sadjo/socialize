@@ -19,7 +19,9 @@ final class MobileMenuTest extends AppWebTestCase
         $this->login($member);
         $this->client->request('GET', '/');
         self::assertSelectorExists('header.mtop button[data-action="mobile-menu#open"]');
-        foreach (['/deconnexion', '/recherche', '/import', '/reglages', '/publier', '/@hugo'] as $href) {
+        self::assertSelectorExists('dialog.mobile-menu button[popovertarget="create-menu"]', 'Créer : choix publication ou story.');
+        self::assertSelectorExists('nav.side button[popovertarget="create-menu"]');
+        foreach (['/deconnexion', '/recherche', '/import', '/reglages', '/@hugo'] as $href) {
             self::assertSelectorExists(\sprintf('dialog.mobile-menu a[href="%s"]', $href), $href);
             self::assertSelectorExists(\sprintf('nav.side a[href="%s"]', $href), 'Menu de gauche inchangé : '.$href);
         }

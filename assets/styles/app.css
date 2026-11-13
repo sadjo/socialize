@@ -639,6 +639,16 @@ dialog:modal{margin:auto}
 .share-sheet .opt:hover,.share-sheet .opt:focus-visible{background:var(--surface-2)}
 .share-sheet .opt span{display:flex;flex-direction:column}
 .share-sheet .opt small{color:var(--muted);font-size:.78rem}
+/* Choix « Créer » (popover) : publication ou story. */
+.create-menu{border:0;padding:0;margin:auto;background:transparent;max-width:min(420px,calc(100vw - 24px));width:100%;color:var(--fg);overflow:visible}
+.create-menu::backdrop{background:oklch(0.15 0.02 285 / .55);backdrop-filter:blur(4px)}
+.create-menu .sheet{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;animation:rise .15s}
+.create-menu header{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 8px 10px;font-family:var(--font-display)}
+.create-menu .opt{display:flex;align-items:center;gap:14px;padding:12px;border-radius:14px;color:var(--fg);background:none}
+.create-menu .opt:hover,.create-menu .opt:focus-visible{background:var(--surface-2)}
+.create-menu .opt span{display:flex;flex-direction:column}
+.create-menu .opt small{color:var(--muted);font-size:.78rem}
+button.nav{font:inherit;background:none;border:0;cursor:pointer;width:100%;text-align:left}
 
 /* ---------- Commentaires ---------- */
 .cmts-list{display:flex;flex-direction:column;gap:16px}

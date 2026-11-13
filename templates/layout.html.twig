@@ -13,7 +13,7 @@
 <header class="mtop">
     <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
     {% if me %}
-        {% if is_granted('ROLE_PUBLISHER') %}<a class="ib" href="{{ path('app_compose') }}" aria-label="Créer une publication">{{ ui.icon('plus') }}</a>{% endif %}
+        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="ib" popovertarget="create-menu" aria-haspopup="dialog" aria-label="Créer">{{ ui.icon('plus') }}</button>{% endif %}
         <span data-controller="mobile-menu">
             <button type="button" class="ib" data-action="mobile-menu#open" aria-label="Menu" aria-haspopup="dialog">{{ ui.icon('menu') }}</button>
             <dialog class="mobile-menu" data-mobile-menu-target="dialog" data-action="click->mobile-menu#backdrop" aria-label="Menu">
@@ -65,12 +65,23 @@
     </div>
 </dialog>
 
+{% if me and is_granted('ROLE_PUBLISHER') %}
+{# Choix offert par les boutons « Créer » (menu, barre du haut et du bas) : publication ou story. #}
+<div id="create-menu" class="create-menu" popover role="dialog" aria-labelledby="create-title">
+    <div class="sheet">
+        <header><b id="create-title">Créer</b><button type="button" class="ib" popovertarget="create-menu" popovertargetaction="hide" aria-label="Fermer">{{ ui.icon('x') }}</button></header>
+        <a class="opt" href="{{ path('app_compose') }}">{{ ui.icon('image') }}<span>Publication<small>Photos et vidéos, dans le fil et sur votre profil</small></span></a>
+        <a class="opt" href="{{ path('app_story_new') }}">{{ ui.icon('reel') }}<span>Story<small>Visible 24 heures</small></span></a>
+    </div>
+</div>
+{% endif %}
+
 {% if show_menu %}
 <nav class="tabbar" aria-label="Navigation mobile">
     <a href="{{ path('app_home') }}" class="{{ current_route == 'app_home' ? 'on' }}" aria-label="Accueil">{{ ui.icon('home') }}</a>
     {% if me or not home_login_only %}<a href="{{ path('app_feed_local') }}" class="{{ current_route == 'app_feed_local' ? 'on' }}" aria-label="Fil local">{{ ui.icon('compass') }}</a>{% endif %}
     {% if me %}
-        {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_compose') }}" class="plus" aria-label="Créer une publication">{{ ui.icon('plus') }}</a>{% endif %}
+        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="plus" popovertarget="create-menu" aria-haspopup="dialog" aria-label="Créer">{{ ui.icon('plus') }}</button>{% endif %}
         <a href="{{ path('app_settings') }}" class="{{ current_route == 'app_settings' ? 'on' }}" aria-label="Réglages">{{ ui.icon('sliders') }}</a>
         <a href="{{ path('app_profile', {username: me.username}) }}" aria-label="Profil">{{ ui.avatar(me, 26) }}</a>
     {% else %}

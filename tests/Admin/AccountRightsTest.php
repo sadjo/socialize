@@ -64,9 +64,9 @@ final class AccountRightsTest extends AppWebTestCase
         $this->login($this->reload($hugo));
         $this->client->request('GET', '/publier');
         self::assertResponseIsSuccessful();
-        foreach (['/publier', '/import'] as $href) {
-            self::assertSelectorExists(\sprintf('nav.side a[href="%s"]', $href));
-        }
+        self::assertSelectorExists('nav.side a[href="/import"]');
+        self::assertSelectorExists('nav.side button[popovertarget="create-menu"]');
+        self::assertSelectorExists('#create-menu a[href="/publier"]');
 
         $this->login($this->reload($admin));
         $this->client->request('GET', '/admin/comptes');
@@ -139,7 +139,8 @@ final class AccountRightsTest extends AppWebTestCase
         $this->client->request('GET', '/import');
         self::assertResponseStatusCodeSame(403);
         $this->client->request('GET', '/');
-        self::assertSelectorExists('nav.side a[href="/publier"]');
+        self::assertSelectorExists('nav.side button[popovertarget="create-menu"]');
+        self::assertSelectorExists('#create-menu a[href="/publier"]');
         self::assertSelectorNotExists('a[href="/import"]');
 
         // L'administrateur l'accorde dans la colonne « Import Instagram ».
