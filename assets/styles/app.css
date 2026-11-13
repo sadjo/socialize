@@ -380,7 +380,12 @@ tr:last-child td{border-bottom:0}
 .ptabs button.on{color:var(--fg);border-top-color:var(--fg)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
 /* Pages de la grille (cadres Turbo) : même grille, et une boîte visible pour le chargement au défilement. */
-.grid3 turbo-frame{display:grid;grid-template-columns:subgrid;grid-column:1/-1;gap:inherit}
+/* Pages de la grille : chaque page est un cadre imbriqué dans la précédente. Chargés, ces cadres s'effacent
+   (display:contents) et leurs vignettes rejoignent une seule grille : des sous-grilles imbriquées coûtaient à WebKit
+   (Safari, navigateurs sur iPhone) un calcul qui doublait à chaque page, jusqu'à bloquer le défilement. Seul le cadre
+   suivant, pas encore chargé, garde une boîte pour être vu par le chargement paresseux. */
+.grid3 turbo-frame{display:contents}
+.grid3 turbo-frame[src]:not([complete]){display:block;grid-column:1/-1;min-height:1px}
 .gt{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:6px;background:var(--surface-2)}
 .gt img,.gt video{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
 .gt:hover img{transform:scale(1.04)}
