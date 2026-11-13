@@ -212,11 +212,11 @@ final class ImmichTest extends AppWebTestCase
         $files = \in_array('n-0', $order, true) ? ['compose_post' => ['media' => [$this->jpeg(400, 500)]]] : [];
         $this->client->request('POST', '/publier', $values, $files);
         self::assertResponseRedirects();
-        $id = basename((string) $this->client->getResponse()->headers->get('Location'));
-
         self::getContainer()->get('doctrine')->getManager()->clear();
+        // Redirection vers la publication, ou vers le profil si elle attend la conversion d'une vidéo : la plus récente.
+        $posts = self::getContainer()->get(PostRepository::class)->findBy([], ['publishedAt' => 'DESC', 'id' => 'DESC'], 1);
 
-        return self::getContainer()->get(PostRepository::class)->findByPublicId($id) ?? throw new \LogicException('Publication introuvable.');
+        return $posts[0] ?? throw new \LogicException('Publication introuvable.');
     }
 
     /**

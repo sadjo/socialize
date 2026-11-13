@@ -17,4 +17,20 @@ final class MediaAttachmentRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, MediaAttachment::class);
     }
+
+    /**
+     * Progression de la conversion d'une vidéo, enregistrée directement (sans toucher au reste de l'unité de travail) ;
+     * null l'efface (conversion terminée).
+     */
+    public function saveProgress(MediaAttachment $media, ?int $percent): void
+    {
+        $this->getEntityManager()->createQueryBuilder()
+            ->update(MediaAttachment::class, 'm')
+            ->set('m.progress', ':progress')
+            ->where('m.id = :id')
+            ->setParameter('progress', null === $percent ? null : max(0, min(99, $percent)))
+            ->setParameter('id', $media->getId(), \Symfony\Bridge\Doctrine\Types\UuidType::NAME)
+            ->getQuery()
+            ->execute();
+    }
 }

@@ -777,3 +777,11 @@ label.act{cursor:pointer}
 .chip-check{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);font-size:.88rem;font-weight:600;cursor:pointer}
 .chip-check:has(input:checked){background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .choices label.off{opacity:.5;cursor:not-allowed}
+
+/* Profil : publications en préparation (conversion des vidéos) */
+.pending-posts{display:grid;gap:12px;margin-bottom:16px}
+.pending-posts h2{display:flex;align-items:center;gap:8px;margin:0}
+.pending-post{display:flex;gap:12px;align-items:flex-start}
+.pending-post .th{flex:0 0 64px;width:64px;height:80px;aspect-ratio:auto}
+.pending-post .grow{flex:1;display:grid;gap:6px;min-width:0}
+.pending-post .grow b{overflow-wrap:anywhere}

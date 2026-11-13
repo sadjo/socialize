@@ -116,6 +116,7 @@ final class PostRepository extends ServiceEntityRepository
             ->join('p.account', 'a')
             ->where('p.account = :account')
             ->andWhere('p.archivedAt IS NULL')
+            ->andWhere('p.pending = false')
             ->andWhere('p.publishedAt > :cursorDate OR (p.publishedAt = :cursorDate AND p.id > :cursorId)')
             ->setParameter('account', $account->getId(), UuidType::NAME);
         $this->visibleTo($qb, $account, $visible, $viewer);
@@ -141,11 +142,29 @@ final class PostRepository extends ServiceEntityRepository
             ->select('COUNT(p.id)')
             ->where('p.account = :account')
             ->andWhere('p.archivedAt IS NULL')
+            ->andWhere('p.pending = false')
             ->setParameter('account', $account->getId(), UuidType::NAME);
         $this->visibleTo($qb, $account, $visible, $viewer);
 
         return (int) $qb->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * Publications d'un compte en attente de la conversion de leurs vidéos, les plus récentes d'abord.
+     *
+     * @return list<Post>
+     */
+    public function pendingOf(Account $account): array
+    {
+        /* @var list<Post> */
+        return $this->createQueryBuilder('p')
+            ->where('p.account = :account')
+            ->andWhere('p.pending = true')
+            ->setParameter('account', $account->getId(), UuidType::NAME)
+            ->orderBy('p.publishedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -186,6 +205,7 @@ final class PostRepository extends ServiceEntityRepository
             ->andWhere('p.source = :source')
             ->andWhere('p.announce = false')
             ->andWhere('p.archivedAt IS NULL')
+            ->andWhere('p.pending = false')
             ->andWhere('p.visibility != :private')
             ->setParameter('account', $account->getId(), UuidType::NAME)
             ->setParameter('source', PostSource::InstagramImport)
@@ -238,6 +258,8 @@ final class PostRepository extends ServiceEntityRepository
         if (!$archived) {
             $qb->andWhere('p.archivedAt IS NULL');
         }
+        // En attente de la conversion de ses vidéos : seulement dans le bloc « En préparation » de son auteur.
+        $qb->andWhere('p.pending = false');
         if ($cursor instanceof Cursor) {
             $qb->andWhere('p.publishedAt < :cursorDate OR (p.publishedAt = :cursorDate AND p.id < :cursorId)')
                 ->setParameter('cursorDate', $cursor->publishedAt)

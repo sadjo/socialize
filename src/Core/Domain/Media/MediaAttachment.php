@@ -41,6 +41,10 @@ class MediaAttachment
     #[ORM\Column(nullable: true)]
     private ?float $duration = null;
 
+    /** Conversion d'une vidéo : pourcentage fait (null : pas encore commencée). */
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $progress = null;
+
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $blurhash = null;
 
@@ -280,6 +284,12 @@ class MediaAttachment
         $this->duration = $duration;
         $this->status = MediaStatus::Ready;
         $this->failureReason = null;
+        $this->progress = null;
+    }
+
+    public function getProgress(): ?int
+    {
+        return $this->progress;
     }
 
     public function markFailed(string $reason): void
