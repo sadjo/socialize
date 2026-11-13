@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Media\Application;
 
+use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Media\MediaStatus;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
@@ -117,6 +119,18 @@ final readonly class PostEditor
                 $processing = true;
                 $this->bus->dispatch(new ProcessVideo($media->getId()->toRfc4122()));
             }
+        }
+        if ($post->isPending()) {
+            // Encore en attente : elle paraît quand plus aucune vidéo n'est en conversion ni en échec (par exemple
+            // après avoir retiré la vidéo qui n'a pas pu être convertie).
+            $blocked = $post->getMedia()->exists(static fn (int $i, MediaAttachment $m): bool => MediaStatus::Ready !== $m->getStatus());
+            if (!$blocked) {
+                $post->release($this->clock->now());
+                $this->em->flush();
+                $this->events->dispatch(new PostPublished($post));
+            }
+
+            return;
         }
         // Avec une nouvelle vidéo, la mise à jour est fédérée une fois la vidéo prête (ProcessVideoHandler).
         if (!$processing) {

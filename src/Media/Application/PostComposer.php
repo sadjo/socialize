@@ -63,6 +63,10 @@ final readonly class PostComposer
             throw $e;
         }
 
+        // Avec une vidéo, la publication attend sa conversion avant de paraître (ProcessVideoHandler).
+        if ($post->getMedia()->exists(static fn (int $i, MediaAttachment $m): bool => $m->isVideo())) {
+            $post->hold();
+        }
         $this->em->persist($post);
         $this->em->flush();
 

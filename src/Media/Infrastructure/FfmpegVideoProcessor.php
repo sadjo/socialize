@@ -45,9 +45,12 @@ final class FfmpegVideoProcessor
         throw new MediaProcessingException('Ce fichier ne contient pas de piste vidéo.');
     }
 
-    public function transcode(string $input, string $output): void
+    /**
+     * @param ?callable(int): void $onProgress appelé avec le pourcentage fait, au fil de la conversion
+     */
+    public function transcode(string $input, string $output, ?callable $onProgress = null): void
     {
-        $command = ['ffmpeg', '-y', '-v', 'error', '-i', $input];
+        $command = ['ffmpeg', '-y', '-v', 'error', '-nostats', '-progress', 'pipe:1', '-i', $input];
         if ($this->hasAudio($input)) {
             $command = [...$command, '-map', '0:v:0', '-map', '0:a:0'];
         } else {
@@ -56,14 +59,43 @@ final class FfmpegVideoProcessor
             $command = [...$command, '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000', '-map', '0:v:0', '-map', '1:a:0', '-shortest'];
         }
 
-        $this->run([
+        $command = [
             ...$command,
             '-vf', "scale=w='min(1080,iw)':h='min(1920,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
             '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p',
             '-c:a', 'aac', '-b:a', '128k',
             '-map_metadata', '-1', '-movflags', '+faststart',
             $output,
-        ]);
+        ];
+        if (null === $onProgress) {
+            $this->run($command);
+
+            return;
+        }
+
+        // Progression : ffmpeg écrit « out_time_us=… » sur sa sortie ; rapportée à la durée de la vidéo, par pas de 5 %.
+        $duration = $this->probe($input)['duration'];
+        $process = new Process($command);
+        $process->setTimeout(self::TIMEOUT);
+        $reported = -1;
+        try {
+            $process->start();
+            foreach ($process->getIterator(Process::ITER_SKIP_ERR) as $chunk) {
+                if ($duration <= 0 || !preg_match_all('/^out_time_us=(\d+)$/m', $chunk, $m)) {
+                    continue;
+                }
+                $percent = (int) floor(min(99, (int) end($m[1]) / ($duration * 1_000_000) * 100));
+                if ($percent >= $reported + 5) {
+                    $reported = $percent;
+                    $onProgress($percent);
+                }
+            }
+            if (0 !== $process->wait()) {
+                throw new ProcessFailedException($process);
+            }
+        } catch (ProcessFailedException $e) {
+            throw new MediaProcessingException('Le traitement de la vidéo a échoué.', $e->getCode(), previous: $e);
+        }
     }
 
     public function hasAudio(string $path): bool

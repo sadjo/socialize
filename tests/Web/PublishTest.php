@@ -106,7 +106,9 @@ final class PublishTest extends AppWebTestCase
         self::assertInstanceOf(MediaAttachment::class, $video);
         self::assertSame(MediaStatus::Processing, $video->getStatus());
 
-        $this->client->followRedirect();
+        // En attente de la conversion : l'auteur la suit sur son profil, la page de la publication montre l'attente.
+        self::assertTrue($post->isPending());
+        $this->client->request('GET', '/p/'.$post->getPublicId());
         self::assertSelectorTextContains('.processing', 'Vidéo en cours de préparation');
 
         // Le consommateur Messenger traiterait ce message en tâche de fond.

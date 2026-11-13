@@ -1,0 +1,37 @@
+{# « En préparation » : publications de l'auteur qui attendent la conversion de leurs vidéos, avec la progression.
+   Rechargé par le contrôleur poll tant qu'une vidéo est en conversion ; dès qu'une publication est prête, la page est
+   rechargée et elle paraît dans la grille. Variables : account, pending_posts, in_frame, shown (nombre affiché au départ) #}
+{% import '_macros.html.twig' as ui %}
+{% set converting = pending_posts|filter(p => p.media|filter(m => m.status.value == 'processing')|length > 0)|length > 0 %}
+<turbo-frame id="pending-posts"{% if converting and not in_frame|default(false) %} src="{{ path('app_profile_pending', {username: account.username, affichees: pending_posts|length}) }}" data-controller="poll" data-poll-interval-value="3000"{% endif %}>
+    {% if pending_posts|length < shown|default(pending_posts|length) %}<span data-poll-done hidden></span>{% endif %}
+    {% if pending_posts is not empty %}
+        <section class="card pending-posts" aria-label="Publications en préparation">
+            <h2>{{ ui.icon('reel', 'sm') }}En préparation</h2>
+            <p class="small">Visibles par vous seul : elles paraissent, et partent dans le fédivers, dès que leurs vidéos sont converties.</p>
+            {% for post in pending_posts %}
+                {% set cover = post.media|filter(m => m.ready)|first %}
+                <article class="pending-post">
+                    <a class="th" href="{{ path('app_post_show', {id: post.publicId}) }}" aria-label="Voir la publication en préparation">
+                        {% if cover %}<img src="{{ media_url(cover, 'thumb') }}" alt="">{% else %}<span class="processing skel">{{ ui.icon('reel') }}</span>{% endif %}
+                    </a>
+                    <div class="grow">
+                        <b>{{ post.caption ? (post.caption|length > 80 ? post.caption|slice(0, 80) ~ '…' : post.caption) : 'Publication sans légende' }}</b>
+                        {% for media in post.media|filter(m => m.video) %}
+                            {% if media.status.value == 'processing' %}
+                                {% set percent = media.progress ?? 0 %}
+                                <div class="row"><span class="small">Vidéo {{ loop.index }} : {{ media.progress is null ? 'en attente de conversion' : 'conversion' }}</span><span class="grow"></span><b class="num small">{{ media.progress is null ? '' : percent ~ ' %' }}</b></div>
+                                <div class="prog" role="progressbar" aria-label="Conversion de la vidéo {{ loop.index }}" aria-valuenow="{{ percent }}" aria-valuemin="0" aria-valuemax="100"><span{% if media.progress is null %} class="skel"{% endif %} style="width:{{ media.progress is null ? 100 : max(4, percent) }}%"></span></div>
+                            {% elseif media.status.value == 'failed' %}
+                                <p class="field-errors">Vidéo {{ loop.index }} : la conversion a échoué. {{ media.failureReason }}</p>
+                                <p class="small"><a class="lnk" href="{{ path('app_post_edit', {id: post.publicId}) }}">Modifier la publication</a> pour retirer ou remplacer cette vidéo : elle paraîtra ensuite.</p>
+                            {% else %}
+                                <p class="small">{{ ui.icon('check', 'xs') }}Vidéo {{ loop.index }} prête</p>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+    {% endif %}
+</turbo-frame>
