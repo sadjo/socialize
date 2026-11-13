@@ -123,7 +123,9 @@ final readonly class Outbox
 
         // Destinataires du fédivers seulement : un membre de cette instance voit la publication selon ses droits du
         // moment, sans rien recevoir.
-        if ($wasFederated && $isFederated && $previous === $current && $this->remoteIds($previousAudience) === $this->remoteIds($audience)) {
+        // Date de publication changée : Mastodon garde la date d'un statut reçu, il est donc retiré puis renvoyé sous un
+        // nouvel identifiant.
+        if (!$event->dateChanged && $wasFederated && $isFederated && $previous === $current && $this->remoteIds($previousAudience) === $this->remoteIds($audience)) {
             // Seuls les membres de ses groupes ont changé, pas ceux du fédivers : rien à renvoyer.
             if (!$event->contentChanged) {
                 return;

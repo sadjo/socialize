@@ -40,6 +40,7 @@ final readonly class PostEditor
      * @param list<File>             $newFiles       nouveaux fichiers, référencés par « n-<index> »
      * @param array<string, ?string> $altTexts       texte alternatif par jeton
      * @param list<AudienceGroup>    $audienceGroups groupes d'abonnés (visibilité « Groupes »)
+     * @param ?\DateTimeImmutable    $publishedAt    nouvelle date de publication (administrateur), null pour la garder
      *
      * @throws MediaProcessingException
      */
@@ -54,6 +55,7 @@ final readonly class PostEditor
         array $altTexts = [],
         ?MusicChoice $music = null,
         array $audienceGroups = [],
+        ?\DateTimeImmutable $publishedAt = null,
     ): void {
         $existing = [];
         foreach ($post->getMedia() as $media) {
@@ -79,6 +81,8 @@ final readonly class PostEditor
         $post->edit($caption, $visibility, $contentWarning, $location, $this->clock->now());
         $post->chooseMusic($music);
         $post->restrictTo($audienceGroups);
+        // Une publication en attente prend la date de sa parution : la date choisie ne vaut qu'une fois parue.
+        $redated = $publishedAt instanceof \DateTimeImmutable && !$post->isPending() && $post->redate($publishedAt);
 
         // Retrait des médias absents de la nouvelle liste (les fichiers sont supprimés après l'enregistrement).
         $removed = [];
@@ -134,7 +138,7 @@ final readonly class PostEditor
         }
         // Avec une nouvelle vidéo, la mise à jour est fédérée une fois la vidéo prête (ProcessVideoHandler).
         if (!$processing) {
-            $this->events->dispatch(new PostUpdated($post, $previousVisibility, $previousAudience));
+            $this->events->dispatch(new PostUpdated($post, $previousVisibility, $previousAudience, dateChanged: $redated));
         }
     }
 

@@ -259,6 +259,19 @@ class Post
         return $this->publishedAt;
     }
 
+    /**
+     * Nouvelle date de publication (choisie par un administrateur) ; vrai si elle a changé.
+     */
+    public function redate(\DateTimeImmutable $publishedAt): bool
+    {
+        if ($publishedAt->getTimestamp() === $this->publishedAt->getTimestamp()) {
+            return false;
+        }
+        $this->publishedAt = $publishedAt;
+
+        return true;
+    }
+
     public function getOriginalCreatedAt(): ?\DateTimeImmutable
     {
         return $this->originalCreatedAt;

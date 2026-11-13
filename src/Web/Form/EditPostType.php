@@ -9,6 +9,7 @@ use App\Core\Domain\Post\Visibility;
 use App\Media\Application\MediaRules;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
@@ -73,6 +74,22 @@ final class EditPostType extends AbstractType
                 'constraints' => [new Assert\Length(max: 500)],
             ])
             ->add('music', MusicChoiceType::class);
+        if (true === $options['can_redate']) {
+            // Administrateur : date de publication modifiable (heure de Paris), jamais dans le futur.
+            $builder->add('publishedAt', DateTimeType::class, [
+                'label' => 'Date de publication',
+                'help' => 'Réservé aux administrateurs. La publication est rangée à cette date, ici et sur le fédivers (où elle est renvoyée).',
+                'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+                'model_timezone' => 'UTC',
+                'view_timezone' => 'Europe/Paris',
+                'with_seconds' => false,
+                'constraints' => [
+                    new Assert\NotNull(message: 'Indiquez une date de publication.'),
+                    new Assert\LessThanOrEqual('now', message: 'La date de publication ne peut pas être dans le futur.'),
+                ],
+            ]);
+        }
         /** @var list<\App\Core\Domain\Social\AudienceGroup> $groups */
         $groups = $options['groups'];
         AudienceGroupChoiceType::addTo($builder, 'visibility', $groups);
@@ -81,7 +98,8 @@ final class EditPostType extends AbstractType
     public function configureOptions(\Symfony\Component\OptionsResolver\OptionsResolver $resolver): void
     {
         // Groupes d'abonnés du compte (visibilité « Groupes »).
-        $resolver->setDefaults(['groups' => []]);
+        $resolver->setDefaults(['groups' => [], 'can_redate' => false]);
         $resolver->setAllowedTypes('groups', 'array');
+        $resolver->setAllowedTypes('can_redate', 'bool');
     }
 }

@@ -34,6 +34,7 @@
                 {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Visible avec le lien', followers: 'Vos abonnés', groups: 'Vos groupes d’abonnés', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
                 {{ include('compose/_music.html.twig', {field: form.music}) }}
+                {% if form.publishedAt is defined %}{{ form_row(form.publishedAt) }}{% endif %}
                 <button class="btn pri" data-compose-target="submit">Enregistrer les modifications</button>
             </section>
         </div>
