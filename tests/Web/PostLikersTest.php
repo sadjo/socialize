@@ -33,6 +33,8 @@ final class PostLikersTest extends AppWebTestCase
         $crawler = $this->client->request('GET', '/p/'.$id.'/jaime');
         self::assertResponseIsSuccessful();
         self::assertEqualsCanonicalizing(['/@lina', '/@hugo'], $crawler->filter('turbo-frame#likers-frame-'.$id.' .likers-list a')->each(static fn ($a): ?string => $a->attr('href')), 'Les deux personnes.');
+        self::assertCount(2, $crawler->filter('.likers-list a > .av'), 'Avatar par défaut, hors du bloc du nom.');
+        self::assertCount(2, $crawler->filter('.likers-list a > .who'));
     }
 
     public function testNoListWithoutLikesAndNoListOfAPostOneCannotSee(): void

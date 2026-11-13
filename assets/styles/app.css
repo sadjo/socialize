@@ -670,7 +670,8 @@ button.nav{font:inherit;background:none;border:0;cursor:pointer;width:100%;text-
 .likers-list{list-style:none;margin:0;padding:0}
 .likers-list a{display:flex;align-items:center;gap:12px;padding:8px;border-radius:14px;color:var(--fg)}
 .likers-list a:hover,.likers-list a:focus-visible{background:var(--surface-2)}
-.likers-list span{display:flex;flex-direction:column;min-width:0}
+/* Nom et pseudo l'un sous l'autre (pas l'avatar par défaut, un span lui aussi, centré par .av). */
+.likers-list .who{display:flex;flex-direction:column;min-width:0}
 .likers-list small{color:var(--muted);font-size:.78rem;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- Commentaires ---------- */

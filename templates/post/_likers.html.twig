@@ -9,7 +9,7 @@
                 <li>
                     <a href="{{ path('app_profile', {username: who.acct}) }}" data-turbo-frame="_top">
                         {{ ui.avatar(who, 40) }}
-                        <span><b>{{ who.displayName }}</b><small>@{{ who.local ? who.username : who.acct }}</small></span>
+                        <span class="who"><b>{{ who.displayName }}</b><small>@{{ who.local ? who.username : who.acct }}</small></span>
                     </a>
                 </li>
             {% endfor %}
