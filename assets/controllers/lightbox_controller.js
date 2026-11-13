@@ -1,12 +1,12 @@
 import { Controller } from '@hotwired/stimulus';
 import { setSound, soundOn } from '../lib/sound.js';
+import { DOUBLE_TAP_DELAY } from '../lib/double_tap.js';
 
 /*
  * Visionneuse des médias d'une publication : un clic sur une photo ou une vidéo l'ouvre en plein écran, dans
  * ses proportions d'origine (sans recadrage), et l'on passe d'un média à l'autre (flèches, clavier, balayage).
- * Un clic simple attend un instant : un double-clic (J'aime) n'ouvre pas la visionneuse.
+ * Un clic simple attend un instant : un double tap ou double-clic (J'aime) n'ouvre pas la visionneuse.
  */
-const DOUBLE_CLICK_DELAY = 260;
 
 export default class extends Controller {
     static targets = ['item'];
@@ -22,14 +22,16 @@ export default class extends Controller {
         if (this.element.querySelector('.cw-veil')) return;
         event.preventDefault();
         const index = this.itemTargets.indexOf(event.currentTarget);
-        clearTimeout(this.pending);
-        if (event.detail > 1) return;
-        this.pending = setTimeout(() => this.show(index), DOUBLE_CLICK_DELAY);
-    }
-
-    // Double-clic (J'aime) : la visionneuse ne s'ouvre pas.
-    cancel() {
-        clearTimeout(this.pending);
+        // Second clic rapproché : c'est un « J'aime » (like_controller), la visionneuse ne s'ouvre pas.
+        if (this.pending) {
+            clearTimeout(this.pending);
+            this.pending = null;
+            return;
+        }
+        this.pending = setTimeout(() => {
+            this.pending = null;
+            this.show(index);
+        }, DOUBLE_TAP_DELAY);
     }
 
     show(index) {

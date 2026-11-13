@@ -4,7 +4,7 @@
 {% import '_macros.html.twig' as ui %}
 {% set count = post.media|length %}
 {% set music = post.music %}
-<div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="dblclick->like#doubleTap dblclick->lightbox#cancel" data-carousel-count-value="{{ count }}"
+<div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="click->like#tap" data-carousel-count-value="{{ count }}"
      {%- if music %} data-music data-music-start-value="{{ post.musicStart }}" data-music-excerpt-value="{{ constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') }}"{% endif %}>
     <div class="frame">
     <div class="track" data-carousel-target="track">
