@@ -26,6 +26,19 @@ final class LikeRepository extends ServiceEntityRepository
     }
 
     /**
+     * Comptes (locaux ou du fédivers) qui ont aimé la publication, du plus récent au plus ancien.
+     *
+     * @return list<Account>
+     */
+    public function likersOf(Post $post, int $limit = 200): array
+    {
+        // findBy convertit l'identifiant avec le bon type (UUID binaire ou natif selon la base).
+        $likes = $this->findBy(['post' => $post], ['createdAt' => 'DESC'], $limit);
+
+        return array_map(static fn (Like $like): Account => $like->getAccount(), $likes);
+    }
+
+    /**
      * Identifiants (base58) des publications de la liste que le compte a aimées.
      *
      * @param iterable<Post> $posts

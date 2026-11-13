@@ -22,6 +22,18 @@
         <span class="sp"></span>
     </div>
     <div class="pbody" style="padding-bottom:0">
-        <div class="num"><b>{{ post.likesCount|format_number(locale: 'fr') }} J’aime</b>{% if post.commentsCount %} <span class="meta">· {{ post.commentsCount }} commentaire{{ post.commentsCount > 1 ? 's' }}</span>{% endif %}</div>
+        <div class="num">
+            {%- if post.likesCount > 0 -%}
+                {# Compteur cliquable : la liste des personnes est chargée à l'ouverture (turbo-frame paresseux). #}
+                <button type="button" class="likes-count" popovertarget="likers-{{ post.publicId }}" aria-haspopup="dialog"><b>{{ post.likesCount|format_number(locale: 'fr') }} J’aime</b></button>
+                <div id="likers-{{ post.publicId }}" class="likers" popover role="dialog" aria-label="Personnes qui aiment cette publication">
+                    <div class="sheet">
+                        <header><b>J’aime</b><button type="button" class="ib" popovertarget="likers-{{ post.publicId }}" popovertargetaction="hide" aria-label="Fermer">{{ ui.icon('x') }}</button></header>
+                        <turbo-frame id="likers-frame-{{ post.publicId }}" src="{{ path('app_post_likers', {id: post.publicId}) }}" loading="lazy"><p class="meta">Chargement…</p></turbo-frame>
+                    </div>
+                </div>
+            {%- else -%}
+                <b>0 J’aime</b>
+            {%- endif -%}{% if post.commentsCount %} <span class="meta">· {{ post.commentsCount }} commentaire{{ post.commentsCount > 1 ? 's' }}</span>{% endif %}</div>
     </div>
 </div>

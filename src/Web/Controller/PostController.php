@@ -68,6 +68,17 @@ final class PostController extends AbstractController
         ]);
     }
 
+    /**
+     * Personnes qui ont aimé la publication (chargée dans la fenêtre ouverte par le compteur de « J'aime »).
+     */
+    #[Route('/p/{id}/jaime', name: 'app_post_likers', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET'])]
+    public function likers(string $id, LikeRepository $likes): Response
+    {
+        $post = $this->visiblePost($id);
+
+        return $this->render('post/_likers.html.twig', ['post' => $post, 'likers' => $likes->likersOf($post)]);
+    }
+
     #[Route('/p/{id}/aimer', name: 'app_post_like', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
     public function like(string $id, Request $request, SocialActions $social): Response
     {
