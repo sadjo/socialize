@@ -1,9 +1,15 @@
-{# Médias d'une publication : carrousel, visionneuse (clic), vidéo, musique, avertissement de contenu. Variables : post #}
+{# Médias d'une publication : carrousel, visionneuse (clic), vidéo, musique, avertissement de contenu. Variables : post
+   Sur ordinateur, le cadre prend les proportions du premier média, ramenées entre 4:5 et 1,91:1 (comme Instagram) ;
+   sur mobile, toutes les publications gardent le même cadre 4:5. Chaque média y est montré en entier. Les points du
+   carrousel sont sous le cadre. #}
 {% import '_macros.html.twig' as ui %}
 {% set count = post.media|length %}
+{% set first = post.media|filter(m => m.width and m.height)|first %}
+{% set ratio = first ? max(0.8, min(1.91, first.width / first.height)) : 0.8 %}
 {% set music = post.music %}
 <div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="dblclick->like#doubleTap dblclick->lightbox#cancel" data-carousel-count-value="{{ count }}"
      {%- if music %} data-music data-music-start-value="{{ post.musicStart }}" data-music-excerpt-value="{{ constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') }}"{% endif %}>
+    <div class="frame" style="--ratio: {{ ratio|number_format(4, '.', '') }}">
     <div class="track" data-carousel-target="track">
         {% for media in post.media %}
             {% set viewable = media.ready %}
@@ -47,12 +53,15 @@
         {# Pas de flèche vers l'arrière sur le premier média, ni vers l'avant sur le dernier (carousel_controller). #}
         <button type="button" class="nb prev" data-carousel-target="prev" data-action="carousel#prev" aria-label="Média précédent" hidden>{{ ui.icon('left', 'sm') }}</button>
         <button type="button" class="nb next" data-carousel-target="next" data-action="carousel#next" aria-label="Média suivant">{{ ui.icon('right', 'sm') }}</button>
-        <div class="dots" aria-hidden="true">{% for i in 1..count %}<i class="{{ loop.first ? 'on' }}" data-carousel-target="dot"></i>{% endfor %}</div>
     {% endif %}
     {% if post.sensitive %}
         <div class="cw-veil" data-reveal-target="veil">
             <div>{{ ui.icon('eye') }}<b>Contenu sensible</b><span>{{ post.contentWarning }}</span><br>
                 <button type="button" class="btn sm" data-action="reveal#show">Afficher</button></div>
         </div>
+    {% endif %}
+    </div>
+    {% if count > 1 %}
+        <div class="dots" aria-hidden="true">{% for i in 1..count %}<i class="{{ loop.first ? 'on' }}" data-carousel-target="dot"></i>{% endfor %}</div>
     {% endif %}
 </div>

@@ -193,10 +193,14 @@ tr:last-child td{border-bottom:0}
 .psub{font-size:.78rem;color:var(--muted)}
 .fed{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:10px}
 .imp{height:22px;font-size:.7rem;padding:0 8px}
-.media{position:relative;aspect-ratio:4/5;max-width:100%;overflow:hidden;background:var(--surface-2);user-select:none}
+.media{position:relative;max-width:100%;user-select:none}
+/* Cadre aux proportions du premier média (4:5 à 1,91:1, voir post/_media.html.twig) ; chaque média y est entier. */
+.media .frame{position:relative;aspect-ratio:var(--ratio,4/5);overflow:hidden;background:var(--surface-2);max-height:max(320px,calc(100dvh - 140px))}
+/* Mobile : même cadre 4:5 pour toutes les publications (le média y reste entier). */
+@media (max-width:767px){.media .frame{aspect-ratio:4/5}}
 .track{display:flex;height:100%;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
 .slide{flex:0 0 100%;height:100%;position:relative}
-.slide img,.slide video{width:100%;height:100%;object-fit:cover;display:block}
+.slide img,.slide video{width:100%;height:100%;object-fit:contain;display:block}
 /* Vidéo façon Instagram : affiche, lecture muette à l'écran, bouton son en bas à gauche */
 .player{position:relative;height:100%}
 .player video{cursor:pointer}
@@ -215,9 +219,10 @@ tr:last-child td{border-bottom:0}
 .nb{position:absolute;top:50%;translate:0 -50%;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--glass);backdrop-filter:blur(10px);color:var(--fg);opacity:0;transition:opacity .2s}
 .media:hover .nb,.media:focus-within .nb{opacity:1}
 .nb.prev{left:10px}.nb.next{right:10px}
-.dots{position:absolute;bottom:12px;left:50%;translate:-50% 0;display:flex;gap:5px}
-.dots i{width:6px;height:6px;border-radius:3px;background:var(--on-media);opacity:.5;transition:all .3s}
-.dots i.on{opacity:1;width:16px}
+/* Position dans le carrousel : sous le média, pas dessus. */
+.dots{display:flex;justify-content:center;gap:5px;padding:9px 0 3px}
+.dots i{width:6px;height:6px;border-radius:3px;background:var(--faint);opacity:.6;transition:all .3s}
+.dots i.on{opacity:1;width:16px;background:var(--accent)}
 .burst{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
 .burst svg{width:110px;height:110px;fill:var(--on-media);stroke:none;filter:drop-shadow(0 8px 24px oklch(0.6 0.2 20 / .6));animation:burst .9s ease-out forwards}
 @keyframes burst{0%{transform:scale(.2);opacity:0}25%{transform:scale(1.15);opacity:1}45%{transform:scale(.95)}80%{opacity:1}100%{transform:scale(1.1) translateY(-20px);opacity:0}}
@@ -262,7 +267,9 @@ tr:last-child td{border-bottom:0}
 @keyframes rise{from{transform:translateY(16px) scale(.98);opacity:0}}
 .pd-media{position:relative;background:var(--bg);display:grid;place-items:center;overflow:hidden;min-height:0}
 .pd-media .glow{position:absolute;inset:-20%;background-size:cover;background-position:center;filter:blur(60px) saturate(1.4);opacity:.75}
-.pd-media .media{width:100%;max-height:calc(100dvh - 48px);border-radius:0;background:transparent}
+.pd-media .media{width:100%;border-radius:0}
+.pd-media .media .frame{max-height:calc(100dvh - 48px - 28px);background:transparent}
+.pd-media .dots{position:relative}
 .pd-side{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line)}
 .pd-side .ph{border-bottom:1px solid var(--line)}
 .cmts{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:16px;min-height:120px}
@@ -276,7 +283,7 @@ tr:last-child td{border-bottom:0}
   .ov{padding-inline:0}
   .pd{grid-template-columns:1fr;border-radius:26px 26px 0 0;max-height:calc(100dvh - 40px);overflow-y:auto}
   .pd-side{border-left:0}
-  .pd-media .media{max-height:60dvh}
+  .pd-media .media .frame{max-height:calc(60dvh - 28px)}
 }
 
 /* ---------- Stories ---------- */
@@ -648,7 +655,7 @@ label.act{cursor:pointer}
 /* Visionneuse des médias d'une publication : proportions d'origine, navigation entre photos et vidéos */
 .lightbox{border:0;padding:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;background:transparent;color:#fff;overflow:hidden}
 .lightbox::backdrop{background:oklch(0.08 0.01 285 / .94)}
-.lb-stage{width:100%;height:100%;display:grid;place-items:center;padding:calc(56px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.lb-stage{width:100%;height:100%;display:grid;place-items:center;padding:calc(56px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));grid-template:minmax(0,1fr)/minmax(0,1fr)}
 .lb-media{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:6px;background:#000;user-select:none}
 .lightbox .ib{position:fixed;z-index:1;color:#fff;background:oklch(0 0 0 / .45)}
 .lb-close{top:calc(12px + env(safe-area-inset-top,0px));right:12px}
