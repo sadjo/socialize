@@ -60,7 +60,8 @@ final readonly class AudienceGroups
 
     /**
      * Membres du groupe, choisis parmi les abonnés (les autres sont ignorés) ; un ancien membre qui s'est désabonné
-     * peut rester dans le groupe, sans accès.
+     * peut rester dans le groupe, sans accès. Les publications réservées au groupe en sont informées : le fédivers les
+     * retire chez les membres retirés et les envoie aux membres ajoutés.
      *
      * @param list<string> $memberIds identifiants (RFC 4122) des comptes choisis
      */
@@ -70,8 +71,17 @@ final readonly class AudienceGroups
         foreach ([...$this->follows->followersOf($group->getOwner()), ...$group->getMembers()] as $account) {
             $allowed[$account->getId()->toRfc4122()] = $account;
         }
+        $updated = [];
+        foreach ($this->restrictedTo($group, Post::class) as $post) {
+            if (Visibility::Groups === $post->getVisibility()) {
+                $updated[] = [$post, $post->getAudienceMembers()];
+            }
+        }
         $group->replaceMembers(array_values(array_intersect_key($allowed, array_flip($memberIds))));
         $this->em->flush();
+        foreach ($updated as [$post, $audience]) {
+            $this->events->dispatch(new PostUpdated($post, Visibility::Groups, $audience, contentChanged: false));
+        }
     }
 
     /**
