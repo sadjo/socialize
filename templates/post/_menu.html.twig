@@ -13,6 +13,13 @@
             <a role="menuitem" href="{{ post.url }}" target="_blank" rel="noopener nofollow">{{ ui.icon('globe', 'sm') }}Voir sur {{ post.account.domain }}</a>
         {% endif %}
         {% if post.ownedBy(me) %}
+            {% set share_files = [] %}
+            {% for media in post.media %}
+                {% if media.ready %}
+                    {% set share_files = share_files|merge([{url: path('app_post_share_file', {id: post.publicId, position: loop.index0}), name: 'socialize-' ~ post.publicId ~ '-' ~ loop.index ~ (media.video ? '.mp4' : '.jpg'), type: media.video ? 'video/mp4' : 'image/jpeg'}]) %}
+                {% endif %}
+            {% endfor %}
+            {% if share_files is not empty %}{{ include('post/_share_instagram.html.twig', {files: share_files, caption: post.caption, label: true}) }}{% endif %}
             {% if not post.isFederated() %}
                 <a role="menuitem" href="{{ path('app_post_edit', {id: post.publicId}) }}">{{ ui.icon('sliders', 'sm') }}Modifier</a>
                 <form method="post" action="{{ path(post.archived ? 'app_post_unarchive' : 'app_post_archive', {id: post.publicId}) }}">

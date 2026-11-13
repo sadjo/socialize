@@ -27,6 +27,7 @@
                 {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Visible avec le lien', followers: 'Vos abonnés', groups: 'Vos groupes d’abonnés', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
                 {{ include('compose/_music.html.twig', {field: form.music}) }}
+                {{ include('compose/_crosspost.html.twig', {visibility_field: 'visibility'}) }}
                 <button class="btn pri" data-compose-target="submit">Publier</button>
             </section>
         </div>

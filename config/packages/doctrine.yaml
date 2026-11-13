@@ -25,6 +25,11 @@ doctrine:
                 is_bundle: false
                 dir: '%kernel.project_dir%/src/Integration/Immich/Domain'
                 prefix: 'App\Integration\Immich\Domain'
+            CrosspostMeta:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Crosspost/Meta/Domain'
+                prefix: 'App\Crosspost\Meta\Domain'
             IntegrationSynologyPhotos:
                 type: attribute
                 is_bundle: false

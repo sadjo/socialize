@@ -9,6 +9,7 @@ use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicChoice;
+use App\Core\Domain\Post\CrosspostTarget;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\AudienceGroup;
@@ -33,6 +34,7 @@ final readonly class PostComposer
     /**
      * @param list<array{file: File, alt: ?string}> $uploads
      * @param list<AudienceGroup>                   $audienceGroups groupes d'abonnés (visibilité « Groupes »)
+     * @param list<CrosspostTarget>                 $crosspost      réseaux où l'envoyer aussi (Instagram…)
      */
     public function publish(
         Account $author,
@@ -43,6 +45,7 @@ final readonly class PostComposer
         ?string $location = null,
         ?MusicChoice $music = null,
         array $audienceGroups = [],
+        array $crosspost = [],
     ): Post {
         if ([] === $uploads) {
             throw new MediaProcessingException('Ajoutez au moins une photo ou une vidéo.');
@@ -51,6 +54,7 @@ final readonly class PostComposer
         $post = new Post($author, $caption, $visibility, $contentWarning, $location);
         $post->chooseMusic($music);
         $post->restrictTo($audienceGroups);
+        $post->requestCrosspost($crosspost);
         $stored = [];
         try {
             foreach ($uploads as $position => $upload) {

@@ -85,6 +85,9 @@ final class ComposePostType extends AbstractType
         /** @var list<\App\Core\Domain\Social\AudienceGroup> $groups */
         $groups = $options['groups'];
         AudienceGroupChoiceType::addTo($builder, 'visibility', $groups);
+        /** @var ?\App\Crosspost\Meta\Domain\InstagramConnection $instagram */
+        $instagram = $options['instagram'];
+        CrosspostField::addTo($builder, $instagram, story: false);
     }
 
     public function configureOptions(\Symfony\Component\OptionsResolver\OptionsResolver $resolver): void
@@ -92,5 +95,6 @@ final class ComposePostType extends AbstractType
         // Groupes d'abonnés du compte (visibilité « Groupes »).
         $resolver->setDefaults(['groups' => []]);
         $resolver->setAllowedTypes('groups', 'array');
+        CrosspostField::configure($resolver);
     }
 }

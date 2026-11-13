@@ -4,7 +4,7 @@ Réseau photo et vidéo auto-hébergé, compatible avec le fédivers (Mastodon, 
 Socialize permet d'importer une archive Instagram sans perte, de choisir ses médias dans [Immich](https://immich.app)
 ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règles réglables.
 
-> **État : jalon 7.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
+> **État : jalon 8.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
 > stories, archives, fédération ActivityPub (Mastodon, Pixelfed), import d'une archive Instagram et publication
 > depuis Immich ou Synology Photos : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
 > Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
@@ -12,7 +12,9 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > Groupes d'abonnés (famille, amis…) : publications et stories réservées à un ou plusieurs groupes, y compris pour
 > les abonnés du fédivers, et groupe par défaut à l'import Instagram. Invitations et création de comptes par l'administrateur,
 > qui choisit quels comptes peuvent publier et lesquels peuvent importer leur archive Instagram.
-> Jalons suivants : personnes reconnues par Immich (mentions), API/MCP, crosspost.
+> Crosspost vers Instagram : publications et stories envoyées aussi sur un compte Instagram professionnel, selon
+> des règles par visibilité ; bouton « Partager vers Instagram » pour tout compte, personnel compris.
+> Jalons suivants : crosspost Facebook (jalon 9), API REST et serveur MCP (jalon 10).
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
 - Stack : PHP 8.5, Symfony 8.1, FrankenPHP (mode worker), Doctrine ORM, Symfony Messenger, Twig + Symfony UX.
@@ -129,6 +131,27 @@ make help        # toutes les commandes
 
 Le code est monté dans le conteneur et FrankenPHP recharge les fichiers modifiés. Xdebug est installé mais désactivé :
 `XDEBUG_MODE=debug make up` pour l'activer.
+
+### Crosspost Instagram
+
+Réglages › Instagram : un compte autorisé à publier y connecte son compte Instagram **professionnel** (Créateur ou
+Entreprise, exigé par l'API d'Instagram). Les règles choisissent les visibilités pour lesquelles « Publier aussi sur
+Instagram » est coché d'avance à la création (et si elles valent pour les stories) ; la case reste modifiable à chaque
+publication. L'envoi se fait en tâche de fond quand les médias sont prêts : photos converties en JPEG et mises aux
+proportions acceptées par des bandes (sans recadrage), vidéo seule en Reel (3 s à 15 min), carrousel jusqu'à 20
+médias, story. L'état apparaît sur la page de la publication, avec « Réessayer » en cas d'échec. Instagram ne permet
+**ni de modifier ni de supprimer** une publication par son API : ces copies se gèrent dans l'application Instagram.
+Le jeton (60 jours) est renouvelé automatiquement.
+
+Configuration de l'instance (une fois) : créer une application sur [developers.facebook.com](https://developers.facebook.com)
+(type Business, cas d'usage « API Instagram avec connexion Instagram »), déclarer l'adresse de retour
+`https://<instance>/reglages/instagram/retour`, puis renseigner `INSTAGRAM_APP_ID` (variable) et `INSTAGRAM_APP_SECRET`
+(secret). Sans validation de l'application par Meta (accès standard), seuls les comptes Instagram ajoutés comme
+**testeurs** de l'application peuvent se connecter.
+
+Sans application Meta, ou pour un compte Instagram personnel : « Partager vers Instagram » (menu « … » d'une
+publication, page Mes stories) ouvre le menu de partage du téléphone avec les photos en JPEG et les vidéos, et copie
+la légende ; sur un ordinateur, les fichiers se téléchargent.
 
 ### Synology Photos
 

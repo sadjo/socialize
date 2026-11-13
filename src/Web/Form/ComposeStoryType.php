@@ -79,6 +79,9 @@ final class ComposeStoryType extends AbstractType
         /** @var list<\App\Core\Domain\Social\AudienceGroup> $groups */
         $groups = $options['groups'];
         AudienceGroupChoiceType::addTo($builder, 'audience', $groups);
+        /** @var ?\App\Crosspost\Meta\Domain\InstagramConnection $instagram */
+        $instagram = $options['instagram'];
+        CrosspostField::addTo($builder, $instagram, story: true);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -86,5 +89,6 @@ final class ComposeStoryType extends AbstractType
         $resolver->setDefaults(['highlights' => [], 'groups' => []]);
         $resolver->setAllowedTypes('highlights', 'array');
         $resolver->setAllowedTypes('groups', 'array');
+        CrosspostField::configure($resolver);
     }
 }

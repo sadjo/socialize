@@ -35,6 +35,11 @@ services:
     immich.http_client:
         alias: http_client
 
+    # Client HTTP de l'API Instagram (remplacé dans les tests) : Instagram n'est jamais sur le réseau privé.
+    instagram.http_client:
+        class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
+        arguments: ['@http_client']
+
     # Client HTTP des échanges avec Synology Photos (remplacé dans les tests).
     synology_photos.http_client:
         alias: http_client
@@ -61,6 +66,12 @@ when@test:
         immich.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
             arguments: ['@App\Tests\Integration\FakeImmich']
+        # Faux Instagram pour les tests (voir tests/Integration).
+        App\Tests\Integration\FakeInstagram:
+            public: true
+        instagram.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            arguments: ['@App\Tests\Integration\FakeInstagram']
         # Faux Synology Photos pour les tests (voir tests/Integration).
         App\Tests\Integration\FakeSynologyPhotos:
             public: true

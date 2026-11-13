@@ -36,7 +36,8 @@
         </div>
 
         {{ include('post/_actions.html.twig') }}
-        <div class="pbody"><div class="ago"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time>{% if post.updatedAt %} · modifié {{ post.updatedAt|ago }}{% endif %}{% if post.isImported() and post.originalCreatedAt %} · {{ ui.icon('download', 'xs') }} publié à l’origine sur Instagram le {{ post.originalCreatedAt|format_date('long', locale: 'fr') }}{% endif %}{% if post.url and not author.local %} · <a class="lnk" href="{{ post.url }}" target="_blank" rel="noopener nofollow">voir sur {{ author.domain }}</a>{% endif %}</div></div>
+        <div class="pbody"><div class="ago"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time>{% if post.updatedAt %} · modifié {{ post.updatedAt|ago }}{% endif %}{% if post.isImported() and post.originalCreatedAt %} · {{ ui.icon('download', 'xs') }} publié à l’origine sur Instagram le {{ post.originalCreatedAt|format_date('long', locale: 'fr') }}{% endif %}{% if post.url and not author.local %} · <a class="lnk" href="{{ post.url }}" target="_blank" rel="noopener nofollow">voir sur {{ author.domain }}</a>{% endif %}</div>
+            {% if app.user and post.ownedBy(app.user.account) %}{{ include('post/_crosspost_status.html.twig', {crosspost: instagram_crosspost(post)}) }}{% endif %}</div>
 
         {% if app.user %}
             {{ include('comment/_form.html.twig') }}

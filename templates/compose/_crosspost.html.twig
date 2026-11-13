@@ -1,0 +1,11 @@
+{# Case « Publier aussi sur Instagram » (si le compte a connecté Instagram).
+   Variables : form, instagram (connexion ou null), crosspost_defaults (visibilités cochées d'avance), visibility_field (« visibility » ou « audience ») #}
+{% if form.crosspostInstagram is defined %}
+    <div class="crosspost" data-controller="crosspost"
+         data-crosspost-defaults-value="{{ crosspost_defaults|json_encode }}"
+         data-crosspost-field-value="{{ form[visibility_field].vars.full_name }}">
+        <label class="chk">{{ form_widget(form.crosspostInstagram, {attr: {'data-crosspost-target': 'box', 'data-action': 'crosspost#touch'}}) }}<span>{{ form.crosspostInstagram.vars.label }}<br>
+            <small>Envoyé dès que les médias sont prêts. Instagram ne permet pas de modifier ni de supprimer la copie ensuite{{ form.music is defined ? ', ni d’y ajouter la musique' }}.</small></span></label>
+        <p class="small crosspost-warn" data-crosspost-target="warning" hidden>Sur Instagram, elle sera visible de tous : un compte professionnel est public.</p>
+    </div>
+{% endif %}
