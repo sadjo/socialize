@@ -45,6 +45,7 @@ final readonly class InboxProcessor
         private ApUrls $urls,
         private LoggerInterface $logger,
         private MessageBusInterface $bus,
+        private \App\Core\Application\Notification\Notifications $notifications,
     ) {
     }
 
@@ -168,6 +169,7 @@ final readonly class InboxProcessor
                 $this->em->remove($like);
                 $post->decrementLikes();
                 $this->em->flush();
+                $this->notifications->unliked($actor, $post);
             }
         }
     }
@@ -186,6 +188,7 @@ final readonly class InboxProcessor
         $this->em->persist($like);
         $post->incrementLikes();
         $this->em->flush();
+        $this->notifications->liked($actor, $post);
     }
 
     /**
@@ -258,6 +261,7 @@ final readonly class InboxProcessor
         $this->em->persist($comment);
         $post->incrementComments();
         $this->em->flush();
+        $this->notifications->commented($comment);
     }
 
     /**

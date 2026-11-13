@@ -6,6 +6,8 @@
     {% if not visitor_closed %}<a class="nav{{ current_route == 'app_search' ? ' on' }}" href="{{ path('app_search') }}">{{ ui.icon('search') }}<span class="lbl">Rechercher</span></a>{% endif %}
     {% if me %}
         {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="nav{{ current_route in ['app_compose', 'app_story_new'] ? ' on' }}" popovertarget="create-menu" aria-haspopup="dialog">{{ ui.icon('plus') }}<span class="lbl">Créer</span></button>{% endif %}
+        {% set unread = unread_notifications() %}
+        <a class="nav notif-link{{ current_route == 'app_notifications' ? ' on' }}" href="{{ path('app_notifications') }}"{% if current_route == 'app_notifications' %} aria-current="page"{% endif %}>{{ ui.icon('bell') }}<span class="lbl">Notifications</span>{% if unread %}<span class="badge num" aria-label="{{ unread }} non lue{{ unread > 1 ? 's' }}">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>
         <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.username}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>
         <div class="sep"></div>
         {% if is_granted('ROLE_PUBLISHER') and is_granted('ROLE_INSTAGRAM_IMPORTER') %}<a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>{% endif %}

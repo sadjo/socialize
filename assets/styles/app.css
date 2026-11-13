@@ -829,3 +829,25 @@ label.act{cursor:pointer}
 .pending-post .th{flex:0 0 64px;width:64px;height:80px;aspect-ratio:auto}
 .pending-post .grow{flex:1;display:grid;gap:6px;min-width:0}
 .pending-post .grow b{overflow-wrap:anywhere}
+
+/* Notifications : pastille du nombre de non lues (menu, barre du bas) et page. */
+.notif-link{position:relative}
+.notif-link .badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-grad);font-size:.68rem;font-weight:700;display:inline-grid;place-items:center;line-height:1}
+.nav.notif-link .badge{margin-left:auto}
+.tabbar .notif-link .badge{position:absolute;top:2px;right:4px;box-shadow:0 0 0 2px var(--bg)}
+.notifs{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:8px}
+.notif{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:4px 6px 4px 4px}
+.notif.unread{background:color-mix(in oklch,var(--accent) 8%,var(--surface));border-color:color-mix(in oklch,var(--accent) 35%,var(--line))}
+.notif-open{flex:1;min-width:0}
+.notif-open button{display:flex;align-items:center;gap:12px;width:100%;padding:8px;border-radius:12px;text-align:left;font:inherit;color:var(--fg)}
+.notif-open button:hover,.notif-open button:focus-visible{background:var(--surface-2)}
+.notif-av{position:relative;flex:none}
+.notif-kind{position:absolute;right:-4px;bottom:-4px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;box-shadow:0 0 0 2px var(--surface)}
+.notif-kind.like{background:oklch(0.62 0.22 15)}
+.notif-kind.comment{background:var(--accent)}
+.notif-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;overflow-wrap:anywhere}
+.notif-text small{color:var(--muted);font-size:.78rem}
+.notif-new{color:var(--accent);font-weight:600}
+.notif-th{flex:none;width:44px;height:55px;object-fit:cover;border-radius:8px}
+.notif-acts{display:flex;flex:none}
+.empty-notifs{display:grid;justify-items:center;gap:8px;text-align:center;color:var(--muted);margin-top:16px}

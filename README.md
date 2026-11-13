@@ -14,7 +14,9 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > qui choisit quels comptes peuvent publier et lesquels peuvent importer leur archive Instagram.
 > Crosspost vers Instagram : publications et stories envoyées aussi sur un compte Instagram professionnel, selon
 > des règles par visibilité ; bouton « Partager vers Instagram » pour tout compte, personnel compris.
-> Jalons suivants : crosspost Facebook (jalon 9), API REST et serveur MCP (jalon 10).
+> Notifications des « J'aime » et commentaires reçus (d'ici ou du fédivers), lues ou non lues, supprimables.
+> Jalons suivants : crosspost Facebook (jalon 9), API REST et serveur MCP (jalon 10) ; à prévoir : notifications
+> réglables par compte.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
 - Stack : PHP 8.5, Symfony 8.1, FrankenPHP (mode worker), Doctrine ORM, Symfony Messenger, Twig + Symfony UX.
