@@ -16,6 +16,33 @@ final class StoryTest extends AppWebTestCase
 {
     use ClockSensitiveTrait;
 
+    public function testTheStoriesBarIsHiddenWhenThereIsNoStoryToSee(): void
+    {
+        $camille = $this->register('camille');
+        $hugo = $this->register('hugo');
+        $this->login($hugo);
+        $crawler = $this->client->request('GET', '/@camille');
+        $this->client->submit($crawler->selectButton('Suivre')->form());
+
+        $this->client->request('GET', '/');
+        self::assertSelectorNotExists('.stories', 'Aucune story à voir : pas de barre.');
+
+        // Une story d'un compte suivi : la barre paraît, avec le bouton d'ajout.
+        $this->publish($this->fresh($camille->getAccount()), 'Matin');
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('.stories a[href="/stories?depuis=camille"]');
+        self::assertSelectorExists('.stories a[href="/stories/nouvelle"]');
+
+        // Sa propre story seule suffit aussi.
+        $lina = $this->register('lina');
+        $this->login($lina);
+        $this->client->request('GET', '/');
+        self::assertSelectorNotExists('.stories');
+        $this->publish($this->fresh($lina->getAccount()), 'Soir');
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('.stories a[href="/stories?depuis=lina"]');
+    }
+
     public function testAStoryAppearsInTheFollowersBarAndIsMarkedAsSeen(): void
     {
         self::mockTime('2026-11-12 10:00:00');
@@ -156,6 +183,15 @@ final class StoryTest extends AppWebTestCase
         self::assertResponseRedirects('/stories/mes-stories');
         self::assertSame([], self::getContainer()->get(StoryRepository::class)->findAll());
         self::assertFalse(self::getContainer()->get('originals.storage')->fileExists($original));
+    }
+
+    /** Compte rechargé dans le gestionnaire d'entités actuel (après des requêtes HTTP). */
+    private function fresh(Account $account): Account
+    {
+        $fresh = self::getContainer()->get('doctrine')->getRepository(Account::class)->find($account->getId());
+        self::assertInstanceOf(Account::class, $fresh);
+
+        return $fresh;
     }
 
     private function publish(Account $author, ?string $text, Visibility $audience = Visibility::Public): Story
