@@ -70,6 +70,8 @@
         </div>
     {% endif %}
 
+    {% if pending_posts is not empty %}{{ include('profile/_pending.html.twig') }}{% endif %}
+
     <div>
         {{ include('profile/_tabs.html.twig', {current: 'posts'}) }}
         {% if page.empty %}

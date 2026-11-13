@@ -204,6 +204,32 @@ final class FederationTest extends AppWebTestCase
         self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3', $noteId.'/v4'], $this->objectIds($sent, 'Delete'));
     }
 
+    /**
+     * Date de publication changée par un administrateur : Mastodon garde la date d'un statut reçu, la publication
+     * est donc retirée puis renvoyée à sa nouvelle date, sous un nouvel identifiant.
+     */
+    public function testRedatingAPostSendsItAgainAtItsNewDate(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/8', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $post = $this->publish($this->reloadAccount($camille), 'Souvenir', Visibility::Public);
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        $editor = self::getContainer()->get(\App\Media\Application\PostEditor::class);
+        $order = array_values(array_map(\App\Media\Application\PostEditor::token(...), $post->getMedia()->toArray()));
+
+        $date = new \DateTimeImmutable('2025-07-14 18:30:00 UTC');
+        $sent = $this->during(static fn () => $editor->edit($post, 'Souvenir', Visibility::Public, null, null, $order, publishedAt: $date));
+        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
+        self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Create'));
+        self::assertSame([], $this->ofType($sent, 'Update'), 'Un Update ne changerait pas la date chez Mastodon.');
+        self::assertSame('2025-07-14T18:30:00+00:00', $this->dig($this->ofType($sent, 'Create')[0], 'object', 'published'));
+
+        // Même date : simple mise à jour.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Souvenir d’été', Visibility::Public, null, null, $order, publishedAt: $date));
+        self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Update'));
+        self::assertSame([], $this->ofType($sent, 'Delete'));
+    }
+
     public function testTheResyncCommandRemovesLeftoverCopies(): void
     {
         $camille = $this->register('camille')->getAccount();
@@ -231,6 +257,51 @@ final class FederationTest extends AppWebTestCase
         self::assertSame(['https://remote.test/inbox'], array_values(array_unique(array_map(fn (array $d): string => $this->text($d, 'url'), $sent))), 'Vers la boîte partagée des abonnés.');
 
         self::assertSame(Command::FAILURE, $command->execute(['publication' => 'pas une adresse']));
+    }
+
+    /**
+     * Membres d'un groupe modifiés : ses publications sont retirées puis renvoyées aux membres actuels du fédivers ;
+     * un membre de cette instance ajouté ou retiré ne change rien au fédivers (son accès est vérifié à l'affichage).
+     */
+    public function testChangingTheMembersOfAGroupUpdatesItsPostsOnTheFediverse(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $hugo = $this->register('hugo')->getAccount();
+        $author = $this->reloadAccount($camille);
+        $follower = self::getContainer()->get(AccountRepository::class)->find($hugo->getId());
+        self::assertNotNull($follower);
+        self::getContainer()->get(\App\Core\Application\Social\SocialActions::class)->follow($follower, $author);
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/11', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
+        $family = $groups->create($this->reloadAccount($camille), 'Famille');
+        $alice = $this->alice()->getId()->toRfc4122();
+        $groups->setMembers($family, [$alice]);
+        $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadAccount($camille), 'En famille', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$this->family($family)]);
+        $noteId = 'http://localhost/p/'.$post->getPublicId();
+        self::assertSame([$noteId], $this->objectIds($this->fediverse()->deliveries, 'Create'));
+
+        // Alice retirée du groupe : la publication est retirée chez elle, et envoyée à personne.
+        $sent = $this->during(fn () => $groups->setMembers($this->family($family), []));
+        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
+        self::assertContains(FakeFediverse::ALICE.'/inbox', array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Delete')));
+        self::assertSame([], $this->ofType($sent, 'Create'));
+
+        // Alice de retour : la publication lui est renvoyée sous un nouvel identifiant.
+        $sent = $this->during(fn () => $groups->setMembers($this->family($family), [$alice]));
+        self::assertSame([$noteId.'/v3'], $this->objectIds($sent, 'Create'));
+        self::assertSame([FakeFediverse::ALICE.'/inbox'], array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Create')));
+
+        // Hugo (membre de cette instance) ajouté : rien ne part.
+        $sent = $this->during(fn () => $groups->setMembers($this->family($family), [$alice, $hugo->getId()->toRfc4122()]));
+        self::assertSame([], $sent);
+    }
+
+    private function family(\App\Core\Domain\Social\AudienceGroup $group): \App\Core\Domain\Social\AudienceGroup
+    {
+        $fresh = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($group->getId());
+        self::assertNotNull($fresh);
+
+        return $fresh;
     }
 
     /**

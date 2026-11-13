@@ -53,6 +53,10 @@
 	@frontController path index.php
 	php @frontController
 
+	# Manifeste de l'application (icône de l'écran d'accueil sur Android) : son type n'est pas connu de Caddy.
+	@manifest path /site.webmanifest
+	header @manifest Content-Type "application/manifest+json"
+
 	file_server {
 		hide *.php
 	}

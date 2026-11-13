@@ -1,9 +1,12 @@
-{# Médias d'une publication : carrousel, visionneuse (clic), vidéo, musique, avertissement de contenu. Variables : post #}
+{# Médias d'une publication : carrousel, visionneuse (clic), vidéo, musique, avertissement de contenu. Variables : post
+   Toutes les publications ont le même cadre 4:5, que le média couvre entièrement (la visionneuse le montre en
+   entier). Les points du carrousel sont sous le cadre. #}
 {% import '_macros.html.twig' as ui %}
 {% set count = post.media|length %}
 {% set music = post.music %}
-<div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="dblclick->like#doubleTap dblclick->lightbox#cancel" data-carousel-count-value="{{ count }}"
+<div class="media" data-controller="carousel lightbox{{ post.sensitive ? ' reveal' }}{{ music ? ' music' }}" data-action="click->like#tap" data-carousel-count-value="{{ count }}"
      {%- if music %} data-music data-music-start-value="{{ post.musicStart }}" data-music-excerpt-value="{{ constant('App\\Core\\Domain\\Music\\MusicChoice::EXCERPT') }}"{% endif %}>
+    <div class="frame">
     <div class="track" data-carousel-target="track">
         {% for media in post.media %}
             {% set viewable = media.ready %}
@@ -47,12 +50,18 @@
         {# Pas de flèche vers l'arrière sur le premier média, ni vers l'avant sur le dernier (carousel_controller). #}
         <button type="button" class="nb prev" data-carousel-target="prev" data-action="carousel#prev" aria-label="Média précédent" hidden>{{ ui.icon('left', 'sm') }}</button>
         <button type="button" class="nb next" data-carousel-target="next" data-action="carousel#next" aria-label="Média suivant">{{ ui.icon('right', 'sm') }}</button>
-        <div class="dots" aria-hidden="true">{% for i in 1..count %}<i class="{{ loop.first ? 'on' }}" data-carousel-target="dot"></i>{% endfor %}</div>
     {% endif %}
     {% if post.sensitive %}
         <div class="cw-veil" data-reveal-target="veil">
             <div>{{ ui.icon('eye') }}<b>Contenu sensible</b><span>{{ post.contentWarning }}</span><br>
                 <button type="button" class="btn sm" data-action="reveal#show">Afficher</button></div>
+        </div>
+    {% endif %}
+    </div>
+    {% if count > 1 %}
+        {# Points cliquables : chacun mène au média correspondant. #}
+        <div class="dots" role="group" aria-label="Médias de la publication">
+            {%- for i in 1..count %}<button type="button" class="{{ loop.first ? 'on' }}" data-carousel-target="dot" data-action="carousel#show" data-carousel-index-param="{{ loop.index0 }}" aria-label="Média {{ i }} sur {{ count }}"{% if loop.first %} aria-current="true"{% endif %}><i></i></button>{% endfor -%}
         </div>
     {% endif %}
 </div>

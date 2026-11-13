@@ -71,7 +71,10 @@ final readonly class MediaIngestor
     /**
      * Transcodage d'une vidéo, appelé par le consommateur Messenger.
      */
-    public function processVideo(MediaAttachment $media): void
+    /**
+     * @param ?callable(int): void $onProgress pourcentage de la conversion, au fil de l'eau
+     */
+    public function processVideo(MediaAttachment $media, ?callable $onProgress = null): void
     {
         $dir = sys_get_temp_dir().'/socialize-'.$media->getId()->toBase58();
         $this->filesystem->mkdir($dir);
@@ -83,7 +86,7 @@ final readonly class MediaIngestor
 
             $output = $dir.'/video.mp4';
             $posterFile = $dir.'/poster.jpg';
-            $this->videos->transcode($input, $output);
+            $this->videos->transcode($input, $output, $onProgress);
             $info = $this->videos->probe($output);
             $this->videos->poster($output, $posterFile, $info['duration']);
 

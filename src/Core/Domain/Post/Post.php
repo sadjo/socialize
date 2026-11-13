@@ -78,6 +78,13 @@ class Post
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $crosspostTargets = null;
 
+    /**
+     * En attente : une vidéo est en cours de conversion. La publication n'est montrée qu'à son auteur (avec la
+     * progression) et ne part pas dans le fédivers ; elle paraît quand ses médias sont prêts.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $pending = false;
+
     #[ORM\Column]
     private int $likesCount = 0;
 
@@ -260,6 +267,19 @@ class Post
         return $this->publishedAt;
     }
 
+    /**
+     * Nouvelle date de publication (choisie par un administrateur) ; vrai si elle a changé.
+     */
+    public function redate(\DateTimeImmutable $publishedAt): bool
+    {
+        if ($publishedAt->getTimestamp() === $this->publishedAt->getTimestamp()) {
+            return false;
+        }
+        $this->publishedAt = $publishedAt;
+
+        return true;
+    }
+
     public function getOriginalCreatedAt(): ?\DateTimeImmutable
     {
         return $this->originalCreatedAt;
@@ -417,6 +437,34 @@ class Post
         $this->musicStart = $choice->start ?? 0;
     }
 
+    public function isPending(): bool
+    {
+        return $this->pending;
+    }
+
+    /**
+     * Mise en attente le temps de convertir ses vidéos.
+     */
+    public function hold(): void
+    {
+        $this->pending = true;
+    }
+
+    /**
+     * Médias prêts : la publication paraît, à la date du moment (elle arrive en tête des fils), sauf une publication
+     * importée, qui garde sa date d'origine.
+     */
+    public function release(\DateTimeImmutable $now): void
+    {
+        if (!$this->pending) {
+            return;
+        }
+        $this->pending = false;
+        if (PostSource::Local === $this->source) {
+            $this->publishedAt = $now;
+        }
+    }
+
     public function isArchived(): bool
     {
         return $this->archivedAt instanceof \DateTimeImmutable;
@@ -448,7 +496,7 @@ class Post
      */
     public function isFederable(): bool
     {
-        return $this->account->isLocal() && !$this->isArchived() && Visibility::Private !== $this->visibility;
+        return $this->account->isLocal() && !$this->isArchived() && !$this->pending && Visibility::Private !== $this->visibility;
     }
 
     public function getApRevision(): int

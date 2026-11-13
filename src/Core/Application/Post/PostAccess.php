@@ -21,7 +21,8 @@ final readonly class PostAccess
 
     public function canView(Post $post, ?Account $viewer): bool
     {
-        if ($post->isArchived() || $post->isOwnedBy($viewer)) {
+        // Archivée, ou en attente de la conversion de ses vidéos : son auteur seul la voit.
+        if ($post->isArchived() || $post->isPending() || $post->isOwnedBy($viewer)) {
             return $post->isOwnedBy($viewer);
         }
         if (!\in_array($post->getVisibility(), $this->visibleFor($post->getAccount(), $viewer), true)) {

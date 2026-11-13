@@ -49,10 +49,13 @@ final class ProfileController extends AbstractController
         $visible = $access->visibleFor($account, $viewer);
         $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres') ?: null), self::PAGE_SIZE, $viewer);
 
+        $isOwner = $viewer instanceof Account && $viewer->getId()->equals($account->getId());
         $parameters = [
             'account' => $account,
             'page' => $page,
-            'is_owner' => $viewer instanceof Account && $viewer->getId()->equals($account->getId()),
+            'is_owner' => $isOwner,
+            // Publications de l'auteur en attente de la conversion de leurs vidéos (bloc « En préparation »).
+            'pending_posts' => $isOwner ? $posts->pendingOf($account) : [],
             'is_following' => $follows->isFollowing($viewer, $account),
             'can_view_network' => $network->canView($account, $viewer),
             'follow_pending' => $viewer instanceof Account && ($f = $follows->findBetween($viewer, $account)) instanceof \App\Core\Domain\Social\Follow && !$f->isAccepted(),
@@ -73,6 +76,27 @@ final class ProfileController extends AbstractController
         }
 
         return $this->render('profile/show.html.twig', $parameters);
+    }
+
+    /**
+     * Bloc « En préparation » du profil de l'auteur, rechargé pendant la conversion des vidéos (contrôleur poll).
+     */
+    #[Route('/@{username}/en-preparation', name: 'app_profile_pending', requirements: ['username' => self::ACCT], methods: ['GET'])]
+    public function pending(string $username, Request $request, PostRepository $posts): Response
+    {
+        $account = $this->account($username);
+        $viewer = $this->currentAccount->get();
+        if (!$viewer instanceof Account || !$viewer->getId()->equals($account->getId())) {
+            throw new NotFoundHttpException();
+        }
+
+        return $this->render('profile/_pending.html.twig', [
+            'account' => $account,
+            'pending_posts' => $posts->pendingOf($account),
+            'in_frame' => true,
+            // Une publication de moins qu'au départ : elle est prête, la page est rechargée pour la montrer.
+            'shown' => max(0, $request->query->getInt('affichees')),
+        ]);
     }
 
     /**

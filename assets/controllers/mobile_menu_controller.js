@@ -21,6 +21,6 @@ export default class extends Controller {
 
     // Lien suivi : la fenêtre se ferme (la page suivante arrive par Turbo).
     followed(event) {
-        if (event.target.closest('a')) this.close();
+        if (event.target.closest('a, [popovertarget]')) this.close();
     }
 }

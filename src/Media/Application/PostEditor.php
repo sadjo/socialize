@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Media\Application;
 
+use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Media\MediaStatus;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
@@ -38,6 +40,7 @@ final readonly class PostEditor
      * @param list<File>             $newFiles       nouveaux fichiers, référencés par « n-<index> »
      * @param array<string, ?string> $altTexts       texte alternatif par jeton
      * @param list<AudienceGroup>    $audienceGroups groupes d'abonnés (visibilité « Groupes »)
+     * @param ?\DateTimeImmutable    $publishedAt    nouvelle date de publication (administrateur), null pour la garder
      *
      * @throws MediaProcessingException
      */
@@ -52,6 +55,7 @@ final readonly class PostEditor
         array $altTexts = [],
         ?MusicChoice $music = null,
         array $audienceGroups = [],
+        ?\DateTimeImmutable $publishedAt = null,
     ): void {
         $existing = [];
         foreach ($post->getMedia() as $media) {
@@ -77,6 +81,8 @@ final readonly class PostEditor
         $post->edit($caption, $visibility, $contentWarning, $location, $this->clock->now());
         $post->chooseMusic($music);
         $post->restrictTo($audienceGroups);
+        // Une publication en attente prend la date de sa parution : la date choisie ne vaut qu'une fois parue.
+        $redated = $publishedAt instanceof \DateTimeImmutable && !$post->isPending() && $post->redate($publishedAt);
 
         // Retrait des médias absents de la nouvelle liste (les fichiers sont supprimés après l'enregistrement).
         $removed = [];
@@ -118,9 +124,21 @@ final readonly class PostEditor
                 $this->bus->dispatch(new ProcessVideo($media->getId()->toRfc4122()));
             }
         }
+        if ($post->isPending()) {
+            // Encore en attente : elle paraît quand plus aucune vidéo n'est en conversion ni en échec (par exemple
+            // après avoir retiré la vidéo qui n'a pas pu être convertie).
+            $blocked = $post->getMedia()->exists(static fn (int $i, MediaAttachment $m): bool => MediaStatus::Ready !== $m->getStatus());
+            if (!$blocked) {
+                $post->release($this->clock->now());
+                $this->em->flush();
+                $this->events->dispatch(new PostPublished($post));
+            }
+
+            return;
+        }
         // Avec une nouvelle vidéo, la mise à jour est fédérée une fois la vidéo prête (ProcessVideoHandler).
         if (!$processing) {
-            $this->events->dispatch(new PostUpdated($post, $previousVisibility, $previousAudience));
+            $this->events->dispatch(new PostUpdated($post, $previousVisibility, $previousAudience, dateChanged: $redated));
         }
     }
 

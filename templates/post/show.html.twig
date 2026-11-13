@@ -17,6 +17,7 @@
                 <div class="pname"><a href="{{ path('app_profile', {username: author.acct}) }}"><b>{{ author.username }}</b></a>
                     {% if not author.local %}<span class="fed">{{ ui.icon('globe', 'xs') }}{{ author.domain }}</span>{% endif %}
                     {% if post.archived %}<span class="chip imp" title="Visible uniquement par vous, dans vos archives">{{ ui.icon('album', 'xs') }}Archivée</span>{% endif %}
+                    {% if post.pending %}<span class="chip imp" title="Visible uniquement par vous jusqu’à la fin de la conversion de ses vidéos">{{ ui.icon('reel', 'xs') }}En préparation</span>{% endif %}
                     {{ include('post/_visibility.html.twig') }}</div>
                 {% if post.location %}<div class="psub">{{ ui.icon('pin', 'xs') }} {{ post.location }}</div>{% endif %}
             {% if post.music %}{{ include('post/_music_credit.html.twig', {music: post.music}) }}{% endif %}

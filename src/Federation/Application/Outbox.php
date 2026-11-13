@@ -121,7 +121,15 @@ final readonly class Outbox
         $previousAudience = array_values(array_filter($event->previousAudience, fn (Account $m): bool => $this->follows->isFollowing($m, $author)));
         $audience = $this->access->groupAudience($post);
 
-        if ($wasFederated && $isFederated && $previous === $current && $this->ids($previousAudience) === $this->ids($audience)) {
+        // Destinataires du fédivers seulement : un membre de cette instance voit la publication selon ses droits du
+        // moment, sans rien recevoir.
+        // Date de publication changée : Mastodon garde la date d'un statut reçu, il est donc retiré puis renvoyé sous un
+        // nouvel identifiant.
+        if (!$event->dateChanged && $wasFederated && $isFederated && $previous === $current && $this->remoteIds($previousAudience) === $this->remoteIds($audience)) {
+            // Seuls les membres de ses groupes ont changé, pas ceux du fédivers : rien à renvoyer.
+            if (!$event->contentChanged) {
+                return;
+            }
             $note = $this->serializer->note($post);
             $this->deliver($author, $this->recipients($post, $current, $audience), [
                 'id' => $this->urls->activity($author, 'update'),
@@ -149,9 +157,9 @@ final readonly class Outbox
      *
      * @return list<string>
      */
-    private function ids(array $accounts): array
+    private function remoteIds(array $accounts): array
     {
-        $ids = array_map(static fn (Account $a): string => $a->getId()->toRfc4122(), $accounts);
+        $ids = array_map(static fn (Account $a): string => $a->getId()->toRfc4122(), array_filter($accounts, static fn (Account $a): bool => !$a->isLocal()));
         sort($ids);
 
         return $ids;

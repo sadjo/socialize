@@ -68,6 +68,17 @@ final class PostController extends AbstractController
         ]);
     }
 
+    /**
+     * Personnes qui ont aimé la publication (chargée dans la fenêtre ouverte par le compteur de « J'aime »).
+     */
+    #[Route('/p/{id}/jaime', name: 'app_post_likers', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET'])]
+    public function likers(string $id, LikeRepository $likes): Response
+    {
+        $post = $this->visiblePost($id);
+
+        return $this->render('post/_likers.html.twig', ['post' => $post, 'likers' => $likes->likersOf($post)]);
+    }
+
     #[Route('/p/{id}/aimer', name: 'app_post_like', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
     public function like(string $id, Request $request, SocialActions $social): Response
     {
@@ -177,11 +188,12 @@ final class PostController extends AbstractController
             'altTexts' => $altTexts,
             'music' => ['track' => $post->getMusic()?->getOpenverseId(), 'start' => (string) $post->getMusicStart()],
             'audienceGroups' => $post->getAudienceGroups(),
-        ], ['groups' => $groups->of($post->getAccount())]);
+            'publishedAt' => $post->getPublishedAt(),
+        ], ['groups' => $groups->of($post->getAccount()), 'can_redate' => $this->isGranted('ROLE_ADMIN') && !$post->isPending()]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>} $data */
+            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>, publishedAt?: \DateTimeImmutable} $data */
             $data = $form->getData();
             try {
                 $editor->edit(
@@ -195,6 +207,7 @@ final class PostController extends AbstractController
                     $data['altTexts'] ?? [],
                     $music->choice($data['music']['track'], (int) $data['music']['start']),
                     Visibility::Groups === $data['visibility'] ? $data['audienceGroups'] : [],
+                    $data['publishedAt'] ?? null,
                 );
                 $this->addFlash('success', 'Publication modifiée.');
 

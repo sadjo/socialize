@@ -53,9 +53,13 @@ final class ComposeController extends AbstractController
                     Visibility::Groups === $data['visibility'] ? $data['audienceGroups'] : [],
                     true === ($data[CrosspostField::NAME] ?? false) ? [CrosspostTarget::Instagram] : [],
                 );
-                $this->addFlash('success', $post->hasVideo()
-                    ? 'Publié. La vidéo est en cours de préparation, elle apparaîtra dans quelques instants.'
-                    : 'Publié.');
+                if ($post->isPending()) {
+                    // Vidéo en conversion : la publication attend sur le profil, avec la progression.
+                    $this->addFlash('success', 'Publication en préparation : elle paraîtra, et partira dans le fédivers, dès que la vidéo sera convertie.');
+
+                    return $this->redirectToRoute('app_profile', ['username' => $post->getAccount()->getUsername()], Response::HTTP_SEE_OTHER);
+                }
+                $this->addFlash('success', 'Publié.');
 
                 return $this->redirectToRoute('app_post_show', ['id' => $post->getPublicId()], Response::HTTP_SEE_OTHER);
             } catch (MediaProcessingException $e) {
