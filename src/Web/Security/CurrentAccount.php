@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Web\Security;
 
 use App\Core\Domain\Account\Account;
-use App\Core\Domain\Account\User;
+use App\Core\Domain\Account\AccountUser;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
- * Compte du visiteur connecté.
+ * Compte du visiteur connecté : le sien sur l'instance, ou son compte Mastodon s'il s'est connecté avec.
  */
 final readonly class CurrentAccount
 {
@@ -23,7 +23,7 @@ final readonly class CurrentAccount
     {
         $user = $this->security->getUser();
 
-        return $user instanceof User ? $user->getAccount() : null;
+        return $user instanceof AccountUser ? $user->getAccount() : null;
     }
 
     public function require(): Account

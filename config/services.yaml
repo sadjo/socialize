@@ -44,6 +44,12 @@ services:
     synology_photos.http_client:
         alias: http_client
 
+    # Client HTTP des serveurs Mastodon (remplacé dans les tests) : un serveur Mastodon est public, et son adresse
+    # vient de la personne qui se connecte.
+    mastodon.http_client:
+        class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
+        arguments: ['@http_client']
+
     # Client HTTP d'Openverse et des fournisseurs de musique (remplacé dans les tests) : les adresses
     # de fichiers viennent d'Openverse, le réseau privé de l'instance leur est fermé.
     openverse.http_client:
@@ -78,6 +84,12 @@ when@test:
         # Faux Synology Photos pour les tests (voir tests/Integration).
         App\Tests\Integration\FakeSynologyPhotos:
             public: true
+        # Faux serveur Mastodon pour les tests (voir tests/Integration).
+        App\Tests\Integration\FakeMastodon:
+            public: true
+        mastodon.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            arguments: ['@App\Tests\Integration\FakeMastodon']
         synology_photos.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
             arguments: ['@App\Tests\Integration\FakeSynologyPhotos']

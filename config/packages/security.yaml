@@ -7,6 +7,13 @@ security:
             # Connexion avec l'adresse e-mail ou le nom d'utilisateur (UserRepository::loadUserByIdentifier).
             entity:
                 class: App\Core\Domain\Account\User
+        # Personnes connectées avec leur compte Mastodon (MastodonUserRepository::loadUserByIdentifier).
+        mastodon_users:
+            entity:
+                class: App\Integration\Mastodon\Domain\MastodonUser
+        all_users:
+            chain:
+                providers: [app_users, mastodon_users]
 
     firewalls:
         dev:
@@ -14,8 +21,10 @@ security:
             security: false
         main:
             lazy: true
-            provider: app_users
+            provider: all_users
             form_login:
+                # Le formulaire ne connaît que les comptes de l'instance (mot de passe).
+                provider: app_users
                 login_path: app_login
                 check_path: app_login
                 username_parameter: identifier

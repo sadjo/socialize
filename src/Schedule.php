@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App;
 
 use App\Crosspost\Meta\Application\RefreshInstagramTokens;
+use App\Integration\Mastodon\Application\RefreshMastodonAccounts;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
 use Symfony\Component\Scheduler\Schedule as SymfonySchedule;
@@ -27,6 +28,8 @@ class Schedule implements ScheduleProviderInterface
 
             // Jetons Instagram (60 jours) : renouvelés chaque jour s'ils ont plus d'une semaine.
             ->add(RecurringMessage::every('1 day', new RefreshInstagramTokens()))
+            // Comptes Mastodon pilotés d'ici : leur historique, toutes les 30 minutes.
+            ->add(RecurringMessage::every('30 minutes', new RefreshMastodonAccounts()))
         ;
     }
 }

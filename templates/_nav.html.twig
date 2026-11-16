@@ -6,12 +6,18 @@
     {% if not visitor_closed %}<a class="nav{{ current_route == 'app_search' ? ' on' }}" href="{{ path('app_search') }}">{{ ui.icon('search') }}<span class="lbl">Rechercher</span></a>{% endif %}
     {% if me %}
         {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="nav{{ current_route in ['app_compose', 'app_story_new'] ? ' on' }}" popovertarget="create-menu" aria-haspopup="dialog">{{ ui.icon('plus') }}<span class="lbl">Créer</span></button>{% endif %}
-        {% set unread = unread_notifications() %}
-        <a class="nav notif-link{{ current_route == 'app_notifications' ? ' on' }}" href="{{ path('app_notifications') }}"{% if current_route == 'app_notifications' %} aria-current="page"{% endif %}>{{ ui.icon('bell') }}<span class="lbl">Notifications</span>{% if unread %}<span class="badge num" aria-label="{{ unread }} non lue{{ unread > 1 ? 's' }}">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>
-        <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.username}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>
+        {% set mastodon = is_granted('ROLE_MASTODON') %}
+        {% set unread = mastodon ? 0 : unread_notifications() %}
+        {% if not mastodon %}<a class="nav notif-link{{ current_route == 'app_notifications' ? ' on' }}" href="{{ path('app_notifications') }}"{% if current_route == 'app_notifications' %} aria-current="page"{% endif %}>{{ ui.icon('bell') }}<span class="lbl">Notifications</span>{% if unread %}<span class="badge num" aria-label="{{ unread }} non lue{{ unread > 1 ? 's' }}">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>{% endif %}
+        <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.acct}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>
         <div class="sep"></div>
         {% if is_granted('ROLE_PUBLISHER') and is_granted('ROLE_INSTAGRAM_IMPORTER') %}<a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>{% endif %}
-        <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
+        {% if mastodon %}
+            {# Compte Mastodon : il se règle sur son serveur. #}
+            {% if me.profileUrl %}<a class="nav" href="{{ me.profileUrl }}" target="_blank" rel="noopener">{{ ui.icon('sliders') }}<span class="lbl">Mon compte sur {{ me.domain }}</span></a>{% endif %}
+        {% else %}
+            <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
+        {% endif %}
         {% if app.user.isAdmin() %}<a class="nav{{ (current_route ?? '') starts with 'admin_' ? ' on' }}" href="{{ path('admin_accounts') }}">{{ ui.icon('shield') }}<span class="lbl">Administration</span></a>{% endif %}
     {% else %}
         <div class="sep"></div>

@@ -74,14 +74,16 @@ les intégrations Immich et Synology Photos.
   `ROLE_MASTODON` en plus de ses rôles), fournie par un second provider (chaîne de providers). `CurrentAccount`
   rend son compte distant comme il rend aujourd'hui celui d'un `User`.
 - Déconnexion : le jeton est révoqué sur le serveur (`/oauth/revoke`) et effacé.
-- **Accès** : un réglage d'administration « Connexion Mastodon » : fermée (par défaut), réservée à certains
-  serveurs, ou ouverte. À trancher au moment de la réalisation.
+- **Accès** : variable `MASTODON_LOGIN` de l'instance : `closed` (par défaut, personne), `open` (tout serveur), ou
+  la liste des serveurs permis (`mastodon.social,piaille.fr`).
 
 ## 2. Profil et fils
 
-- Son profil est la page de profil d'un compte distant qui existe déjà. À la première connexion, `BackfillAccount`
-  importe son historique (six mois, 50 publications au plus, comme aujourd'hui), puis la fédération le tient à
-  jour.
+- Son profil est la page de profil d'un compte distant qui existe déjà. `BackfillAccount` importe son historique
+  (six mois, 50 publications au plus, comme aujourd'hui) à chaque connexion, puis toutes les 30 minutes
+  (`RefreshMastodonAccounts`, planificateur) : son serveur n'envoie ses nouvelles publications qu'aux serveurs de
+  ses abonnés. La boîte de réception garde les publications d'un compte piloté d'ici (`PilotedAccounts`), même
+  sans abonné local.
 - Pas de modification du profil sur Socialize : un lien renvoie vers les réglages de son serveur Mastodon.
 - Fil d'accueil : les publications des comptes qu'elle suit et que Socialize connaît. Ce sont ses
   abonnements aux comptes Socialize (connus par les `Follow` reçus), et les comptes distants déjà connus.
@@ -187,7 +189,6 @@ Chaque étape fait l'objet de sa propre branche `feature/...`.
 
 ## Points à trancher plus tard
 
-- Accès à la connexion Mastodon : fermée, serveurs autorisés, ou ouverte à tous.
 - Contenu du fil d'accueil de ces comptes.
 - Autres logiciels compatibles avec l'API Mastodon (Pixelfed, GoToSocial, Akkoma) : même code, avec
   quelques différences à vérifier.
