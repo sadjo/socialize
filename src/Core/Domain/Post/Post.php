@@ -423,6 +423,14 @@ class Post
         $this->crosspostTargets = [] === $values ? null : $values;
     }
 
+    /**
+     * Réseau ajouté après coup (publication déjà en ligne envoyée ensuite).
+     */
+    public function addCrosspost(CrosspostTarget $target): void
+    {
+        $this->crosspostTargets = array_values(array_unique([...$this->crosspostTargets ?? [], $target->value]));
+    }
+
     public function wantsCrosspost(CrosspostTarget $target): bool
     {
         return \in_array($target->value, $this->crosspostTargets ?? [], true);

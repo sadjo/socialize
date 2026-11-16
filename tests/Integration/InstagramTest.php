@@ -170,6 +170,43 @@ final class InstagramTest extends AppWebTestCase
         self::assertSame('[]', $this->client->getCrawler()->filter('[data-controller="crosspost"]')->attr('data-crosspost-defaults-value'));
     }
 
+    public function testAPostAlreadyOnlineCanBeSentAfterwards(): void
+    {
+        $camille = $this->register('camille');
+        // Publiée avant la connexion d'Instagram, sans crosspost.
+        $post = self::getContainer()->get(PostComposer::class)->publish($camille->getAccount(), 'Souvenir de l’été', [['file' => $this->jpeg(), 'alt' => null]], Visibility::Followers);
+        $this->login($camille);
+        $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertSelectorNotExists('form[action$="/instagram"]', 'Instagram non connecté : pas de bouton.');
+
+        self::getContainer()->get(InstagramConnections::class)->connect($this->reloadUser($camille)->getAccount(), FakeInstagram::CODE, 'http://localhost/reglages/instagram/retour');
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        $form = $crawler->filter('form[action="/p/'.$post->getPublicId().'/instagram"]');
+        self::assertCount(1, $form);
+        self::assertStringContainsString('visible de tous', (string) $form->attr('data-turbo-confirm'), 'Publication réservée aux abonnés : avertissement.');
+        $this->client->submit($crawler->selectButton('Publier sur Instagram')->form());
+        self::assertResponseRedirects('/p/'.$post->getPublicId());
+
+        self::assertCount(1, FakeInstagram::publishedContainers());
+        self::assertSame('Souvenir de l’été', FakeInstagram::publishedContainers()[0]['params']['caption'] ?? null);
+        $crosspost = $this->crosspostOf($post);
+        self::assertSame(CrosspostStatus::Published, $crosspost->getStatus());
+        self::assertTrue($this->reload($post)->wantsCrosspost(CrosspostTarget::Instagram));
+
+        // Déjà envoyée : plus de bouton, le lien vers Instagram ; un second envoi ne republie pas.
+        $this->client->followRedirect();
+        self::assertSelectorNotExists('form[action$="/instagram"]');
+        self::assertSelectorTextContains('.crosspost-status', 'Publiée sur Instagram');
+        $this->client->request('POST', '/p/'.$post->getPublicId().'/instagram', ['_token' => 'invalide']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertCount(1, FakeInstagram::$published, 'Rien de republié.');
+
+        // Une publication d'un autre compte : introuvable.
+        $other = self::getContainer()->get(PostComposer::class)->publish($this->register('hugo')->getAccount(), 'Mer', [['file' => $this->jpeg(), 'alt' => null]]);
+        $this->client->request('POST', '/p/'.$other->getPublicId().'/instagram', ['_token' => 'x']);
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testAPhotoGoesToInstagramAsJpegWithinTheAcceptedProportions(): void
     {
         $this->login($this->connected('camille'));

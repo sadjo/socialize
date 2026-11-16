@@ -170,6 +170,29 @@ final class InstagramController extends AbstractController
     }
 
     /**
+     * Envoi après coup d'une publication déjà en ligne.
+     */
+    #[Route('/p/{id}/instagram', name: 'app_post_instagram', requirements: ['id' => Requirement::UID_BASE58], methods: ['POST'])]
+    public function sendPost(string $id, Request $request, \App\Core\Infrastructure\Doctrine\PostRepository $posts, InstagramPublishing $publishing): RedirectResponse
+    {
+        $post = $posts->findByPublicId($id);
+        if (!$post instanceof \App\Core\Domain\Post\Post || !$post->isOwnedBy($this->currentAccount->require())) {
+            throw new NotFoundHttpException();
+        }
+        if (!$this->isCsrfTokenValid('instagram-send-'.$id, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
+        }
+        try {
+            $publishing->sendExisting($post);
+            $this->addFlash('success', 'Envoi vers Instagram en cours.');
+        } catch (InstagramException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_post_show', ['id' => $id], Response::HTTP_SEE_OTHER);
+    }
+
+    /**
      * Nouvel essai d'un envoi qui a échoué.
      */
     #[Route('/instagram/envois/{id}/reessayer', name: 'app_instagram_retry', requirements: ['id' => Requirement::UUID], methods: ['POST'])]

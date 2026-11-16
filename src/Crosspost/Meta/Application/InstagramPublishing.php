@@ -9,6 +9,7 @@ use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\StoryPublished;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\CrosspostTarget;
+use App\Core\Domain\Post\Post;
 use App\Crosspost\Meta\Domain\CrosspostStatus;
 use App\Crosspost\Meta\Domain\InstagramConnection;
 use App\Crosspost\Meta\Domain\InstagramCrosspost;
@@ -78,6 +79,39 @@ final readonly class InstagramPublishing
         if ($crosspost instanceof InstagramCrosspost) {
             $this->files->remove($crosspost->getId()->toBase58());
         }
+    }
+
+    /**
+     * Peut-on envoyer après coup cette publication déjà en ligne ? (rédigée ici, parue, non archivée, pas importée
+     * d'Instagram, pas encore envoyée, compte Instagram connecté).
+     */
+    public function canSendExisting(Post $post): bool
+    {
+        return $post->getAccount()->isLocal()
+            && !$post->isImported()
+            && !$post->isPending()
+            && !$post->isArchived()
+            && !$this->crossposts->forPost($post) instanceof InstagramCrosspost
+            && $this->connections->usable($post->getAccount()) instanceof InstagramConnection;
+    }
+
+    /**
+     * Envoi après coup d'une publication déjà en ligne (bouton « Publier sur Instagram » de sa page).
+     */
+    public function sendExisting(Post $post): InstagramCrosspost
+    {
+        $existing = $this->crossposts->forPost($post);
+        if ($existing instanceof InstagramCrosspost) {
+            return $existing;
+        }
+        if (!$this->canSendExisting($post)) {
+            throw new InstagramException($post->isImported() ? 'Cette publication vient de votre archive Instagram : elle y est déjà.' : 'Cette publication ne peut pas être envoyée sur Instagram (en préparation, archivée, ou Instagram non connecté).');
+        }
+        $post->addCrosspost(CrosspostTarget::Instagram);
+        $crosspost = InstagramCrosspost::forPost($post, $this->clock->now());
+        $this->start($crosspost);
+
+        return $crosspost;
     }
 
     public function retry(InstagramCrosspost $crosspost): void
