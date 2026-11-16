@@ -54,7 +54,7 @@ final readonly class InstagramConnections
     {
         $own = $this->apps->forAccount($account);
         if ($own instanceof InstagramAppSettings) {
-            return new InstagramApp($own->getAppId(), $this->vault->decrypt($own->getSecretEncrypted()));
+            return new InstagramApp($own->getAppId(), $this->vault->decrypt($own->getSecretEncrypted()), $own->getConfigId());
         }
 
         return $this->app->isConfigured() ? $this->app : null;
@@ -66,20 +66,24 @@ final readonly class InstagramConnections
     }
 
     /**
-     * Application Meta propre au compte. Clé secrète vide : celle déjà enregistrée est gardée.
+     * Application Meta propre au compte. Clé secrète vide : celle déjà enregistrée est gardée. Identifiant de
+     * configuration : connexion unifiée (applications récentes).
      */
-    public function saveApp(Account $account, string $appId, #[\SensitiveParameter] ?string $secret): void
+    public function saveApp(Account $account, string $appId, #[\SensitiveParameter] ?string $secret, ?string $configId = null): void
     {
         $appId = trim($appId);
+        $configId = null === $configId || '' === trim($configId) ? null : trim($configId);
         $secret = null === $secret || '' === trim($secret) ? null : trim($secret);
         $own = $this->apps->forAccount($account);
         if (!$own instanceof InstagramAppSettings) {
             if (null === $secret) {
                 throw new InstagramException('Indiquez la clé secrète de l’application.');
             }
-            $this->em->persist(new InstagramAppSettings($account, $appId, $this->vault->encrypt($secret), $this->clock->now()));
+            $own = new InstagramAppSettings($account, $appId, $this->vault->encrypt($secret), $this->clock->now());
+            $own->change($appId, null, $this->clock->now(), $configId);
+            $this->em->persist($own);
         } else {
-            $own->change($appId, null === $secret ? null : $this->vault->encrypt($secret), $this->clock->now());
+            $own->change($appId, null === $secret ? null : $this->vault->encrypt($secret), $this->clock->now(), $configId);
         }
         $this->em->flush();
     }
@@ -116,7 +120,9 @@ final readonly class InstagramConnections
     {
         $app = $this->appFor($account) ?? throw new InstagramException('Aucune application Meta n’est réglée pour ce compte.');
 
-        return $this->client->authorizeUrl($app->id, $redirectUri, $state);
+        return $app->isUnified()
+            ? $this->client->unifiedAuthorizeUrl($app->id, (string) $app->configId, $redirectUri, $state)
+            : $this->client->authorizeUrl($app->id, $redirectUri, $state);
     }
 
     /**
@@ -125,6 +131,9 @@ final readonly class InstagramConnections
     public function connect(Account $account, #[\SensitiveParameter] string $code, string $redirectUri): InstagramConnection
     {
         $app = $this->appFor($account) ?? throw new InstagramException('Aucune application Meta n’est réglée pour ce compte.');
+        if ($app->isUnified()) {
+            return $this->connectUnified($account, $app, $code, $redirectUri);
+        }
         $short = $this->client->exchangeCode($app->id, $app->secret, $redirectUri, $code);
         $missing = array_diff(InstagramClient::SCOPES, $short['permissions']);
         if ([] !== $short['permissions'] && [] !== $missing) {
@@ -144,6 +153,39 @@ final readonly class InstagramConnections
             $connection->reconnect($userId, $me['username'], $this->vault->encrypt($long['token']), $expiresAt, $now);
         } else {
             $connection = new InstagramConnection($account, $userId, $me['username'], $this->vault->encrypt($long['token']), $expiresAt, $now);
+            $this->em->persist($connection);
+        }
+        $this->em->flush();
+
+        return $connection;
+    }
+
+    /**
+     * Connexion unifiée : jeton d'utilisateur système (sans expiration si la configuration le prévoit), compte
+     * Instagram confié à la configuration.
+     */
+    private function connectUnified(Account $account, InstagramApp $app, #[\SensitiveParameter] string $code, string $redirectUri): InstagramConnection
+    {
+        $grant = $this->client->unifiedExchange($app->id, $app->secret, $redirectUri, $code);
+        $missing = array_diff(InstagramClient::UNIFIED_SCOPES, $grant['scopes']);
+        if ([] !== $grant['scopes'] && [] !== $missing) {
+            throw new InstagramException(\sprintf('Autorisation incomplète : la configuration de l’application Meta doit accorder %s.', implode(' et ', $missing)));
+        }
+        $accounts = $this->client->unifiedAccounts($grant['token']);
+        if ([] === $accounts) {
+            throw new InstagramException('Aucun compte Instagram professionnel n’est confié à cette configuration : ajoutez-le comme ressource (« Compte Instagram ») dans la configuration de l’application Meta.');
+        }
+        $ig = $accounts[0];
+
+        $now = $this->clock->now();
+        // Sans expiration (utilisateur système) : gardée dix ans, sans renouvellement.
+        $expiresAt = null !== $grant['expiresAt'] ? $now->setTimestamp($grant['expiresAt']) : $now->modify('+10 years');
+        $connection = $this->connections->forAccount($account);
+        if ($connection instanceof InstagramConnection) {
+            $connection->reconnect($ig['userId'], $ig['username'], $this->vault->encrypt($grant['token']), $expiresAt, $now, unifiedLogin: true);
+        } else {
+            $connection = new InstagramConnection($account, $ig['userId'], $ig['username'], $this->vault->encrypt($grant['token']), $expiresAt, $now);
+            $connection->viaUnifiedLogin();
             $this->em->persist($connection);
         }
         $this->em->flush();
@@ -197,6 +239,10 @@ final readonly class InstagramConnections
         foreach ($this->connections->toRefresh($now->modify(self::REFRESH_AFTER)) as $connection) {
             if ($connection->getTokenExpiresAt() <= $now) {
                 $connection->expire($now);
+                continue;
+            }
+            // Connexion unifiée : jeton d'utilisateur système, sans renouvellement (reconnexion à son expiration).
+            if ($connection->isUnifiedLogin()) {
                 continue;
             }
             try {

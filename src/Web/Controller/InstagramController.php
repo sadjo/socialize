@@ -66,13 +66,13 @@ final class InstagramController extends AbstractController
 
         // Application Meta propre au compte (sinon celle de l'instance, si elle en a une).
         $own = $this->connections->ownApp($account);
-        $appForm = $this->createForm(InstagramAppType::class, ['appId' => $own?->getAppId()], ['has_secret' => $own instanceof InstagramAppSettings]);
+        $appForm = $this->createForm(InstagramAppType::class, ['appId' => $own?->getAppId(), 'configId' => $own?->getConfigId()], ['has_secret' => $own instanceof InstagramAppSettings]);
         $appForm->handleRequest($request);
         if ($appForm->isSubmitted() && $appForm->isValid()) {
-            /** @var array{appId: string, secret: ?string} $data */
+            /** @var array{appId: string, secret: ?string, configId: ?string} $data */
             $data = $appForm->getData();
             try {
-                $this->connections->saveApp($account, $data['appId'], $data['secret']);
+                $this->connections->saveApp($account, $data['appId'], $data['secret'], $data['configId']);
                 $this->addFlash('success', 'Application Meta enregistrée.');
 
                 return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);

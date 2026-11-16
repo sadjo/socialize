@@ -151,6 +151,52 @@ final class InstagramTest extends AppWebTestCase
         self::assertSame('1234567890', $query['client_id'] ?? null);
     }
 
+    /**
+     * Applications Meta récentes : « connexion unifiée » (Facebook Login for Business avec une configuration), API
+     * jointe sur graph.facebook.com.
+     */
+    public function testTheUnifiedLoginOfRecentMetaApps(): void
+    {
+        $camille = $this->register('camille');
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/reglages/instagram');
+        $form = $crawler->selectButton('Enregistrer l’application')->form();
+        $form['instagram_app[appId]'] = '987650000111';
+        $form['instagram_app[secret]'] = 'secret-meta';
+        $form['instagram_app[configId]'] = '24680000222';
+        $this->client->submit($form);
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('#application-meta', 'connexion unifiée, configuration 24680000222');
+
+        // Vers la boîte de dialogue de Facebook Login for Business, avec la configuration et sans « scope ».
+        $this->client->submit($crawler->selectButton('Se connecter à Instagram')->form());
+        $location = (string) $this->client->getResponse()->headers->get('Location');
+        self::assertStringStartsWith('https://www.facebook.com/v27.0/dialog/oauth?', $location);
+        parse_str((string) parse_url($location, \PHP_URL_QUERY), $query);
+        self::assertSame('987650000111', $query['client_id'] ?? null);
+        self::assertSame('24680000222', $query['config_id'] ?? null);
+        self::assertSame('code', $query['response_type'] ?? null);
+        self::assertArrayNotHasKey('scope', $query);
+
+        FakeInstagram::$secret = 'secret-meta';
+        $this->client->request('GET', '/reglages/instagram/retour', ['code' => FakeInstagram::CODE, 'state' => $query['state'] ?? '']);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Instagram connecté (@camille.photo).');
+        $connection = $this->connection();
+        self::assertInstanceOf(InstagramConnection::class, $connection);
+        self::assertTrue($connection->isUnifiedLogin());
+        self::assertSame(FakeInstagram::USER_ID, $connection->getInstagramUserId());
+        self::assertSame(FakeInstagram::SYSTEM_TOKEN, $this->token());
+        self::assertGreaterThan(new \DateTimeImmutable('+5 years'), $connection->getTokenExpiresAt(), 'Jeton sans expiration.');
+
+        // Publication : mêmes conteneurs, sur graph.facebook.com.
+        $post = $this->publish($camille, 'Matin calme');
+        self::assertCount(1, FakeInstagram::publishedContainers());
+        self::assertSame(CrosspostStatus::Published, $this->crosspostOf($post)->getStatus());
+        $hosts = array_unique(array_map(static fn (array $r): string => $r['host'], array_filter(FakeInstagram::$requests, static fn (array $r): bool => str_ends_with($r['path'], '/media_publish'))));
+        self::assertSame(['graph.facebook.com'], array_values($hosts));
+    }
+
     public function testThePublishBoxFollowsTheRulesAndOnlyAppearsWhenConnected(): void
     {
         $this->login($this->register('hugo'));

@@ -11,7 +11,9 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * API Instagram « avec connexion Instagram » (graph.instagram.com), pour publier sur un compte professionnel.
+ * API Instagram « avec connexion Instagram » (graph.instagram.com), pour publier sur un compte professionnel ; ou,
+ * pour les applications Meta récentes, « connexion unifiée » (Facebook Login for Business avec une configuration,
+ * API jointe sur graph.facebook.com, mêmes conteneurs et même publication).
  *
  * Vérifié sur la documentation de Meta (novembre 2026) : autorisation sur www.instagram.com/oauth/authorize, échange
  * du code sur api.instagram.com, jeton long de 60 jours (ig_exchange_token, ig_refresh_token), conteneurs puis
@@ -22,6 +24,10 @@ final readonly class InstagramClient
 {
     public const string VERSION = 'v27.0';
     public const string GRAPH = 'https://graph.instagram.com';
+    /** Connexion unifiée (applications Meta récentes) : même API de publication, jointe sur graph.facebook.com. */
+    public const string FACEBOOK_GRAPH = 'https://graph.facebook.com';
+    /** Droits demandés par la configuration « Facebook Login for Business » de la connexion unifiée. */
+    public const array UNIFIED_SCOPES = ['instagram_basic', 'instagram_content_publish'];
     public const array SCOPES = ['instagram_business_basic', 'instagram_business_content_publish'];
 
     /** Jeton refusé (expiré, révoqué, droits retirés). */
@@ -46,6 +52,79 @@ final readonly class InstagramClient
             // Connexion avec le compte Instagram lui-même (sans passer par Facebook).
             'enable_fb_login' => 'false',
         ]);
+    }
+
+    /**
+     * Connexion unifiée : boîte de dialogue de Facebook Login for Business, avec l'identifiant de l'application Meta
+     * et celui de la configuration (les droits viennent de la configuration : pas de « scope »).
+     */
+    public function unifiedAuthorizeUrl(string $appId, string $configId, string $redirectUri, string $state): string
+    {
+        return 'https://www.facebook.com/'.self::VERSION.'/dialog/oauth?'.http_build_query([
+            'client_id' => $appId,
+            'redirect_uri' => $redirectUri,
+            'response_type' => 'code',
+            'config_id' => $configId,
+            'override_default_response_type' => 'true',
+            'state' => $state,
+        ]);
+    }
+
+    /**
+     * Connexion unifiée : code → jeton (utilisateur système, sans expiration si la configuration le prévoit).
+     *
+     * @return array{token: string, expiresAt: ?int, scopes: list<string>}
+     */
+    public function unifiedExchange(string $appId, #[\SensitiveParameter] string $appSecret, string $redirectUri, #[\SensitiveParameter] string $code): array
+    {
+        $data = $this->request('GET', $this->graph('oauth/access_token', true), ['query' => [
+            'client_id' => $appId, 'client_secret' => $appSecret, 'redirect_uri' => $redirectUri, 'code' => $code,
+        ]]);
+        $token = \is_string($data['access_token'] ?? null) && '' !== $data['access_token'] ? $data['access_token'] : throw new InstagramException('Meta n’a pas donné de jeton.');
+
+        // Expiration et droits accordés, lus sur le jeton lui-même (expires_at = 0 : sans expiration).
+        $info = $this->request('GET', $this->graph('debug_token', true), ['query' => ['input_token' => $token, 'access_token' => $appId.'|'.$appSecret]]);
+        $info = \is_array($info['data'] ?? null) ? $info['data'] : [];
+        $expiresAt = is_numeric($info['expires_at'] ?? null) && (int) $info['expires_at'] > 0 ? (int) $info['expires_at'] : null;
+        if (null === $expiresAt && is_numeric($data['expires_in'] ?? null) && (int) $data['expires_in'] > 0) {
+            $expiresAt = time() + (int) $data['expires_in'];
+        }
+        $scopes = \is_array($info['scopes'] ?? null) ? array_values(array_filter($info['scopes'], \is_string(...))) : [];
+
+        return ['token' => $token, 'expiresAt' => $expiresAt, 'scopes' => $scopes];
+    }
+
+    /**
+     * Connexion unifiée : comptes Instagram professionnels confiés au jeton (par la configuration), sinon ceux des
+     * pages Facebook gérées.
+     *
+     * @return list<array{userId: string, username: string}>
+     */
+    public function unifiedAccounts(#[\SensitiveParameter] string $token): array
+    {
+        $accounts = [];
+        $data = $this->request('GET', $this->graph('me/assigned_instagram_accounts', true), ['query' => ['fields' => 'id,username', 'limit' => '100', 'access_token' => $token]]);
+        foreach (\is_array($data['data'] ?? null) ? $data['data'] : [] as $row) {
+            if (\is_array($row) && \is_scalar($row['id'] ?? null)) {
+                $accounts[] = ['userId' => (string) $row['id'], 'username' => \is_string($row['username'] ?? null) ? $row['username'] : ''];
+            }
+        }
+        if ([] !== $accounts) {
+            return $accounts;
+        }
+        try {
+            $data = $this->request('GET', $this->graph('me/accounts', true), ['query' => ['fields' => 'instagram_business_account{id,username}', 'access_token' => $token]]);
+        } catch (InstagramException) {
+            return [];
+        }
+        foreach (\is_array($data['data'] ?? null) ? $data['data'] : [] as $page) {
+            $ig = \is_array($page) && \is_array($page['instagram_business_account'] ?? null) ? $page['instagram_business_account'] : null;
+            if (null !== $ig && \is_scalar($ig['id'] ?? null)) {
+                $accounts[] = ['userId' => (string) $ig['id'], 'username' => \is_string($ig['username'] ?? null) ? $ig['username'] : ''];
+            }
+        }
+
+        return $accounts;
     }
 
     /**
@@ -113,9 +192,9 @@ final readonly class InstagramClient
      *
      * @param array<string, string> $params image_url, video_url, media_type, caption, alt_text, is_carousel_item, children…
      */
-    public function createContainer(string $userId, #[\SensitiveParameter] string $token, array $params): string
+    public function createContainer(string $userId, #[\SensitiveParameter] string $token, array $params, bool $unified = false): string
     {
-        $data = $this->request('POST', $this->graph(rawurlencode($userId).'/media'), ['body' => $params + ['access_token' => $token]]);
+        $data = $this->request('POST', $this->graph(rawurlencode($userId).'/media', $unified), ['body' => $params + ['access_token' => $token]]);
 
         return \is_scalar($data['id'] ?? null) ? (string) $data['id'] : throw new InstagramException('Instagram n’a pas créé le conteneur du média.');
     }
@@ -123,24 +202,24 @@ final readonly class InstagramClient
     /**
      * État d'un conteneur : IN_PROGRESS, FINISHED, ERROR, EXPIRED ou PUBLISHED.
      */
-    public function containerStatus(string $containerId, #[\SensitiveParameter] string $token): string
+    public function containerStatus(string $containerId, #[\SensitiveParameter] string $token, bool $unified = false): string
     {
-        $data = $this->request('GET', $this->graph(rawurlencode($containerId)), ['query' => ['fields' => 'status_code', 'access_token' => $token]]);
+        $data = $this->request('GET', $this->graph(rawurlencode($containerId), $unified), ['query' => ['fields' => 'status_code', 'access_token' => $token]]);
 
         return \is_string($data['status_code'] ?? null) ? $data['status_code'] : 'IN_PROGRESS';
     }
 
-    public function publish(string $userId, #[\SensitiveParameter] string $token, string $containerId): string
+    public function publish(string $userId, #[\SensitiveParameter] string $token, string $containerId, bool $unified = false): string
     {
-        $data = $this->request('POST', $this->graph(rawurlencode($userId).'/media_publish'), ['body' => ['creation_id' => $containerId, 'access_token' => $token]]);
+        $data = $this->request('POST', $this->graph(rawurlencode($userId).'/media_publish', $unified), ['body' => ['creation_id' => $containerId, 'access_token' => $token]]);
 
         return \is_scalar($data['id'] ?? null) ? (string) $data['id'] : throw new InstagramException('Instagram n’a pas publié le média.');
     }
 
-    public function permalink(string $mediaId, #[\SensitiveParameter] string $token): ?string
+    public function permalink(string $mediaId, #[\SensitiveParameter] string $token, bool $unified = false): ?string
     {
         try {
-            $data = $this->request('GET', $this->graph(rawurlencode($mediaId)), ['query' => ['fields' => 'permalink', 'access_token' => $token]]);
+            $data = $this->request('GET', $this->graph(rawurlencode($mediaId), $unified), ['query' => ['fields' => 'permalink', 'access_token' => $token]]);
         } catch (InstagramException) {
             return null;
         }
@@ -153,9 +232,9 @@ final readonly class InstagramClient
      *
      * @return array{used: int, total: ?int}
      */
-    public function quota(string $userId, #[\SensitiveParameter] string $token): array
+    public function quota(string $userId, #[\SensitiveParameter] string $token, bool $unified = false): array
     {
-        $data = $this->request('GET', $this->graph(rawurlencode($userId).'/content_publishing_limit'), ['query' => ['fields' => 'quota_usage,config', 'access_token' => $token]]);
+        $data = $this->request('GET', $this->graph(rawurlencode($userId).'/content_publishing_limit', $unified), ['query' => ['fields' => 'quota_usage,config', 'access_token' => $token]]);
         $first = \is_array($data['data'] ?? null) && \is_array($data['data'][0] ?? null) ? $data['data'][0] : [];
         $config = \is_array($first['config'] ?? null) ? $first['config'] : [];
 
@@ -165,9 +244,9 @@ final readonly class InstagramClient
         ];
     }
 
-    private function graph(string $path): string
+    private function graph(string $path, bool $unified = false): string
     {
-        return self::GRAPH.'/'.self::VERSION.'/'.$path;
+        return ($unified ? self::FACEBOOK_GRAPH : self::GRAPH).'/'.self::VERSION.'/'.$path;
     }
 
     /**
