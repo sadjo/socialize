@@ -1,0 +1,9 @@
+framework:
+    rate_limiter:
+        # Créations de compte Mastodon depuis Socialize : 3 par heure et par adresse IP du visiteur. Le serveur
+        # Mastodon n'en accepte que 5 par 30 minutes pour toute l'instance (même adresse IP).
+        mastodon_signup:
+            policy: fixed_window
+            limit: 3
+            interval: '1 hour'
+            cache_pool: mastodon.cache

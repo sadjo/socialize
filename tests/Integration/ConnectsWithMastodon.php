@@ -17,7 +17,7 @@ trait ConnectsWithMastodon
     private function connect(): void
     {
         $crawler = $this->client->request('GET', '/connexion');
-        $this->client->submit($crawler->selectButton('Se connecter avec Mastodon')->form());
+        $this->client->submit($crawler->selectButton('Se connecter avec remote.test')->form());
         parse_str((string) parse_url((string) $this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
         $this->client->request('GET', '/connexion/mastodon/retour?'.http_build_query(['code' => FakeMastodon::CODE, 'state' => $query['state'] ?? '']));
         self::assertResponseRedirects('/');

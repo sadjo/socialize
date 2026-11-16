@@ -12,6 +12,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  */
 final readonly class MastodonLoginPolicy
 {
+    /** Serveur mis en avant sur l'écran de connexion (le plus grand), quand il est permis. */
+    public const string FEATURED = 'mastodon.social';
+
+    /** Au-delà de ce nombre de serveurs permis, un champ remplace les boutons. */
+    private const int MAX_BUTTONS = 3;
+
     private bool $open;
 
     /** @var list<string> */
@@ -34,6 +40,31 @@ final readonly class MastodonLoginPolicy
     public function allows(string $domain): bool
     {
         return $this->open || \in_array(mb_strtolower($domain), $this->servers, true);
+    }
+
+    /**
+     * Ce que propose l'écran de connexion : un bouton par serveur (mastodon.social en premier), et un champ pour
+     * en indiquer un autre (null : pas de champ ; liste vide : tout serveur ; sinon les serveurs proposés).
+     *
+     * @return ?array{buttons: list<string>, field: ?list<string>} null si la connexion Mastodon est fermée
+     */
+    public function choices(): ?array
+    {
+        if (!$this->isEnabled()) {
+            return null;
+        }
+        if ($this->open) {
+            return ['buttons' => [self::FEATURED], 'field' => []];
+        }
+        $servers = \in_array(self::FEATURED, $this->servers, true)
+            ? [self::FEATURED, ...array_values(array_diff($this->servers, [self::FEATURED]))]
+            : $this->servers;
+        if (\count($servers) <= self::MAX_BUTTONS) {
+            return ['buttons' => $servers, 'field' => null];
+        }
+        $buttons = self::FEATURED === $servers[0] ? [self::FEATURED] : [];
+
+        return ['buttons' => $buttons, 'field' => array_values(array_diff($servers, $buttons))];
     }
 
     /**

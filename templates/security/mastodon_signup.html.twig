@@ -1,0 +1,42 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Créer un compte sur {{ registration.domain }} · Socialize{% endblock %}
+
+{% block content %}
+{# Création d'un compte Mastodon. Variables : registration (MastodonRegistration), form (null si les inscriptions
+   du serveur sont fermées) #}
+<div class="auth">
+    <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
+    <section class="card">
+        <h1>Créer un compte sur {{ registration.domain }}</h1>
+        {% if form is null %}
+            <p>{{ registration.domain }} n’accepte pas de nouveaux comptes depuis une application en ce moment.</p>
+            {% if registration.message %}<p class="small">{{ registration.message }}</p>{% endif %}
+            <p><a class="btn pri" href="{{ registration.signUpUrl }}" target="_blank" rel="noopener">S’inscrire sur {{ registration.domain }}</a></p>
+            <p class="small">Une fois votre compte créé, revenez vous connecter avec Mastodon.</p>
+        {% else %}
+            <p class="small">Un compte Mastodon, utilisable ici comme dans toutes les applications Mastodon. Votre adresse e-mail et votre mot de passe sont transmis à {{ registration.domain }} sans être gardés par Socialize.</p>
+            {% if registration.approval %}<p class="small">Sur {{ registration.domain }}, chaque inscription est validée par l’équipe du serveur.</p>{% endif %}
+            {{ form_start(form, {attr: {class: 'form'}}) }}
+                {{ form_errors(form) }}
+                {{ form_row(form.username) }}
+                {{ form_row(form.email) }}
+                {{ form_row(form.password) }}
+                {% if form.dateOfBirth is defined %}{{ form_row(form.dateOfBirth) }}{% endif %}
+                {% if form.reason is defined %}{{ form_row(form.reason) }}{% endif %}
+                {% if registration.rules is not empty %}
+                    <details class="mastodon-rules">
+                        <summary class="small">Règles de {{ registration.domain }} ({{ registration.rules|length }})</summary>
+                        <ol class="small">{% for rule in registration.rules %}<li>{{ rule }}</li>{% endfor %}</ol>
+                    </details>
+                {% endif %}
+                <label class="chk">{{ form_widget(form.agreement) }}<span>{{ form.agreement.vars.label }} (<a class="lnk" href="{{ registration.aboutUrl }}" target="_blank" rel="noopener">voir</a>)</span></label>
+                {{ form_errors(form.agreement) }}
+                <button class="btn pri">Créer mon compte</button>
+            {{ form_end(form) }}
+        {% endif %}
+    </section>
+    <p class="alt">Déjà un compte Mastodon ? <a class="lnk" href="{{ path('app_login') }}">Se connecter</a></p>
+</div>
+{% endblock %}

@@ -76,6 +76,25 @@ les intégrations Immich et Synology Photos.
 - Déconnexion : le jeton est révoqué sur le serveur (`/oauth/revoke`) et effacé.
 - **Accès** : variable `MASTODON_LOGIN` de l'instance : `closed` (par défaut, personne), `open` (tout serveur), ou
   la liste des serveurs permis (`mastodon.social,piaille.fr`).
+- **Écran** : mastodon.social, s'il est permis, se connecte d'un clic (bouton mis en avant) ; un autre serveur
+  s'indique dans un champ (« Votre compte est sur un autre serveur ? »). Avec une liste de trois serveurs au plus,
+  chacun a son bouton ; au-delà, le champ les propose en suggestion.
+
+## 1 bis. Création d'un compte (MASTODON_SIGNUP)
+
+- Variable `MASTODON_SIGNUP` (vide par défaut) : le serveur où l'on peut créer un compte depuis l'écran de
+  connexion (`mastodon.social`), qui doit aussi être permis par `MASTODON_LOGIN`. Lien « Pas encore de compte
+  Mastodon ? Créer un compte sur … » sous les boutons de connexion.
+- Écran `/inscription/mastodon` : nom d'utilisateur, adresse e-mail, mot de passe, date de naissance si le serveur
+  fixe un âge minimal, motif s'il valide les inscriptions, règles du serveur (lues dans `/api/v2/instance`, gardées
+  une heure) à accepter. Inscriptions fermées : lien vers la page d'inscription du serveur.
+- Inscription par l'API du serveur (`MastodonSignup`) : jeton d'application (`client_credentials`, droit
+  `write:accounts`, ajouté aux droits de l'application ; une application enregistrée avant est refaite), puis
+  `POST /api/v1/accounts`. Les refus s'affichent sous les champs. L'adresse et le mot de passe ne font que passer.
+- Le jeton du nouveau compte attend, chiffré, en session (24 heures au plus) ; « J'ai confirmé mon adresse » connecte
+  le compte (`MastodonLogin::loginWithToken`) une fois l'e-mail confirmé (avant : 403, message).
+- Débit : le serveur accepte 5 inscriptions par 30 minutes depuis l'adresse de l'instance ; ici, 3 par heure et par
+  visiteur (`symfony/rate-limiter`, limiteur `mastodon_signup`).
 
 ## 2. Profil et fils
 
