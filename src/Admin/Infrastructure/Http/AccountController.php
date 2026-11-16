@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Admin\Infrastructure\Http;
 
+use App\Core\Application\Account\AccountDeletion;
 use App\Core\Application\Account\RegisterAccount;
 use App\Core\Application\Account\RegistrationException;
 use App\Core\Domain\Account\AccountRight;
 use App\Core\Domain\Account\User;
 use App\Core\Infrastructure\Doctrine\UserRepository;
+use App\Integration\Mastodon\Application\MastodonLogin;
 use App\Integration\Mastodon\Domain\MastodonUser;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonUserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -138,6 +140,55 @@ final class AccountController extends AbstractController
         $this->addFlash('success', $allow
             ? \sprintf('@%s peut désormais importer son archive Instagram sur son compte Mastodon.', $acct)
             : \sprintf('@%s ne peut plus importer d’archive Instagram. Ses publications déjà envoyées restent sur son compte.', $acct));
+
+        return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Supprime un compte de l'instance et tout ce qu'il a publié ; ses abonnés du fédivers en sont prévenus.
+     * Un administrateur ne peut pas supprimer son propre compte.
+     */
+    #[Route('/admin/comptes/{id}/supprimer', name: 'admin_account_delete', requirements: ['id' => Requirement::UUID], methods: ['POST'])]
+    public function delete(string $id, Request $request, UserRepository $users, AccountDeletion $deletion): \Symfony\Component\HttpFoundation\RedirectResponse
+    {
+        $user = $users->find($id);
+        if (!$user instanceof User) {
+            throw $this->createNotFoundException();
+        }
+        if (!$this->isCsrfTokenValid('delete-account-'.$id, $request->getPayload()->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide.');
+        }
+        $username = $user->getAccount()->getUsername();
+        if ($user === $this->getUser()) {
+            $this->addFlash('error', 'Vous ne pouvez pas supprimer votre propre compte.');
+
+            return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
+        }
+        $deletion->delete($user);
+        $this->addFlash('success', \sprintf('Compte @%s supprimé, avec ses publications, ses stories et ses fichiers. Ses abonnés du fédivers en sont prévenus.', $username));
+
+        return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Retire l'accès d'un compte Mastodon connecté : son jeton est révoqué, la personne est déconnectée. Ses J'aime,
+     * commentaires et abonnements restent, comme pour tout compte du fédivers ; elle peut se reconnecter.
+     */
+    #[Route('/admin/comptes-mastodon/{id}/supprimer', name: 'admin_mastodon_delete', requirements: ['id' => Requirement::UUID], methods: ['POST'])]
+    public function deleteMastodon(string $id, Request $request, MastodonUserRepository $mastodonUsers, MastodonLogin $login, EntityManagerInterface $em): \Symfony\Component\HttpFoundation\RedirectResponse
+    {
+        $user = $mastodonUsers->find($id);
+        if (!$user instanceof MastodonUser) {
+            throw $this->createNotFoundException();
+        }
+        if (!$this->isCsrfTokenValid('delete-mastodon-'.$id, $request->getPayload()->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide.');
+        }
+        $acct = $user->getAccount()->getAcct();
+        $login->logout($user);
+        $em->remove($user);
+        $em->flush();
+        $this->addFlash('success', \sprintf('Accès de @%s supprimé : la personne est déconnectée de Socialize.', $acct));
 
         return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
     }
