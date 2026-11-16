@@ -32,6 +32,28 @@ final class PostRepository extends ServiceEntityRepository
         parent::__construct($registry, Post::class);
     }
 
+    /**
+     * Publications rédigées par le compte, de la plus ancienne à la plus récente (depuis une date, si donnée), pour
+     * les renvoyer dans l'ordre au fédivers (commande app:federation:reorder).
+     *
+     * @return list<Post>
+     */
+    public function chronologicalOf(Account $account, ?\DateTimeImmutable $since = null): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.account = :account')
+            ->setParameter('account', $account->getId(), UuidType::NAME)
+            ->orderBy('p.publishedAt', 'ASC')
+            ->addOrderBy('p.id', 'ASC');
+        if ($since instanceof \DateTimeImmutable) {
+            $qb->andWhere('p.publishedAt >= :since')->setParameter('since', $since);
+        }
+        /** @var list<Post> $posts */
+        $posts = $qb->getQuery()->getResult();
+
+        return $posts;
+    }
+
     public function findByPublicId(string $publicId): ?Post
     {
         $id = PublicId::decode($publicId);

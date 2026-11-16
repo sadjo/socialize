@@ -82,6 +82,16 @@ bin/console app:federation:resync https://socialize.example/p/1Ch1rCiDZ7zSfRdPMR
 bin/console app:federation:resync https://socialize.example/p/1Ch1rCiDZ7zSfRdPMRVyPC/v4 --compte=alice   # supprimée
 ```
 
+Mastodon range un message reçu en direct au moment où il le reçoit : une publication renvoyée remonte en tête du
+profil (avec sa vraie date). Pour remettre tout le profil dans l'ordre, renvoyer les publications d'un compte de la
+plus ancienne à la plus récente (chacune arrive chez les abonnés comme un nouveau message, et perd sur Mastodon ses
+« J'aime », partages et réponses) :
+
+```bash
+bin/console app:federation:reorder alice --essai                 # liste, sans rien envoyer
+bin/console app:federation:reorder alice --depuis=2025-09-05     # depuis une date (pause de 5 s entre deux)
+```
+
 ### Variables d'environnement
 
 | Variable | Par défaut | Rôle |
