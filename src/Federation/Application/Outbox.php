@@ -210,7 +210,8 @@ final readonly class Outbox
         $this->sendDeletes($post, $post->getVisibility(), $audience, $this->recipients($post, $post->getVisibility(), $audience));
         $post->retireFromFediverse();
         $this->em->flush();
-        if ($post->isFederable()) {
+        // Une publication importée sans annonce n'a jamais été envoyée : elle ne l'est pas davantage ici.
+        if ($post->isFederable() && $post->shouldAnnounce()) {
             $this->sendCreate($post, $this->recipients($post, $post->getVisibility(), $audience));
         }
     }

@@ -230,6 +230,51 @@ final class FederationTest extends AppWebTestCase
         self::assertSame([], $this->ofType($sent, 'Delete'));
     }
 
+    /**
+     * Remise en ordre : les publications visibles dans le fédivers y sont retirées puis renvoyées de la plus ancienne
+     * à la plus récente ; les publications importées sans annonce n'y partent pas.
+     */
+    public function testTheReorderCommandSendsPostsAgainFromTheOldest(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/9', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $recent = $this->publish($this->reloadAccount($camille), 'Récente', Visibility::Public);
+        $old = $this->publish($this->reloadAccount($camille), 'Ancienne', Visibility::Public);
+        $private = $this->publish($this->reloadAccount($camille), 'Privée', Visibility::Private);
+        $import = $this->publish($this->reloadAccount($camille), 'Import discret', Visibility::Public);
+        $em = self::getContainer()->get('doctrine')->getManager();
+        foreach ([[$recent, '2025-10-01'], [$old, '2025-09-05'], [$private, '2025-09-20'], [$import, '2025-09-10']] as [$p, $date]) {
+            $p = $this->reloadPost($p);
+            $p->redate(new \DateTimeImmutable($date.' 10:00 UTC'));
+            if ($p->getId()->equals($import->getId())) {
+                new \ReflectionProperty(Post::class, 'announce')->setValue($p, false);
+            }
+            $em->flush();
+        }
+        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:reorder'));
+
+        // Essai : la liste, sans rien envoyer.
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--essai' => true]));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([], $sent);
+        self::assertStringContainsString('2 publications, du 05/09/2025 au 01/10/2025', $command->getDisplay());
+
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--pause' => '0']));
+        $command->assertCommandIsSuccessful();
+        $old = 'http://localhost/p/'.$old->getPublicId();
+        $recent = 'http://localhost/p/'.$recent->getPublicId();
+        self::assertSame([$old.'/v2', $recent.'/v2'], $this->objectIds($sent, 'Create'), 'De la plus ancienne à la plus récente.');
+        self::assertSame([$old, $recent], $this->objectIds($sent, 'Delete'));
+
+        // Depuis une date : seulement les publications parues depuis.
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--depuis' => '2025-09-15', '--pause' => '0']));
+        self::assertSame([$recent.'/v3'], $this->objectIds($sent, 'Create'));
+        // Resync d'une publication importée sans annonce : retirée, jamais envoyée.
+        $resync = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:resync'));
+        $sent = $this->during(static fn (): int => $resync->execute(['publication' => $import->getPublicId()]));
+        self::assertSame([], $this->ofType($sent, 'Create'));
+    }
+
     public function testTheResyncCommandRemovesLeftoverCopies(): void
     {
         $camille = $this->register('camille')->getAccount();
