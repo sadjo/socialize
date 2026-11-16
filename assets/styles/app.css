@@ -874,3 +874,11 @@ label.act{cursor:pointer}
 .prof-public .handle{align-self:flex-start}
 .powered{text-align:center;color:var(--muted);font-size:.8rem;padding:32px 16px 24px}
 .powered a{color:inherit;text-decoration:underline}
+.push-card{margin-top:16px;gap:10px}
+.push-head{align-items:center}
+.push-head small{color:var(--muted)}
+.push-card details summary{cursor:pointer;color:var(--muted)}
+.push-card details .form{margin-top:10px}
+/* Bouton Retour : seulement dans l'application ouverte depuis l'écran d'accueil (display-mode: standalone). */
+.mtop .back-btn{display:none;margin-right:-6px}
+@media (display-mode: standalone){.mtop .back-btn{display:grid}}

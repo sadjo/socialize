@@ -14,7 +14,9 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > qui choisit quels comptes peuvent publier et lesquels peuvent importer leur archive Instagram.
 > Crosspost vers Instagram : publications et stories envoyées aussi sur un compte Instagram professionnel, selon
 > des règles par visibilité ; bouton « Partager vers Instagram » pour tout compte, personnel compris.
-> Notifications des « J'aime » et commentaires reçus (d'ici ou du fédivers), lues ou non lues, supprimables.
+> Notifications des « J'aime » et commentaires reçus (d'ici ou du fédivers), lues ou non lues, supprimables ;
+> notifications sur le téléphone (Web Push, application ajoutée à l'écran d'accueil) : nouvelles publications et
+> stories des comptes suivis, J'aime et commentaires, au choix de chacun.
 > Jalons suivants : crosspost Facebook (jalon 9), API REST et serveur MCP (jalon 10) ; à prévoir : notifications
 > réglables par compte.
 

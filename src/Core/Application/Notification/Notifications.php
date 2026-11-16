@@ -23,6 +23,7 @@ final readonly class Notifications
         private NotificationRepository $notifications,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
+        private PushNotifications $push,
     ) {
     }
 
@@ -32,6 +33,7 @@ final readonly class Notifications
         if ($recipient instanceof Account && !$this->notifications->forLike($recipient, $actor, $post) instanceof Notification) {
             $this->em->persist(new Notification($recipient, $actor, NotificationType::Like, $post, null, $this->clock->now()));
             $this->em->flush();
+            $this->push->liked($recipient, $actor, $post);
         }
     }
 
@@ -54,6 +56,7 @@ final readonly class Notifications
         if ($recipient instanceof Account) {
             $this->em->persist(new Notification($recipient, $comment->getAccount(), NotificationType::Comment, $comment->getPost(), $comment, $this->clock->now()));
             $this->em->flush();
+            $this->push->commented($recipient, $comment);
         }
     }
 

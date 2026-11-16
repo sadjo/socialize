@@ -25,6 +25,26 @@
         {% endif %}
     </div>
 
+    {# Notifications sur l'appareil (Web Push) et choix de ce qu'on reçoit. #}
+    <section class="card stack push-card" data-controller="push"
+             data-push-key-value="{{ vapid_key }}" data-push-token-value="{{ csrf_token('push-device') }}"
+             data-push-subscribe-url-value="{{ path('app_push_subscribe') }}" data-push-unsubscribe-url-value="{{ path('app_push_unsubscribe') }}">
+        <div class="row wrap push-head">
+            <span class="grow"><b>{{ ui.icon('bell', 'sm') }} Sur cet appareil</b><br><small data-push-target="status">Vérification…</small></span>
+            <button type="button" class="btn sm pri" data-push-target="enable" data-action="push#enable" hidden>Activer les notifications</button>
+            <button type="button" class="btn sm" data-push-target="disable" data-action="push#disable" hidden>Désactiver</button>
+        </div>
+        <details>
+            <summary class="small">Ce que je reçois{% if devices %} · {{ devices }} appareil{{ devices > 1 ? 's' }} abonné{{ devices > 1 ? 's' }}{% endif %}</summary>
+            {{ form_start(preferences_form, {attr: {class: 'form'}}) }}
+                {% for field in preferences_form.children|filter(f => f.vars.name != '_token') %}
+                    <label class="chk">{{ form_widget(field) }}<span>{{ field.vars.label }}</span></label>
+                {% endfor %}
+                <div class="navbtns"><span></span><button class="btn sm pri">Enregistrer</button></div>
+            {{ form_end(preferences_form) }}
+        </details>
+    </section>
+
     {% if notifications is empty %}
         <section class="card empty-notifs">{{ ui.icon('bell') }}<p>Aucune notification. Les « J’aime » et commentaires sur vos publications apparaîtront ici.</p></section>
     {% else %}

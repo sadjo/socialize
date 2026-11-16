@@ -54,6 +54,9 @@ when@test:
     parameters:
         app.import_dir: '%kernel.project_dir%/var/test-storage/imports'
     services:
+        # Faux envoi des notifications sur les appareils (Web Push).
+        App\Tests\Support\FakePushSender: ~
+        App\Core\Application\Notification\PushSender: '@App\Tests\Support\FakePushSender'
         # Fausse instance du fédivers pour les tests (voir tests/Federation), limitée au client de la fédération.
         App\Tests\Federation\FakeFediverse:
             public: true
