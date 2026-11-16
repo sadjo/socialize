@@ -49,7 +49,7 @@ final readonly class SynologyPhotosLibrarySource implements LibrarySource
             }
             $path = $this->filesystem->tempnam(sys_get_temp_dir(), 'socialize-synology-', '.'.(strtolower(pathinfo($item->fileName, \PATHINFO_EXTENSION)) ?: ($item->video ? 'mp4' : 'jpg')));
             try {
-                $this->client->download($server, $session, $space, $item->id, $path);
+                $this->client->download($server, $session, $space, $item->id, $path, $item->fileName, $item->video, (int) $limit * 1024 * 1024);
             } catch (SynologyPhotosException $e) {
                 $this->filesystem->remove($path);
                 throw $e;

@@ -35,6 +35,8 @@ final class FakeSynologyPhotos
 
     /** NAS injoignable (erreur réseau). */
     public static bool $down = false;
+    /** Les photos arrivent comme des Live Photos : archive ZIP (photo et courte vidéo), comme le fait le NAS. */
+    public static bool $livePhotos = false;
     /** Le compte DSM utilise la double authentification. */
     public static bool $otpRequired = false;
 
@@ -49,6 +51,7 @@ final class FakeSynologyPhotos
     public static function reset(): void
     {
         self::$down = false;
+        self::$livePhotos = false;
         self::$otpRequired = false;
         self::$sessions = [];
         self::$requests = [];
@@ -249,10 +252,28 @@ final class FakeSynologyPhotos
         return \is_string($line) ? trim(substr($line, \strlen($name) + 1)) : null;
     }
 
+    /**
+     * Live Photo : archive avec la photo (sous un autre nom que le média, comme IMG_5001.HEIC pour IMG_5001.jpg) et
+     * sa courte vidéo, plus grande.
+     */
+    private function livePhoto(int $id): string
+    {
+        $path = (string) tempnam(sys_get_temp_dir(), 'fake-synology-zip-');
+        $zip = new \ZipArchive();
+        $zip->open($path, \ZipArchive::OVERWRITE);
+        $zip->addFromString('Live/IMG_'.$id.'_photo.JPG', $this->jpeg(800, 600));
+        $zip->addFromString('Live/IMG_'.$id.'.MOV', str_repeat('v', 500000));
+        $zip->close();
+        $content = (string) file_get_contents($path);
+        unlink($path);
+
+        return $content;
+    }
+
     private function original(int $id): string
     {
         if (self::VIDEO_PORT !== $id) {
-            return $this->jpeg(800, 600);
+            return self::$livePhotos ? $this->livePhoto($id) : $this->jpeg(800, 600);
         }
         if (null === self::$video) {
             $path = sys_get_temp_dir().'/fake-synology-video.mp4';

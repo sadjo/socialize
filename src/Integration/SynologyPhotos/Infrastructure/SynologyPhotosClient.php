@@ -190,11 +190,13 @@ final readonly class SynologyPhotosClient
     }
 
     /**
-     * Télécharge l'original d'un média dans un fichier, par flux.
+     * Télécharge l'original d'un média dans un fichier, par flux. Pour un média à plusieurs fichiers (Live Photo de
+     * l'iPhone : photo et courte vidéo ; photo et ses variantes), Synology Photos envoie une archive ZIP : le fichier
+     * du média en est extrait (celui qui porte son nom, sinon la plus grande photo, ou vidéo).
      *
      * @param SynologyPhotosItem::PERSONAL|SynologyPhotosItem::TEAM $space
      */
-    public function download(string $server, string $session, string $space, int $id, string $target): void
+    public function download(string $server, string $session, string $space, int $id, string $target, string $fileName = '', bool $video = false, int $maxBytes = \PHP_INT_MAX): void
     {
         $response = $this->binary($server, $session, [
             'api' => $this->api($space, 'Download'), 'version' => '2', 'method' => 'download', 'item_id' => \sprintf('[%d]', $id), 'force_download' => 'true',
@@ -207,6 +209,62 @@ final readonly class SynologyPhotosClient
         } finally {
             fclose($out);
         }
+        if ("PK\x03\x04" === file_get_contents($target, false, null, 0, 4)) {
+            $this->extract($target, $fileName, $video, $maxBytes);
+        }
+    }
+
+    private const array IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'heic', 'heif', 'png', 'webp', 'gif', 'tif', 'tiff', 'avif', 'dng'];
+    private const array VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v', '3gp', 'avi', 'mkv', 'webm', 'mts', 'm2ts'];
+
+    /**
+     * Remplace l'archive par le fichier du média qu'elle contient.
+     */
+    private function extract(string $archive, string $fileName, bool $video, int $maxBytes): void
+    {
+        $zip = new \ZipArchive();
+        if (true !== $zip->open($archive, \ZipArchive::RDONLY)) {
+            throw new SynologyPhotosException('Synology Photos a envoyé une archive illisible.');
+        }
+        try {
+            $wanted = $video ? self::VIDEO_EXTENSIONS : self::IMAGE_EXTENSIONS;
+            $best = null;
+            $bestSize = -1;
+            for ($i = 0; $i < $zip->numFiles; ++$i) {
+                $stat = $zip->statIndex($i);
+                if (false === $stat || str_ends_with($stat['name'], '/')) {
+                    continue;
+                }
+                $base = basename($stat['name']);
+                if ('' !== $fileName && 0 === strcasecmp($base, $fileName)) {
+                    $best = $i;
+                    break;
+                }
+                if (\in_array(strtolower(pathinfo($base, \PATHINFO_EXTENSION)), $wanted, true) && $stat['size'] > $bestSize) {
+                    $best = $i;
+                    $bestSize = $stat['size'];
+                }
+            }
+            $stat = null !== $best ? $zip->statIndex($best) : false;
+            if (false === $stat) {
+                throw new SynologyPhotosException(\sprintf('L’archive envoyée par Synology Photos ne contient pas de %s.', $video ? 'vidéo' : 'photo'));
+            }
+            if ($stat['size'] > $maxBytes) {
+                throw new SynologyPhotosException(\sprintf('« %s » dépasse la taille maximale.', basename($stat['name'])));
+            }
+            $in = $zip->getStream($stat['name']) ?: throw new SynologyPhotosException('Synology Photos a envoyé une archive illisible.');
+            $extracted = $archive.'.extrait';
+            $out = fopen($extracted, 'w') ?: throw new SynologyPhotosException('Impossible d’écrire le fichier reçu de Synology Photos.');
+            try {
+                stream_copy_to_stream($in, $out, $maxBytes + 1);
+            } finally {
+                fclose($out);
+                fclose($in);
+            }
+        } finally {
+            $zip->close();
+        }
+        rename($extracted, $archive);
     }
 
     /**

@@ -200,6 +200,22 @@ final class SynologyPhotosTest extends AppWebTestCase
         self::assertSame([], glob(sys_get_temp_dir().'/socialize-synology-*') ?: [], 'Les originaux téléchargés sont supprimés.');
     }
 
+    /**
+     * Live Photo de l'iPhone : le NAS envoie une archive ZIP (photo et courte vidéo) ; la photo en est extraite.
+     */
+    public function testALivePhotoArrivesAsAnArchiveAndItsPhotoIsKept(): void
+    {
+        FakeSynologyPhotos::$livePhotos = true;
+        $this->login($this->connected('camille'));
+        $post = $this->publish(['s-p-501'], []);
+        $media = array_values($post->getMedia()->toArray());
+        self::assertCount(1, $media);
+        self::assertFalse($media[0]->isVideo());
+        self::assertSame('image/jpeg', $media[0]->getMimeType());
+        self::assertSame(800, $media[0]->getWidth());
+        self::assertSame([], glob(sys_get_temp_dir().'/socialize-synology-*') ?: [], 'Archive et fichier extrait supprimés.');
+    }
+
     public function testAStoryFromSynologyPhotos(): void
     {
         $this->login($this->connected('camille'));
