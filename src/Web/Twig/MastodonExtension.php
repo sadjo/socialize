@@ -39,13 +39,13 @@ final readonly class MastodonExtension
     }
 
     /**
-     * Serveurs permis pour la connexion Mastodon : null si elle est fermée, liste vide si tout serveur l'est.
+     * Boutons et champ de la connexion Mastodon (voir MastodonLoginPolicy::choices()) ; null si elle est fermée.
      *
-     * @return ?list<string>
+     * @return ?array{buttons: list<string>, field: ?list<string>}
      */
-    #[AsTwigFunction('mastodon_login_servers')]
-    public function servers(): ?array
+    #[AsTwigFunction('mastodon_login')]
+    public function login(): ?array
     {
-        return $this->policy->isEnabled() ? $this->policy->servers() : null;
+        return $this->policy->choices();
     }
 }

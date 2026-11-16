@@ -42,9 +42,10 @@ final class MastodonLoginTest extends AppWebTestCase
         ]]];
 
         $crawler = $this->client->request('GET', '/connexion');
-        self::assertSelectorTextContains('.mastodon-login', 'Compte sur remote.test');
+        self::assertSelectorTextContains('.mastodon-login button.pri', 'Se connecter avec remote.test');
+        self::assertSelectorNotExists('.mastodon-login input[name="server"][type="text"]', 'Un seul serveur permis : un bouton, pas de champ.');
         self::assertSelectorExists('.mastodon-login form[data-turbo="false"]', 'Redirection vers un autre domaine : pas de Turbo.');
-        $this->client->submit($crawler->selectButton('Se connecter avec Mastodon')->form());
+        $this->client->submit($crawler->selectButton('Se connecter avec remote.test')->form());
         $authorize = (string) $this->client->getResponse()->headers->get('Location');
         self::assertStringStartsWith('https://remote.test/oauth/authorize?', $authorize);
         parse_str((string) parse_url($authorize, \PHP_URL_QUERY), $query);
@@ -145,7 +146,7 @@ final class MastodonLoginTest extends AppWebTestCase
     public function testAnInvalidStateOrAnotherServerIsRefused(): void
     {
         $crawler = $this->client->request('GET', '/connexion');
-        $this->client->submit($crawler->selectButton('Se connecter avec Mastodon')->form());
+        $this->client->submit($crawler->selectButton('Se connecter avec remote.test')->form());
         $this->client->request('GET', '/connexion/mastodon/retour?'.http_build_query(['code' => FakeMastodon::CODE, 'state' => 'falsifie']));
         self::assertResponseRedirects('/connexion');
         $this->client->followRedirect();
@@ -153,7 +154,7 @@ final class MastodonLoginTest extends AppWebTestCase
         self::assertSame([], FakeMastodon::requestsTo('POST', '/oauth/token'));
 
         $crawler = $this->client->request('GET', '/connexion');
-        $this->client->submit($crawler->selectButton('Se connecter avec Mastodon')->form(), ['server' => '@bob@autre.test']);
+        $this->client->submit($crawler->selectButton('Se connecter avec remote.test')->form(), ['server' => '@bob@autre.test']);
         self::assertResponseRedirects('/connexion');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.flashes', 'n’est pas ouverte sur cette instance');

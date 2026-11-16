@@ -76,6 +76,9 @@ les intégrations Immich et Synology Photos.
 - Déconnexion : le jeton est révoqué sur le serveur (`/oauth/revoke`) et effacé.
 - **Accès** : variable `MASTODON_LOGIN` de l'instance : `closed` (par défaut, personne), `open` (tout serveur), ou
   la liste des serveurs permis (`mastodon.social,piaille.fr`).
+- **Écran** : mastodon.social, s'il est permis, se connecte d'un clic (bouton mis en avant) ; un autre serveur
+  s'indique dans un champ (« Votre compte est sur un autre serveur ? »). Avec une liste de trois serveurs au plus,
+  chacun a son bouton ; au-delà, le champ les propose en suggestion.
 
 ## 2. Profil et fils
 

@@ -20,29 +20,38 @@
             <button class="btn pri">Se connecter</button>
         </form>
     </section>
-    {% set mastodon_servers = mastodon_login_servers() %}
-    {% if mastodon_servers is not null %}
-        {# Connexion avec un compte Mastodon : départ vers la page d'autorisation de son serveur. Sans Turbo : il
-           suivrait la redirection vers un autre domaine en arrière-plan, et rien ne se passerait. #}
+    {% set mastodon = mastodon_login() %}
+    {% if mastodon %}
+        {# Connexion avec un compte Mastodon : mastodon.social d'un clic, ou un autre serveur indiqué dans le champ.
+           Départ vers la page d'autorisation du serveur, sans Turbo : il suivrait la redirection vers un autre
+           domaine en arrière-plan, et rien ne se passerait. #}
         <section class="card mastodon-login">
             <h2>Avec votre compte Mastodon</h2>
-            <form method="post" action="{{ path('app_mastodon_login') }}" class="form" data-turbo="false">
-                <div class="field">
-                    <label for="mastodon-server">Votre serveur Mastodon</label>
-                    {% if mastodon_servers|length == 1 %}
-                        <input type="hidden" id="mastodon-server" name="server" value="{{ mastodon_servers|first }}">
-                        <p class="small">Compte sur <b>{{ mastodon_servers|first }}</b></p>
-                    {% else %}
-                        <input class="inp" type="text" id="mastodon-server" name="server" placeholder="{{ mastodon_servers|first ?: 'mastodon.social' }}" autocapitalize="none" spellcheck="false" required{% if mastodon_servers is not empty %} list="mastodon-servers"{% endif %}>
-                        {% if mastodon_servers is not empty %}
-                            <datalist id="mastodon-servers">{% for server in mastodon_servers %}<option value="{{ server }}">{% endfor %}</datalist>
-                            <small>Serveurs acceptés : {{ mastodon_servers|join(', ') }}</small>
+            {% for server in mastodon.buttons %}
+                <form method="post" action="{{ path('app_mastodon_login') }}" class="form" data-turbo="false">
+                    <input type="hidden" name="server" value="{{ server }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('mastodon-login') }}">
+                    <button class="btn{{ loop.first ? ' pri' }} wide">Se connecter avec {{ server }}</button>
+                </form>
+            {% endfor %}
+            {% if mastodon.field is not null %}
+                {% if mastodon.buttons is not empty %}<details class="mastodon-other"><summary class="small">Votre compte est sur un autre serveur ?</summary>{% endif %}
+                <form method="post" action="{{ path('app_mastodon_login') }}" class="form" data-turbo="false">
+                    <div class="field">
+                        <label for="mastodon-server">Votre serveur Mastodon</label>
+                        <input class="inp" type="text" id="mastodon-server" name="server" placeholder="{{ mastodon.field|first ?: 'piaille.fr' }}" autocapitalize="none" spellcheck="false" required{% if mastodon.field is not empty %} list="mastodon-servers"{% endif %}>
+                        {% if mastodon.field is not empty %}
+                            <datalist id="mastodon-servers">{% for server in mastodon.field %}<option value="{{ server }}">{% endfor %}</datalist>
+                            <small>Serveurs acceptés : {{ mastodon.field|join(', ') }}</small>
+                        {% else %}
+                            <small>Son adresse, ou votre adresse complète : @nom@serveur</small>
                         {% endif %}
-                    {% endif %}
-                </div>
-                <input type="hidden" name="_token" value="{{ csrf_token('mastodon-login') }}">
-                <button class="btn">Se connecter avec Mastodon</button>
-            </form>
+                    </div>
+                    <input type="hidden" name="_token" value="{{ csrf_token('mastodon-login') }}">
+                    <button class="btn">Se connecter</button>
+                </form>
+                {% if mastodon.buttons is not empty %}</details>{% endif %}
+            {% endif %}
         </section>
     {% endif %}
     {% if registration_open and not home_login_only %}<p class="alt">Pas encore de compte ? <a class="lnk" href="{{ path('app_register') }}">Créer un compte</a></p>{% endif %}

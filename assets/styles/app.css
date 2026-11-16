@@ -552,6 +552,10 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 .auth .card{padding:24px}
 .auth .alt{text-align:center;font-size:.9rem;color:var(--muted)}
 .auth .mastodon-login h2{font-size:1.05rem;margin:0 0 12px}
+.auth .mastodon-login{display:flex;flex-direction:column;gap:10px}
+.auth .mastodon-login .wide{width:100%;justify-content:center}
+.auth .mastodon-other summary{cursor:pointer;color:var(--muted);padding:4px 0}
+.auth .mastodon-other[open] summary{margin-bottom:8px}
 .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .choices label{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;font-weight:600;font-size:.9rem}
 .choices label small{font-weight:400}
