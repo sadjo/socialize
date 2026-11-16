@@ -20,6 +20,7 @@ final readonly class SendPushHandler
         private EntityManagerInterface $em,
         private PushSubscriptionRepository $subscriptions,
         private PushSender $sender,
+        private \Psr\Log\LoggerInterface $logger,
     ) {
     }
 
@@ -30,8 +31,13 @@ final readonly class SendPushHandler
             return;
         }
         foreach ($this->subscriptions->of($account) as $subscription) {
-            if (!$this->sender->send($subscription, $message->payload)) {
-                $this->em->remove($subscription);
+            // Un appareil en échec n'empêche pas l'envoi aux autres.
+            try {
+                if (!$this->sender->send($subscription, $message->payload)) {
+                    $this->em->remove($subscription);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->error('Notification non envoyée', ['exception' => $e]);
             }
         }
         $this->em->flush();

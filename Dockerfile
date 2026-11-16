@@ -24,6 +24,7 @@ RUN set -eux; \
     install-php-extensions \
         @composer \
         apcu \
+        bcmath \
         exif \
         ffi \
         intl \

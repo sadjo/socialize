@@ -11,6 +11,8 @@ use Minishlink\WebPush\WebPush;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsAlias;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpClient\Psr18Client;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Envoi Web Push (bibliothèque minishlink/web-push) : message chiffré pour l'appareil, signé par les clés VAPID.
@@ -21,6 +23,7 @@ final readonly class WebPushSender implements PushSender
     public function __construct(
         private VapidKeys $keys,
         private LoggerInterface $logger,
+        private HttpClientInterface $httpClient,
         #[Autowire(env: 'DEFAULT_URI')]
         private string $defaultUri,
     ) {
@@ -29,7 +32,9 @@ final readonly class WebPushSender implements PushSender
     public function send(PushSubscription $subscription, array $payload): bool
     {
         $keys = $this->keys->get();
-        $webPush = new WebPush(['VAPID' => ['subject' => $this->defaultUri, 'publicKey' => $keys['publicKey'], 'privateKey' => $keys['privateKey']]]);
+        // Client HTTP de Symfony (PSR-18), donné explicitement : la bibliothèque n'a pas à en chercher un.
+        $client = new Psr18Client($this->httpClient);
+        $webPush = new WebPush(['VAPID' => ['subject' => $this->defaultUri, 'publicKey' => $keys['publicKey'], 'privateKey' => $keys['privateKey']]], client: $client, requestFactory: $client, streamFactory: $client);
         $report = $webPush->sendOneNotification(
             Subscription::create(['endpoint' => $subscription->getEndpoint(), 'publicKey' => $subscription->getPublicKey(), 'authToken' => $subscription->getAuthToken(), 'contentEncoding' => 'aes128gcm']),
             json_encode($payload, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES),
