@@ -154,10 +154,13 @@ facultatifs.
 - **Application récente (« connexion unifiée »)**, imposée par Meta aux applications créées depuis l'automne 2026 :
   cas d'usage « Gérer les messages et le contenu sur Instagram », portefeuille d'entreprise relié, configuration
   Facebook Login for Business avec un jeton d'utilisateur système (expiration « Jamais »), la ressource « Compte
-  Instagram » et les droits `instagram_basic` et `instagram_content_publish`. Saisir l'ID de l'app, sa clé secrète
+  Instagram » et les droits `instagram_basic` et `instagram_content_publish` (plus `instagram_manage_contents` pour
+  que la suppression d'une publication ici la supprime aussi sur Instagram). Saisir l'ID de l'app, sa clé secrète
   (Paramètres › Général) et l'identifiant de la configuration ; déclarer `https://<instance>/reglages/instagram/retour`
   dans la configuration et dans Facebook Login for Business › Paramètres › URI de redirection OAuth valides.
   L'API est alors jointe sur graph.facebook.com, et le jeton n'est pas renouvelé (il n'expire pas).
+  Un envoi se relance depuis la page de la publication (« Réessayer », « Relancer l'envoi », « Republier » : la
+  publication Instagram précédente est alors supprimée si le droit le permet).
 - **Application plus ancienne (« connexion Instagram »)** : ID et clé secrète de l'app Instagram (Configuration de
   l'API avec connexion Instagram), adresse de retour déclarée au même endroit, identifiant de configuration vide.
   Sans validation de l'application par Meta, seuls les comptes Instagram ajoutés comme **testeurs** peuvent se

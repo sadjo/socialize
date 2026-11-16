@@ -36,6 +36,7 @@ framework:
             App\Import\Instagram\Application\ImportInstagramBatch: async
             App\Integration\Immich\Application\AddToImmichAlbum: async
             App\Crosspost\Meta\Application\PublishToInstagram: async
+            App\Crosspost\Meta\Application\DeleteFromInstagram: async
             # E-mails envoyés tout de suite : l'administrateur sait aussitôt si une invitation est partie.
             Symfony\Component\Mailer\Messenger\SendEmailMessage: sync
 
@@ -56,3 +57,4 @@ when@test:
                 App\Import\Instagram\Application\ImportInstagramBatch: sync
                 App\Integration\Immich\Application\AddToImmichAlbum: sync
                 App\Crosspost\Meta\Application\PublishToInstagram: sync
+                App\Crosspost\Meta\Application\DeleteFromInstagram: sync

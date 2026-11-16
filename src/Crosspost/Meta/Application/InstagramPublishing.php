@@ -26,8 +26,9 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * en tâche de fond, par étapes (message PublishToInstagram renvoyé avec un délai entre deux étapes) :
  * 1. copies JPEG des photos, création des conteneurs (Instagram télécharge les médias) ;
  * 2. attente que les conteneurs soient prêts (vidéos), création du carrousel s'il y en a plusieurs ;
- * 3. publication, lien vers la publication Instagram.
- * Instagram ne permet ni de modifier ni de supprimer une publication par son API : l'envoi est fait une fois.
+ * 3. publication, lien vers la publication Instagram (redemandé plus tard s'il manque).
+ * L'API ne permet pas de modifier une publication Instagram. Avec la connexion unifiée (Facebook Login), elle permet
+ * de la supprimer : à la suppression de la publication ici, et avant de la republier.
  */
 final readonly class InstagramPublishing
 {
@@ -37,6 +38,8 @@ final readonly class InstagramPublishing
     public const int MAX_CHECKS = 30;
     public const int MAX_CAPTION = 2200;
     public const int MAX_ALT = 1000;
+    /** Lien de la publication Instagram redemandé au plus ce nombre de fois, toutes les minutes. */
+    public const int PERMALINK_CHECKS = 5;
 
     public function __construct(
         private InstagramCrosspostRepository $crossposts,
@@ -70,14 +73,20 @@ final readonly class InstagramPublishing
     }
 
     /**
-     * Publication supprimée pendant un envoi : ses copies temporaires partent avec elle.
+     * Publication supprimée : ses copies temporaires partent avec elle, et sa publication Instagram est supprimée.
      */
     #[AsEventListener]
     public function onPostDeleting(PostDeleting $event): void
     {
         $crosspost = $this->crossposts->forPost($event->post);
-        if ($crosspost instanceof InstagramCrosspost) {
-            $this->files->remove($crosspost->getId()->toBase58());
+        if (!$crosspost instanceof InstagramCrosspost) {
+            return;
+        }
+        $this->files->remove($crosspost->getId()->toBase58());
+        // Supprimée ici : supprimée aussi sur Instagram, en tâche de fond (l'envoi part avec la publication).
+        $mediaId = $crosspost->getInstagramMediaId();
+        if (null !== $mediaId) {
+            $this->bus->dispatch(new DeleteFromInstagram($crosspost->getAccount()->getId()->toRfc4122(), $mediaId));
         }
     }
 
@@ -114,13 +123,77 @@ final readonly class InstagramPublishing
         return $crosspost;
     }
 
-    public function retry(InstagramCrosspost $crosspost): void
+    /**
+     * Message à la suppression d'une publication envoyée sur Instagram : sa copie y est supprimée aussi, ou reste.
+     */
+    public function forDeletion(Post $post): ?string
     {
-        if (CrosspostStatus::Failed !== $crosspost->getStatus()) {
-            return;
+        $crosspost = $this->crossposts->forPost($post);
+        if (!$crosspost instanceof InstagramCrosspost || null === $crosspost->getInstagramMediaId()) {
+            return null;
         }
-        $crosspost->retry($this->clock->now());
+        $connection = $this->connections->usable($post->getAccount());
+
+        return $connection instanceof InstagramConnection && $connection->canDelete()
+            ? 'Elle est supprimée aussi sur Instagram.'
+            : 'Sa copie sur Instagram reste : supprimez-la dans l’application Instagram.';
+    }
+
+    /**
+     * L'envoi peut-il être relancé ? (échec, publié, ou bloqué en cours depuis un quart d'heure).
+     */
+    public function canRelaunch(InstagramCrosspost $crosspost): bool
+    {
+        return $crosspost->isDone() || $crosspost->isStuck($this->clock->now());
+    }
+
+    /**
+     * Relance un envoi : après un échec, s'il est bloqué, ou pour republier. Une publication Instagram précédente
+     * est d'abord supprimée si l'API le permet (connexion unifiée).
+     *
+     * @return string|null message sur la publication Instagram précédente, s'il y en avait une
+     */
+    public function retry(InstagramCrosspost $crosspost): ?string
+    {
+        if (!$this->canRelaunch($crosspost)) {
+            return null;
+        }
+        $previous = $crosspost->retry($this->clock->now());
+        $notice = null === $previous ? null : $this->deletePrevious($crosspost, $previous);
         $this->start($crosspost);
+
+        return $notice;
+    }
+
+    /**
+     * Suppression d'une publication Instagram par l'API (connexion unifiée seulement).
+     *
+     * @throws InstagramException
+     */
+    public function deleteFromInstagram(InstagramConnection $connection, string $mediaId): void
+    {
+        if (!$connection->isUnifiedLogin()) {
+            throw new InstagramException('Instagram ne permet de supprimer une publication par son API qu’avec la connexion unifiée');
+        }
+        if (!$connection->canDelete()) {
+            throw new InstagramException('la configuration de l’application Meta n’accorde pas le droit instagram_manage_contents');
+        }
+        $this->client->deleteMedia($mediaId, $this->connections->token($connection));
+    }
+
+    private function deletePrevious(InstagramCrosspost $crosspost, string $mediaId): string
+    {
+        $connection = $this->connections->usable($crosspost->getAccount());
+        if (!$connection instanceof InstagramConnection) {
+            return 'La publication Instagram précédente n’a pas pu être supprimée (Instagram non connecté) : supprimez-la dans l’application Instagram.';
+        }
+        try {
+            $this->deleteFromInstagram($connection, $mediaId);
+        } catch (InstagramException $e) {
+            return 'La publication Instagram précédente n’a pas été supprimée ('.rtrim($e->getMessage(), '.').') : supprimez-la dans l’application Instagram si elle y est encore.';
+        }
+
+        return 'La publication Instagram précédente a été supprimée.';
     }
 
     /**
@@ -130,6 +203,9 @@ final readonly class InstagramPublishing
      */
     public function advance(InstagramCrosspost $crosspost): ?int
     {
+        if ($crosspost->awaitsPermalink()) {
+            return $this->findPermalink($crosspost);
+        }
         if ($crosspost->isDone()) {
             return null;
         }
@@ -297,7 +373,25 @@ final readonly class InstagramPublishing
         $this->em->flush();
         $this->files->remove($crosspost->getId()->toBase58());
 
-        return null;
+        // Lien pas encore donné par Instagram : redemandé dans une minute.
+        return $crosspost->awaitsPermalink() ? 60 : null;
+    }
+
+    /**
+     * Lien de la publication Instagram, redemandé quand Instagram ne l'a pas donné tout de suite.
+     */
+    private function findPermalink(InstagramCrosspost $crosspost): ?int
+    {
+        $connection = $this->connections->usable($crosspost->getAccount());
+        $mediaId = $crosspost->getInstagramMediaId();
+        if (!$connection instanceof InstagramConnection || null === $mediaId || $crosspost->getChecks() >= self::PERMALINK_CHECKS) {
+            return null;
+        }
+        $permalink = $this->client->permalink($mediaId, $this->connections->token($connection), $connection->isUnifiedLogin());
+        $crosspost->permalinkFound($permalink, $this->clock->now());
+        $this->em->flush();
+
+        return null === $permalink ? 60 : null;
     }
 
     private function fail(InstagramCrosspost $crosspost, string $reason): null

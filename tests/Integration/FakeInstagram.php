@@ -39,6 +39,12 @@ final class FakeInstagram
     public static string $secret = 'secret-de-test';
     /** Connexion unifiée : jeton d'utilisateur système (graph.facebook.com), sans expiration. */
     public const string SYSTEM_TOKEN = 'jeton-systeme';
+    /** @var list<string> droits accordés par la configuration (connexion unifiée) */
+    public static array $scopes = ['instagram_basic', 'instagram_content_publish', 'instagram_manage_contents'];
+    /** @var list<string> publications supprimées (connexion unifiée) */
+    public static array $deleted = [];
+    /** Lien de publication refusé ce nombre de fois avant d'être donné. */
+    public static int $permalinkMisses = 0;
 
     private static int $next = 0;
 
@@ -54,6 +60,9 @@ final class FakeInstagram
         self::$requests = [];
         self::$next = 0;
         self::$secret = 'secret-de-test';
+        self::$scopes = ['instagram_basic', 'instagram_content_publish', 'instagram_manage_contents'];
+        self::$deleted = [];
+        self::$permalinkMisses = 0;
     }
 
     /**
@@ -85,13 +94,21 @@ final class FakeInstagram
                     : $this->error(400, 'Invalid verification code format.', 100);
             }
             if ('/v27.0/debug_token' === $path) {
-                return $this->json(['data' => ['is_valid' => true, 'expires_at' => 0, 'scopes' => ['instagram_basic', 'instagram_content_publish']]]);
+                return $this->json(['data' => ['is_valid' => true, 'expires_at' => 0, 'scopes' => self::$scopes]]);
             }
             if (self::SYSTEM_TOKEN !== ($params['access_token'] ?? null)) {
                 return $this->error(400, 'Invalid OAuth access token', 190);
             }
             if ('/v27.0/me/assigned_instagram_accounts' === $path) {
                 return $this->json(['data' => [['id' => self::USER_ID, 'username' => self::USERNAME]]]);
+            }
+            if ('DELETE' === $method && preg_match('#^/v27\.0/(media-\d+)$#', $path, $d)) {
+                if (!\in_array('instagram_manage_contents', self::$scopes, true)) {
+                    return $this->error(403, '(#10) Application does not have permission for this action', 10);
+                }
+                self::$deleted[] = $d[1];
+
+                return $this->json(['success' => true, 'deleted_id' => $d[1]]);
             }
             $params['access_token'] = self::$token;
         } elseif ('graph.instagram.com' !== $host) {
@@ -121,7 +138,7 @@ final class FakeInstagram
             'POST' === $method && self::USER_ID.'/media' === $node => $this->create($params),
             'POST' === $method && self::USER_ID.'/media_publish' === $node => $this->publish($params['creation_id'] ?? ''),
             isset(self::$containers[$node]) => $this->status($node),
-            str_starts_with($node, 'media-') => $this->json(['id' => $node, 'permalink' => 'https://www.instagram.com/p/'.$node.'/']),
+            str_starts_with($node, 'media-') => self::$permalinkMisses-- > 0 ? $this->json(['id' => $node]) : $this->json(['id' => $node, 'permalink' => 'https://www.instagram.com/p/'.$node.'/']),
             default => $this->error(400, 'Unsupported get request', 100),
         };
     }

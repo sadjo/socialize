@@ -246,7 +246,7 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/supprimer', name: 'app_post_delete', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
-    public function delete(string $id, Request $request, PostComposer $composer): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function delete(string $id, Request $request, PostComposer $composer, \App\Crosspost\Meta\Application\InstagramPublishing $instagramNotice): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $post = $this->visiblePost($id);
         if (!$post->isOwnedBy($this->currentAccount->get())) {
@@ -255,8 +255,9 @@ final class PostController extends AbstractController
         $this->checkToken($request, 'delete-'.$id);
 
         $username = $post->getAccount()->getUsername();
+        $instagram = $instagramNotice->forDeletion($post);
         $composer->delete($post);
-        $this->addFlash('success', 'Publication supprimée.');
+        $this->addFlash('success', 'Publication supprimée.'.(null !== $instagram ? ' '.$instagram : ''));
 
         // Depuis un fil, on y reste ; depuis la page de la publication, retour au profil.
         $referer = (string) $request->headers->get('referer');

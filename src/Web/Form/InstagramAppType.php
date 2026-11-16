@@ -43,7 +43,7 @@ final class InstagramAppType extends AbstractType
             ->add('configId', TextType::class, [
                 'label' => 'Identifiant de configuration (connexion unifiée)',
                 'required' => false,
-                'help' => 'Applications récentes seulement : Facebook Login for Business › Configurations, configuration « Jeton d’accès d’utilisateur système », expiration « Jamais », ressource « Compte Instagram », droits instagram_basic et instagram_content_publish. Laissez vide pour une application avec connexion Instagram.',
+                'help' => 'Applications récentes seulement : Facebook Login for Business › Configurations, configuration « Jeton d’accès d’utilisateur système », expiration « Jamais », ressource « Compte Instagram », droits instagram_basic et instagram_content_publish (et instagram_manage_contents pour supprimer sur Instagram les publications supprimées ici). Laissez vide pour une application avec connexion Instagram.',
                 'attr' => ['autocomplete' => 'off', 'inputmode' => 'numeric', 'spellcheck' => 'false'],
                 'constraints' => [new Assert\Regex('/^\d{5,32}$/', message: 'L’identifiant de configuration est une suite de chiffres.')],
             ]);
