@@ -68,7 +68,8 @@
         {% endif %}
     </section>
 
-    {% if highlights is not empty or is_owner %}
+    {% set mastodon_owner = is_owner and is_granted('ROLE_MASTODON') %}
+    {% if highlights is not empty or (is_owner and not mastodon_owner) %}
         <div class="hls" aria-label="Stories à la une">
             {% for highlight in highlights %}
                 {% set cover = highlight.cover %}
@@ -76,13 +77,14 @@
                     <span class="c">{% if cover %}<img src="{{ media_url(cover.media, 'thumb') }}" alt="">{% endif %}</span>{{ highlight.title }}
                 </a>
             {% endfor %}
-            {% if is_owner %}
+            {% if is_owner and not mastodon_owner %}
                 <a class="hl" href="{{ path('app_story_manage') }}"><span class="c" style="display:grid;place-items:center">{{ ui.icon('plus') }}</span>Mes stories</a>
             {% endif %}
         </div>
     {% endif %}
 
     {% if pending_posts is not empty %}{{ include('profile/_pending.html.twig') }}{% endif %}
+    {% if mastodon_owner %}{{ include('profile/_mastodon_publications.html.twig', {publications: mastodon_publications()}) }}{% endif %}
 
     <div>
         {{ include('profile/_tabs.html.twig', {current: 'posts'}) }}

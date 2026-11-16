@@ -1,0 +1,34 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Nouvelle publication · Socialize{% endblock %}
+
+{% block content %}
+{# Publication sur un compte Mastodon (connexion Mastodon) : médias de l'appareil, dans les limites de son serveur.
+   Variables : form, limits (MastodonLimits), domain #}
+<div class="compose">
+    <div class="page-h"><div class="grow"><h1>Nouvelle publication</h1><p>Publiée sur votre compte de {{ domain }} : jusqu’à {{ limits.maxMedia }} photos ou vidéos et {{ limits.maxCharacters|format_number(locale: 'fr') }} caractères, comme le permet votre serveur.</p></div></div>
+
+    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': limits.maxMedia, 'data-compose-caption-max-value': limits.maxCharacters, 'data-compose-alt-name-value': 'mastodon_compose[altTexts][__key__]'}}) }}
+        {{ form_errors(form) }}
+        <div class="compose-grid">
+            <section class="card picker">
+                {{ include('compose/_sources.html.twig', {immich: null, synology: null, drop_label: 'Choisissez vos photos et vidéos', drop_hint: 'Photos ' ~ (limits.imageSize // 1048576) ~ ' Mo, vidéos ' ~ (limits.videoSize // 1048576) ~ ' Mo au plus'}) }}
+                {{ form_widget(form.media) }}
+                {{ form_widget(form.order) }}
+                {{ form_errors(form.media) }}
+                <p class="small">Faites glisser les aperçus, ou utilisez ◀ ▶, pour changer l’ordre.</p>
+                <div class="previews" data-compose-target="previews" aria-live="polite"></div>
+                {% do form.altTexts.setRendered %}
+            </section>
+
+            <section class="card">
+                {{ form_row(form.caption) }}
+                <div class="counter num" data-compose-target="counter">0 / {{ limits.maxCharacters|format_number(locale: 'fr') }}</div>
+                {{ form_row(form.visibility) }}
+                {{ form_row(form.contentWarning) }}
+                <button class="btn pri" data-compose-target="submit">Publier sur {{ domain }}</button>
+            </section>
+        </div>
+    {{ form_end(form) }}
+</div>
+{% endblock %}

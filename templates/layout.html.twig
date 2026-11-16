@@ -18,7 +18,7 @@
     {% if current_route != 'app_home' %}<button type="button" class="ib back-btn" data-controller="history" data-action="history#back" aria-label="Retour">{{ ui.icon('left') }}</button>{% endif %}
     <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
     {% if me %}
-        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="ib" popovertarget="create-menu" aria-haspopup="dialog" aria-label="Créer">{{ ui.icon('plus') }}</button>{% endif %}
+        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="ib" popovertarget="create-menu" aria-haspopup="dialog" aria-label="Créer">{{ ui.icon('plus') }}</button>{% elseif is_granted('ROLE_MASTODON') %}<a class="ib" href="{{ path('app_mastodon_compose') }}" aria-label="Publier">{{ ui.icon('plus') }}</a>{% endif %}
         <span data-controller="mobile-menu">
             <button type="button" class="ib" data-action="mobile-menu#open" aria-label="Menu" aria-haspopup="dialog">{{ ui.icon('menu') }}</button>
             <dialog class="mobile-menu" data-mobile-menu-target="dialog" data-action="click->mobile-menu#backdrop" aria-label="Menu">
@@ -90,7 +90,7 @@
     <a href="{{ path('app_home') }}" class="{{ current_route == 'app_home' ? 'on' }}" aria-label="Accueil">{{ ui.icon('home') }}</a>
     {% if me or not home_login_only %}<a href="{{ path('app_feed_local') }}" class="{{ current_route == 'app_feed_local' ? 'on' }}" aria-label="Fil local">{{ ui.icon('compass') }}</a>{% endif %}
     {% if me %}
-        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="plus" popovertarget="create-menu" aria-haspopup="dialog" aria-label="Créer">{{ ui.icon('plus') }}</button>{% endif %}
+        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="plus" popovertarget="create-menu" aria-haspopup="dialog" aria-label="Créer">{{ ui.icon('plus') }}</button>{% elseif is_granted('ROLE_MASTODON') %}<a class="plus" href="{{ path('app_mastodon_compose') }}" aria-label="Publier">{{ ui.icon('plus') }}</a>{% endif %}
         {# Notifications à la place des réglages (toujours dans le menu). #}
         {% set unread = is_granted('ROLE_MASTODON') ? 0 : unread_notifications() %}
         {% if not is_granted('ROLE_MASTODON') %}<a href="{{ path('app_notifications') }}" class="notif-link{{ current_route == 'app_notifications' ? ' on' }}" aria-label="Notifications{{ unread ? ' (' ~ unread ~ ' non lue' ~ (unread > 1 ? 's') ~ ')' }}">{{ ui.icon('bell') }}{% if unread %}<span class="badge num" aria-hidden="true">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>{% endif %}

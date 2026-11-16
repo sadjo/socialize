@@ -8,6 +8,8 @@ parameters:
     # Archives Instagram reçues (supprimées à la fin de l'import) et taille maximale d'une archive (20 Go).
     app.import_dir: '%app.storage_dir%/imports'
     app.import_max_size: 21474836480
+    # Médias en attente d'envoi vers un compte Mastodon (supprimés après l'envoi), partagés avec les workers.
+    app.mastodon_upload_dir: '%app.storage_dir%/mastodon'
     # Domaine des adresses du fédivers (@nom@domaine), déduit de DEFAULT_URI.
     app.local_domain: '%env(key:host:url:DEFAULT_URI)%'
 
@@ -59,6 +61,7 @@ services:
 when@test:
     parameters:
         app.import_dir: '%kernel.project_dir%/var/test-storage/imports'
+        app.mastodon_upload_dir: '%kernel.project_dir%/var/test-storage/mastodon'
     services:
         # Faux envoi des notifications sur les appareils (Web Push).
         App\Tests\Support\FakePushSender: ~

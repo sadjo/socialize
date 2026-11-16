@@ -13,7 +13,7 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
  * Ce qu'une personne connectée avec Mastodon peut faire ici : lire (fils, profils, publications, stories), marquer
- * une story comme vue, aimer, commenter et suivre. Le reste (publier, réglages, notifications, import, administration) lui est fermé :
+ * une story comme vue, aimer, commenter, suivre, et publier sur son compte Mastodon. Le reste (publier, réglages, notifications, import, administration) lui est fermé :
  * son compte se gère sur son serveur.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 4)]
@@ -29,6 +29,7 @@ final readonly class MastodonAccess
     private const array ACTIONS = [
         'app_story_seen', 'app_login', 'app_mastodon_login',
         'app_post_like', 'app_post_comment', 'app_comment_delete', 'app_profile_follow', 'app_profile_unfollow',
+        'app_mastodon_compose', 'app_post_delete',
     ];
 
     public function __construct(

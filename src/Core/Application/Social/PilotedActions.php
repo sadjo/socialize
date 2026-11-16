@@ -27,6 +27,11 @@ interface PilotedActions
     public function deleteComment(Comment $comment): void;
 
     /**
+     * Supprime, sur son serveur, une publication du compte (reçue ici par la fédération).
+     */
+    public function deletePost(Post $post): void;
+
+    /**
      * @return bool vrai si l'abonnement est déjà accepté
      */
     public function follow(Account $follower, Account $following): bool;

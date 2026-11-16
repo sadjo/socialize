@@ -34,6 +34,18 @@ final class FakeMastodon
     /** @var array<string, string> adresse ActivityPub par identifiant connu du serveur */
     public static array $known = [];
 
+    /** Le serveur traite les médias en différé (réponse 202, puis prêts à la première consultation). */
+    public static bool $deferredMedia = false;
+
+    /** Nombre maximal de médias par publication annoncé par le serveur. */
+    public static int $maxMedia = 4;
+
+    /** Refus de la publication (erreur 422 avec ce message). */
+    public static ?string $statusError = null;
+
+    /** @var list<array{type: string, description: ?string}> médias reçus */
+    public static array $media = [];
+
     public static function reset(): void
     {
         self::$actor = FakeFediverse::ALICE;
@@ -41,6 +53,10 @@ final class FakeMastodon
         self::$searchFails = false;
         self::$followAccepted = false;
         self::$known = [];
+        self::$deferredMedia = false;
+        self::$maxMedia = 4;
+        self::$media = [];
+        self::$statusError = null;
     }
 
     /**
@@ -65,7 +81,16 @@ final class FakeMastodon
     public function __invoke(string $method, string $url, array $options = []): ResponseInterface
     {
         $body = [];
-        if (\is_string($options['body'] ?? null)) {
+        if (($options['body'] ?? null) instanceof \Closure) {
+            // Formulaire multipart (envoi d'un média) : lu en entier.
+            $raw = '';
+            while ('' !== ($chunk = ($options['body'])(16384))) {
+                $raw .= \is_string($chunk) ? $chunk : '';
+            }
+            preg_match('/Content-Type: ([^\r\n]+)\r\n(?:[^\r\n]+\r\n)*?Content-Disposition: form-data; name="file"/', $raw, $type);
+            preg_match('/name="description"\r\n(?:[^\r\n]+\r\n)*\r\n(.*?)\r\n--/s', $raw, $description);
+            $body = ['file' => $type[1] ?? '', 'description' => $description[1] ?? null];
+        } elseif (\is_string($options['body'] ?? null)) {
             $decoded = json_decode($options['body'], true);
             if (\is_array($decoded)) {
                 $body = $decoded;
@@ -92,17 +117,36 @@ final class FakeMastodon
             'GET' === $method && '/api/v1/accounts/verify_credentials' === $path => self::TOKEN === $token
                 ? $this->json(array_filter(['id' => '109', 'username' => 'alice', 'acct' => 'alice', 'display_name' => 'Alice', 'url' => 'https://remote.test/@alice', 'uri' => self::$actor]))
                 : $this->json(['error' => 'The access token is invalid'], 401),
+            'GET' === $method && '/api/v2/instance' === $path => $this->json(['domain' => self::DOMAIN, 'configuration' => [
+                'statuses' => ['max_characters' => 500, 'max_media_attachments' => self::$maxMedia],
+                'media_attachments' => ['supported_mime_types' => ['image/jpeg', 'image/png', 'image/heic', 'video/mp4', 'video/quicktime'], 'image_size_limit' => 16777216, 'video_size_limit' => 103809024],
+            ]]),
+            'POST' === $method && '/api/v2/media' === $path => $this->upload($body),
+            'GET' === $method && (bool) preg_match('#^/api/v1/media/([^/]+)$#', $path, $m) => $this->json(['id' => $m[1], 'type' => 'image', 'url' => 'https://remote.test/media/'.$m[1].'.jpg']),
             'GET' === $method && '/api/v2/search' === $path => $this->search($url),
             'POST' === $method && (bool) preg_match('#^/api/v1/statuses/([^/]+)/(un)?favourite$#', $path, $m) => isset(self::$known[$m[1]])
                 ? $this->json(['id' => $m[1], 'favourited' => '' === ($m[2] ?? '')])
                 : $this->json(['error' => 'Record not found'], 404),
-            'POST' === $method && '/api/v1/statuses' === $path => $this->status($body),
+            'POST' === $method && '/api/v1/statuses' === $path => null !== self::$statusError ? $this->json(['error' => self::$statusError], 422) : $this->status($body),
             'DELETE' === $method && (bool) preg_match('#^/api/v1/statuses/([^/]+)$#', $path, $m) => $this->json(['id' => $m[1]]),
             'POST' === $method && (bool) preg_match('#^/api/v1/accounts/([^/]+)/(un)?follow$#', $path, $m) => '' === ($m[2] ?? '')
                 ? $this->json(['id' => $m[1], 'following' => self::$followAccepted, 'requested' => !self::$followAccepted])
                 : $this->json(['id' => $m[1], 'following' => false, 'requested' => false]),
             default => $this->json(['error' => 'Record not found'], 404),
         };
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function upload(array $body): MockResponse
+    {
+        self::$media[] = ['type' => \is_string($body['file'] ?? null) ? $body['file'] : '', 'description' => \is_string($body['description'] ?? null) ? $body['description'] : null];
+        $id = 'media-'.\count(self::$media);
+
+        return self::$deferredMedia
+            ? $this->json(['id' => $id, 'type' => 'video', 'url' => null], 202)
+            : $this->json(['id' => $id, 'type' => 'image', 'url' => 'https://remote.test/media/'.$id.'.jpg']);
     }
 
     private function search(string $url): MockResponse

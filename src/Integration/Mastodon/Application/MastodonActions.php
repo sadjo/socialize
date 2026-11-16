@@ -74,6 +74,20 @@ final readonly class MastodonActions implements PilotedActions
         });
     }
 
+    public function deletePost(Post $post): void
+    {
+        $uri = $post->getApUri();
+        if (null === $uri) {
+            return;
+        }
+        $this->run($post->getAccount(), function (string $domain, string $token) use ($uri): void {
+            $id = $this->client->resolve($domain, $token, $uri, 'statuses');
+            if (null !== $id) {
+                $this->client->deleteStatus($domain, $token, $id);
+            }
+        });
+    }
+
     public function follow(Account $follower, Account $following): bool
     {
         return $this->run($follower, fn (string $domain, string $token): bool => $this->client->follow($domain, $token, $this->account($domain, $token, $following))

@@ -122,21 +122,21 @@ d'émettre une activité signée :
 
 ## 5. Publication
 
-- Écran de création des publications (`ComposePostType`), avec les sources actuelles : appareil, Immich,
-  Synology Photos (`LibraryPublisher`). Pas d'onglet Story.
-- Limites lues dans `/api/v2/instance` de son serveur, et vérifiées avant l'envoi : nombre de médias (souvent 4),
-  longueur du texte (souvent 500 caractères), tailles des images et vidéos.
-- Visibilité : public, non listé, abonnés seulement. Les groupes d'abonnés ne sont pas proposés, Mastodon n'en a
-  pas. La musique n'est pas proposée non plus : Mastodon ne sait pas l'afficher.
-- Envoi en tâche de fond (`PublishToMastodon`, file Messenger), sur le modèle de `PublishToInstagram` :
-  - préparation des médias par la chaîne actuelle (conversion des vidéos, WebP, EXIF) ;
-  - envoi des médias à `/api/v2/media`, avec le texte alternatif et le point de cadrage, en attendant leur
-    traitement ;
-  - envoi du statut (`/api/v1/statuses`, avec `media_ids` et une clé d'idempotence).
-
-  La publication revient ensuite par la fédération et s'affiche dans son profil ; en attendant, elle est marquée
-  « en cours d'envoi ».
-- Modification et suppression : `PUT` et `DELETE /api/v1/statuses/:id`. La fédération met ensuite le profil à jour.
+- Page dédiée (`/publier/mastodon`, bouton « Publier » du menu), avec l'interface de l'écran de création (aperçus,
+  ordre, textes alternatifs) : médias de l'appareil seulement (pas d'Immich ni de Synology Photos, dont les
+  réglages se font sur un compte d'ici), texte, visibilité (public, non listé, abonnés) et avertissement. Pas de
+  story, de groupes d'abonnés, de musique ni de lieu.
+- Limites lues dans `/api/v2/instance` de son serveur (gardées un jour) et vérifiées avant l'envoi : nombre de
+  médias, longueur du texte, formats et tailles des images et vidéos.
+- Envoi en tâche de fond (`PublishToMastodon`, file Messenger `async`) : les originaux sont envoyés tels quels à
+  `/api/v2/media` (son serveur les convertit lui-même), avec leur texte alternatif, en attendant le traitement d'une
+  vidéo (3 minutes au plus) ; puis le statut (`/api/v1/statuses`, avec `media_ids` et la clé d'idempotence de
+  l'envoi). Les fichiers attendent dans le stockage partagé avec les workers, et sont supprimés ensuite.
+- Suivi (`MastodonPublication`) : sur son profil, l'auteur voit les envois en cours et les échecs du dernier jour,
+  avec la raison. Une fois publiée, la publication revient par l'historique de son compte. Une publication
+  « abonnés » n'y revient que si son serveur l'envoie ici (un abonné sur l'instance).
+- Suppression d'une de ses publications depuis Socialize : d'abord sur son serveur (`DELETE /api/v1/statuses`).
+  La modification n'est pas proposée (elle se fait sur Mastodon).
 
 ## 6. Import Instagram vers le compte Mastodon
 

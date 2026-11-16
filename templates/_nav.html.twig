@@ -5,7 +5,8 @@
     {% if me or not home_login_only %}<a class="nav{{ current_route == 'app_feed_local' ? ' on' }}" href="{{ path('app_feed_local') }}"{% if current_route == 'app_feed_local' %} aria-current="page"{% endif %}>{{ ui.icon('compass') }}<span class="lbl">Local</span></a>{% endif %}
     {% if not visitor_closed %}<a class="nav{{ current_route == 'app_search' ? ' on' }}" href="{{ path('app_search') }}">{{ ui.icon('search') }}<span class="lbl">Rechercher</span></a>{% endif %}
     {% if me %}
-        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="nav{{ current_route in ['app_compose', 'app_story_new'] ? ' on' }}" popovertarget="create-menu" aria-haspopup="dialog">{{ ui.icon('plus') }}<span class="lbl">Créer</span></button>{% endif %}
+        {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="nav{{ current_route in ['app_compose', 'app_story_new'] ? ' on' }}" popovertarget="create-menu" aria-haspopup="dialog">{{ ui.icon('plus') }}<span class="lbl">Créer</span></button>
+        {% elseif is_granted('ROLE_MASTODON') %}<a class="nav{{ current_route == 'app_mastodon_compose' ? ' on' }}" href="{{ path('app_mastodon_compose') }}">{{ ui.icon('plus') }}<span class="lbl">Publier</span></a>{% endif %}
         {% set mastodon = is_granted('ROLE_MASTODON') %}
         {% set unread = mastodon ? 0 : unread_notifications() %}
         {% if not mastodon %}<a class="nav notif-link{{ current_route == 'app_notifications' ? ' on' }}" href="{{ path('app_notifications') }}"{% if current_route == 'app_notifications' %} aria-current="page"{% endif %}>{{ ui.icon('bell') }}<span class="lbl">Notifications</span>{% if unread %}<span class="badge num" aria-label="{{ unread }} non lue{{ unread > 1 ? 's' }}">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>{% endif %}
