@@ -6,10 +6,13 @@
 {# Instance réservée aux comptes (temporaire) : pas de menu pour un visiteur sur un profil public ;
    la connexion se fait depuis l'accueil. #}
 {% set visitor_closed = home_login_only and not me %}
-{% set show_menu = not (visitor_closed and (current_route ?? '') starts with 'app_profile') %}
+{# Profil public (visiteur non connecté sur /@compte) : ni menu, ni logo, ni barres ; pied de page « Propulsé par ». #}
+{% set public_profile = not me and (current_route ?? '') starts with 'app_profile' %}
+{% set show_menu = not public_profile %}
 {% set login_url = visitor_closed ? path('app_home') : path('app_login') %}
 
 {% block body %}
+{% if not public_profile %}
 <header class="mtop">
     <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
     {% if me %}
@@ -29,6 +32,7 @@
         <a class="btn sm pri" href="{{ login_url }}">Connexion</a>
     {% endif %}
 </header>
+{% endif %}
 
 <div class="app{{ show_menu ? '' : ' no-menu' }}">
     {% if show_menu %}
@@ -51,6 +55,9 @@
             </div>
         {% endif %}
         <div class="view">{% block content %}{% endblock %}</div>
+        {% if public_profile %}
+            <footer class="powered">Propulsé par <a href="{{ path('app_home') }}">socialize.example</a> · Version {{ app_version|trim('v', 'left') }}</footer>
+        {% endif %}
     </main>
 </div>
 

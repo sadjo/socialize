@@ -37,8 +37,11 @@ final class MobileMenuTest extends AppWebTestCase
     public function testVisitorsKeepTheirLoginButton(): void
     {
         $this->register('alice');
-        $this->client->request('GET', '/@alice');
+        $this->client->request('GET', '/local');
         self::assertSelectorNotExists('dialog.mobile-menu');
         self::assertSelectorExists('header.mtop a.btn');
+        // Profil public : ni barre du haut, ni bouton de connexion.
+        $this->client->request('GET', '/@alice');
+        self::assertSelectorNotExists('header.mtop');
     }
 }
