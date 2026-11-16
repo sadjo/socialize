@@ -56,7 +56,8 @@ final class PostController extends AbstractController
                 return $this->redirect((string) $post->getApUri());
             }
             // Seul l'identifiant courant existe : les anciens restent supprimés pour le fédivers.
-            if ($revision !== $post->getApRevision() || !\in_array($post->getVisibility(), [Visibility::Public, Visibility::Unlisted], true)) {
+            // Seule une publication publique se lit sans droit : non répertoriée ou réservée, elle reste sur l'instance.
+            if ($revision !== $post->getApRevision() || Visibility::Public !== $post->getVisibility()) {
                 throw new NotFoundHttpException();
             }
 

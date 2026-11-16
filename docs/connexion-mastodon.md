@@ -136,6 +136,9 @@ d'émettre une activité signée :
   ne voient rien d'une publication réservée.
 - **Abonnement** : `POST /api/v1/accounts/:id/follow`. Pour un compte Socialize qui valide ses abonnés, la
   demande suit le parcours actuel.
+- Publication restée sur l'instance (non répertoriée, réservée à des groupes : seules les publications publiques et
+  réservées aux abonnés partent dans le fédivers) : son serveur ne la connaît pas ; J'aime et commentaire restent
+  ici, sans passer par lui. Un compte Mastodon membre d'un groupe voit les publications et stories de ce groupe.
 - En cas d'échec (jeton révoqué, serveur injoignable) : l'action locale est annulée, et un message propose de se
   reconnecter.
 

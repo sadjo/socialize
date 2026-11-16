@@ -501,11 +501,12 @@ class Post
     }
 
     /**
-     * La publication part-elle dans le fédivers ? (ni privée ni archivée, et rédigée ici).
+     * La publication part-elle dans le fédivers ? (publique ou réservée aux abonnés, ni archivée ni en préparation,
+     * et rédigée ici).
      */
     public function isFederable(): bool
     {
-        return $this->account->isLocal() && !$this->isArchived() && !$this->pending && Visibility::Private !== $this->visibility;
+        return $this->account->isLocal() && !$this->isArchived() && !$this->pending && $this->visibility->isFederated();
     }
 
     public function getApRevision(): int

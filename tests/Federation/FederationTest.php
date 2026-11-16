@@ -100,53 +100,37 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas dans le fédivers.');
     }
 
-    public function testAGroupPostGoesOnlyToItsRemoteMembers(): void
+    /**
+     * Seules les publications publiques et réservées aux abonnés partent dans le fédivers : non répertoriées ou
+     * réservées à des groupes, elles restent sur l'instance, même pour un membre distant du groupe.
+     */
+    public function testUnlistedAndGroupPostsStayOnTheInstance(): void
     {
         $camille = $this->register('camille')->getAccount();
         $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/1', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
         $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
         $family = $groups->create($this->reloadAccount($camille), 'Famille');
         $groups->setMembers($family, [$this->alice()->getId()->toRfc4122()]);
-        $friends = $groups->create($this->reloadAccount($camille), 'Amis');
 
-        // Groupe sans Alice : rien ne part.
         $composer = self::getContainer()->get(PostComposer::class);
-        $author = $this->reloadAccount($camille);
-        $friends = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($friends->getId());
-        self::assertNotNull($friends);
-        $composer->publish($author, 'Entre amis', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$friends]);
-        self::assertCount(0, $this->fediverse()->delivered('Create'));
+        $group = $composer->publish($this->reloadAccount($camille), 'En famille', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$this->family($family)]);
+        $unlisted = $this->publish($this->reloadAccount($camille), 'Avec le lien', Visibility::Unlisted);
+        self::assertSame([], $this->fediverse()->delivered('Create'), 'Rien ne part, même vers Alice, membre du groupe.');
 
-        // Groupe avec Alice : adressé à elle seule, livré à sa boîte personnelle.
-        $author = $this->reloadAccount($camille);
-        $family = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($family->getId());
-        self::assertNotNull($family);
-        $post = $composer->publish($author, 'En famille', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$family]);
-        $create = $this->fediverse()->delivered('Create');
-        self::assertCount(1, $create);
-        self::assertSame([FakeFediverse::ALICE], $this->dig($create, 0, 'object', 'to'));
-        self::assertSame([], $this->dig($create, 0, 'object', 'cc'));
-        $delivery = array_values(array_filter($this->fediverse()->deliveries, static fn (array $d): bool => 'Create' === ($d['activity']['type'] ?? null)));
-        self::assertSame(FakeFediverse::ALICE.'/inbox', $delivery[0]['url'], 'Boîte personnelle, pas la boîte partagée.');
+        // Ni l'une ni l'autre ne se lit en ActivityPub, ni leurs commentaires ne partent.
+        foreach ([$group, $unlisted] as $post) {
+            $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => self::AP]);
+            self::assertResponseStatusCodeSame(404);
+        }
+        $social = self::getContainer()->get(\App\Core\Application\Social\SocialActions::class);
+        $post = self::getContainer()->get(PostRepository::class)->find($unlisted->getId());
+        self::assertInstanceOf(Post::class, $post);
+        $social->comment($this->register('hugo')->getAccount(), $post, 'Joli');
+        self::assertSame([], $this->fediverse()->delivered('Create'));
 
-        // Lecture ActivityPub sans droit : refusée.
-        $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => self::AP]);
-        self::assertResponseStatusCodeSame(404);
-
-        // Changement de groupe : la publication disparaît chez Alice.
-        $post = self::getContainer()->get(PostRepository::class)->find($post->getId());
-        self::assertNotNull($post);
-        $friends = self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($friends->getId());
-        self::assertNotNull($friends);
-        $media = $post->getMedia()->first();
-        self::assertInstanceOf(\App\Core\Domain\Media\MediaAttachment::class, $media);
-        self::getContainer()->get(\App\Media\Application\PostEditor::class)->edit($post, 'En famille', Visibility::Groups, null, null, [\App\Media\Application\PostEditor::token($media)], audienceGroups: [$friends]);
-        // Retirée chez Alice (boîte personnelle et boîte partagée de son instance), sans renvoi : plus aucun membre.
-        $delete = $this->fediverse()->delivered('Delete');
-        self::assertCount(2, $delete);
-        self::assertSame(['http://localhost/p/'.$post->getPublicId()], array_values(array_unique(array_map(fn (array $d): string => $this->text($d, 'object', 'id'), $delete))));
-        self::assertCount(0, $this->fediverse()->delivered('Create'), 'Aucun nouveau destinataire.');
-        self::assertCount(0, $this->fediverse()->delivered('Update'));
+        // Abonnés seulement : envoyée aux abonnés distants.
+        $sent = $this->during(fn (): Post => $this->publish($this->reloadAccount($camille), 'Pour mes abonnés', Visibility::Followers));
+        self::assertCount(1, $this->ofType($sent, 'Create'));
     }
 
     /**
@@ -181,27 +165,25 @@ final class FederationTest extends AppWebTestCase
         self::assertSame([$noteId.'/v2'], $this->objectIds($sent, 'Update'));
         self::assertSame([], $this->ofType($sent, 'Delete'));
 
-        // Abonnés → groupe Famille : retirée de partout (tous ses identifiants), renvoyée à Alice seule.
+        // Abonnés → groupe Famille : retirée de partout (tous ses identifiants), et pas renvoyée (les groupes restent ici).
         $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Groups, null, null, $order, audienceGroups: [$family]));
         self::assertSame([$noteId, $noteId.'/v2'], $this->objectIds($sent, 'Delete'));
-        self::assertSame([$noteId.'/v3'], $this->objectIds($sent, 'Create'));
-        self::assertSame([FakeFediverse::ALICE.'/inbox'], array_column($this->ofDeliveries($sent, 'Create'), 'url'), 'Boîte personnelle d’Alice.');
-        self::assertSame([FakeFediverse::ALICE], $this->dig($this->ofType($sent, 'Create')[0], 'object', 'to'));
-
-        // Groupe → privé : retirée, aussi de la boîte partagée de l'instance d'Alice ; rien de renvoyé.
-        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Private, null, null, $order));
-        self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3'], $this->objectIds($sent, 'Delete'));
-        self::assertEqualsCanonicalizing([FakeFediverse::ALICE.'/inbox', 'https://remote.test/inbox'], array_values(array_unique(array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Delete')))));
         self::assertSame([], $this->ofType($sent, 'Create'));
 
-        // Privé → groupe : renvoyée sous un nouvel identifiant, sans retrait.
-        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Groups, null, null, $order, audienceGroups: [$family]));
-        self::assertSame([$noteId.'/v4'], $this->objectIds($sent, 'Create'));
+        // Groupe → non répertoriée → privée : rien ne part, rien n'est retiré (elle n'est plus dans le fédivers).
+        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Unlisted, null, null, $order));
+        $sent = [...$sent, ...$this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Private, null, null, $order))];
+        self::assertSame([], $sent);
+
+        // Privée → publique : renvoyée sous un nouvel identifiant, sans retrait.
+        $sent = $this->during(static fn () => $editor->edit($post, 'Concert de rock', Visibility::Public, null, null, $order));
+        self::assertSame([$noteId.'/v3'], $this->objectIds($sent, 'Create'));
         self::assertSame([], $this->ofType($sent, 'Delete'));
+        self::assertContains($public, (array) $this->dig($this->ofType($sent, 'Create')[0], 'object', 'to'));
 
         // Suppression : retrait de tous les identifiants qu'elle a eus.
         $sent = $this->during(static fn () => self::getContainer()->get(PostComposer::class)->delete($post));
-        self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3', $noteId.'/v4'], $this->objectIds($sent, 'Delete'));
+        self::assertSame([$noteId, $noteId.'/v2', $noteId.'/v3'], $this->objectIds($sent, 'Delete'));
     }
 
     /**
@@ -305,40 +287,28 @@ final class FederationTest extends AppWebTestCase
     }
 
     /**
-     * Membres d'un groupe modifiés : ses publications sont retirées puis renvoyées aux membres actuels du fédivers ;
-     * un membre de cette instance ajouté ou retiré ne change rien au fédivers (son accès est vérifié à l'affichage).
+     * Les publications non répertoriées et celles des groupes partaient auparavant dans le fédivers : la commande
+     * app:federation:retract-local-only retire leurs copies, sans toucher aux publications publiques ou aux abonnés.
      */
-    public function testChangingTheMembersOfAGroupUpdatesItsPostsOnTheFediverse(): void
+    public function testTheRetractCommandRemovesLocalOnlyPostsFromTheFediverse(): void
     {
         $camille = $this->register('camille')->getAccount();
-        $hugo = $this->register('hugo')->getAccount();
-        $author = $this->reloadAccount($camille);
-        $follower = self::getContainer()->get(AccountRepository::class)->find($hugo->getId());
-        self::assertNotNull($follower);
-        self::getContainer()->get(\App\Core\Application\Social\SocialActions::class)->follow($follower, $author);
         $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/11', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
-        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
-        $family = $groups->create($this->reloadAccount($camille), 'Famille');
-        $alice = $this->alice()->getId()->toRfc4122();
-        $groups->setMembers($family, [$alice]);
-        $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadAccount($camille), 'En famille', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$this->family($family)]);
-        $noteId = 'http://localhost/p/'.$post->getPublicId();
-        self::assertSame([$noteId], $this->objectIds($this->fediverse()->deliveries, 'Create'));
+        $unlisted = $this->publish($this->reloadAccount($camille), 'Avec le lien', Visibility::Unlisted);
+        $this->publish($this->reloadAccount($camille), 'Publique', Visibility::Public);
+        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:retract-local-only'));
 
-        // Alice retirée du groupe : la publication est retirée chez elle, et envoyée à personne.
-        $sent = $this->during(fn () => $groups->setMembers($this->family($family), []));
-        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
-        self::assertContains(FakeFediverse::ALICE.'/inbox', array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Delete')));
-        self::assertSame([], $this->ofType($sent, 'Create'));
-
-        // Alice de retour : la publication lui est renvoyée sous un nouvel identifiant.
-        $sent = $this->during(fn () => $groups->setMembers($this->family($family), [$alice]));
-        self::assertSame([$noteId.'/v3'], $this->objectIds($sent, 'Create'));
-        self::assertSame([FakeFediverse::ALICE.'/inbox'], array_map(fn (array $d): string => $this->text($d, 'url'), $this->ofDeliveries($sent, 'Create')));
-
-        // Hugo (membre de cette instance) ajouté : rien ne part.
-        $sent = $this->during(fn () => $groups->setMembers($this->family($family), [$alice, $hugo->getId()->toRfc4122()]));
+        $sent = $this->during(static fn (): int => $command->execute(['--simulation' => true]));
+        $command->assertCommandIsSuccessful();
         self::assertSame([], $sent);
+        self::assertStringContainsString('1 publication non répertoriée', $command->getDisplay());
+
+        $noteId = 'http://localhost/p/'.$unlisted->getPublicId();
+        $sent = $this->during(static fn (): int => $command->execute([]));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([$noteId], $this->objectIds($sent, 'Delete'));
+        self::assertSame(['https://remote.test/inbox'], array_values(array_unique(array_map(fn (array $d): string => $this->text($d, 'url'), $sent))), 'Chez les abonnés distants.');
+        self::assertSame([], $this->ofType($sent, 'Create'), 'Elle n’est pas renvoyée.');
     }
 
     private function family(\App\Core\Domain\Social\AudienceGroup $group): \App\Core\Domain\Social\AudienceGroup

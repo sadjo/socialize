@@ -10,7 +10,8 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
 > (licences Creative Commons, crédit affiché), copiée sur l'instance et jouée quand la publication est à l'écran.
 > Groupes d'abonnés (famille, amis…) : publications et stories réservées à un ou plusieurs groupes, y compris pour
-> les abonnés du fédivers, et groupe par défaut à l'import Instagram. Invitations et création de comptes par l'administrateur,
+> les comptes Mastodon connectés ici, et groupe par défaut à l'import Instagram. Seules les publications publiques et
+> réservées aux abonnés partent dans le fédivers ; les non répertoriées et celles des groupes restent sur l'instance. Invitations et création de comptes par l'administrateur,
 > qui choisit quels comptes peuvent publier et lesquels peuvent importer leur archive Instagram.
 > Crosspost vers Instagram : publications et stories envoyées aussi sur un compte Instagram professionnel, selon
 > des règles par visibilité ; bouton « Partager vers Instagram » pour tout compte, personnel compris.
