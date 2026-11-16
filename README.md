@@ -17,9 +17,9 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > Notifications des « J'aime » et commentaires reçus (d'ici ou du fédivers), lues ou non lues, supprimables ;
 > notifications sur le téléphone (Web Push, application ajoutée à l'écran d'accueil) : nouvelles publications et
 > stories des comptes suivis, J'aime et commentaires, au choix de chacun.
-> Jalons suivants : crosspost Facebook (jalon 9), API REST et serveur MCP (jalon 10), connexion avec un compte
-> Mastodon (jalon 11 : profil, interactions, publication et import Instagram vers ce compte, voir
-> [`docs/connexion-mastodon.md`](docs/connexion-mastodon.md)) ; à prévoir : notifications réglables par compte.
+> Jalons suivants : connexion avec un compte Mastodon (jalon 9 : profil, interactions, publication et import
+> Instagram vers ce compte, voir [`docs/connexion-mastodon.md`](docs/connexion-mastodon.md)), crosspost Facebook
+> (jalon 10), API REST et serveur MCP (jalon 11) ; à prévoir : notifications réglables par compte.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
 - Stack : PHP 8.5, Symfony 8.1, FrankenPHP (mode worker), Doctrine ORM, Symfony Messenger, Twig + Symfony UX.

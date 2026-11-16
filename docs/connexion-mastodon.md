@@ -1,6 +1,6 @@
 # Note de conception : se connecter avec un compte Mastodon
 
-> Prévu au jalon 11 (voir la feuille de route dans le README).
+> Prochain jalon : jalon 9 (voir la feuille de route dans le README).
 
 ## Contexte
 
