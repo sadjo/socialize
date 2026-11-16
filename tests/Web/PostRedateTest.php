@@ -38,6 +38,36 @@ final class PostRedateTest extends AppWebTestCase
         self::assertSame('2025-07-14T18:30:00+00:00', $this->post($post)->getPublishedAt()->setTimezone(new \DateTimeZone('UTC'))->format(\DATE_ATOM));
     }
 
+    /**
+     * Le champ ne garde que la minute : une date laissée telle quelle n'est pas un changement (sinon chaque
+     * modification retirait la publication du fédivers puis l'y renvoyait, en tête des profils sur Mastodon).
+     */
+    public function testEditingWithoutTouchingTheDateKeepsIt(): void
+    {
+        $admin = $this->register('alice');
+        $post = self::getContainer()->get(PostComposer::class)->publish($admin->getAccount(), 'Été', [['file' => $this->jpeg(), 'alt' => null]]);
+        // Date avec des secondes, comme toute publication.
+        $this->post($post)->redate(new \DateTimeImmutable('2025-09-05 14:22:37 UTC'));
+        self::getContainer()->get('doctrine')->getManager()->flush();
+
+        $this->login($admin);
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        self::assertSame('2025-09-05T16:22', $crawler->filter('input[name="edit_post[publishedAt]"]')->attr('value'), 'Heure de Paris, à la minute.');
+        $form = $crawler->selectButton('Enregistrer les modifications')->form();
+        $form['edit_post[caption]'] = 'Été, légende retouchée';
+        $this->client->submit($form);
+        self::assertResponseRedirects('/p/'.$post->getPublicId());
+        self::assertSame('2025-09-05T14:22:37+00:00', $this->post($post)->getPublishedAt()->setTimezone(new \DateTimeZone('UTC'))->format(\DATE_ATOM), 'Date gardée, secondes comprises.');
+        self::assertSame(1, $this->post($post)->getApRevision(), 'Simple mise à jour : ni retrait ni renvoi dans le fédivers (même identifiant).');
+
+        // Une autre date : là, la publication est renvoyée sous un nouvel identifiant.
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        $form = $crawler->selectButton('Enregistrer les modifications')->form();
+        $form['edit_post[publishedAt]'] = '2025-09-05T16:30';
+        $this->client->submit($form);
+        self::assertSame(2, $this->post($post)->getApRevision());
+    }
+
     public function testAnAuthorWhoIsNotAdministratorCannotChangeIt(): void
     {
         $this->register('alice');
