@@ -47,6 +47,12 @@ final class FakeMastodon
     public static bool $confirmed = false;
     public static bool $registrationsOpen = true;
 
+    /** Réglages du compte reçus (update_credentials), visibilité par défaut qui en découle, et refus éventuel. */
+    /** @var list<array<string, mixed>> */
+    public static array $settings = [];
+    public static string $privacy = 'public';
+    public static bool $settingsFail = false;
+
     /** Le serveur limite une fois le débit (erreur 429) à la prochaine publication. */
     public static bool $rateLimitOnce = false;
 
@@ -71,6 +77,9 @@ final class FakeMastodon
         self::$signups = [];
         self::$confirmed = false;
         self::$registrationsOpen = true;
+        self::$settings = [];
+        self::$privacy = 'public';
+        self::$settingsFail = false;
     }
 
     /**
@@ -132,9 +141,10 @@ final class FakeMastodon
                 ? $this->json(['access_token' => self::TOKEN, 'token_type' => 'Bearer', 'scope' => $body['scope'] ?? '', 'created_at' => time()])
                 : $this->json(['error' => 'invalid_grant'], 400),
             'POST' === $method && '/oauth/revoke' === $path => $this->json([]),
+            'PATCH' === $method && '/api/v1/accounts/update_credentials' === $path => $this->updateCredentials($body, $token),
             'GET' === $method && '/api/v1/accounts/verify_credentials' === $path && self::NEW_TOKEN === $token && !self::$confirmed => $this->json(['error' => 'Your login is missing a confirmed e-mail address'], 403),
             'GET' === $method && '/api/v1/accounts/verify_credentials' === $path => \in_array($token, [self::TOKEN, self::NEW_TOKEN], true)
-                ? $this->json(array_filter(['id' => '109', 'username' => 'alice', 'acct' => 'alice', 'display_name' => 'Alice', 'url' => 'https://remote.test/@alice', 'uri' => self::$actor]))
+                ? $this->json(array_filter(['id' => '109', 'username' => 'alice', 'acct' => 'alice', 'display_name' => 'Alice', 'url' => 'https://remote.test/@alice', 'uri' => self::$actor, 'source' => ['privacy' => self::$privacy]]))
                 : $this->json(['error' => 'The access token is invalid'], 401),
             'GET' === $method && '/api/v2/instance' === $path => $this->json(['domain' => self::DOMAIN,
                 'registrations' => ['enabled' => self::$registrationsOpen, 'approval_required' => false, 'min_age' => 16, 'message' => null],
@@ -177,6 +187,24 @@ final class FakeMastodon
         self::$signups[] = $body;
 
         return $this->json(['access_token' => self::NEW_TOKEN, 'token_type' => 'Bearer', 'scope' => 'read write', 'created_at' => time()]);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function updateCredentials(array $body, ?string $token): MockResponse
+    {
+        if (self::NEW_TOKEN === $token && !self::$confirmed) {
+            return $this->json(['error' => 'Your login is missing a confirmed e-mail address'], 403);
+        }
+        if (self::$settingsFail) {
+            return $this->json(['error' => 'Internal server error'], 500);
+        }
+        self::$settings[] = $body;
+        $source = \is_array($body['source'] ?? null) ? $body['source'] : [];
+        self::$privacy = \is_string($source['privacy'] ?? null) ? $source['privacy'] : self::$privacy;
+
+        return $this->json(['id' => '109', 'username' => 'alice', 'locked' => 'true' === ($body['locked'] ?? null)]);
     }
 
     private function rateLimited(): MockResponse

@@ -168,9 +168,10 @@ final readonly class MastodonClient
     }
 
     /**
-     * Compte du jeton : nom d'utilisateur et, si le serveur la donne, l'adresse ActivityPub de son acteur.
+     * Compte du jeton : nom d'utilisateur, adresse ActivityPub de son acteur et visibilité par défaut de ses
+     * publications, si le serveur les donne.
      *
-     * @return array{username: string, actor: ?string}
+     * @return array{username: string, actor: ?string, privacy: ?string}
      */
     public function verifyCredentials(string $domain, #[\SensitiveParameter] string $token): array
     {
@@ -180,7 +181,25 @@ final readonly class MastodonClient
             throw new MastodonException(\sprintf('%s n’a pas indiqué de compte.', $domain));
         }
 
-        return ['username' => $username, 'actor' => \is_string($me['uri'] ?? null) && str_starts_with($me['uri'], 'https://') ? $me['uri'] : null];
+        $source = \is_array($me['source'] ?? null) ? $me['source'] : [];
+
+        return [
+            'username' => $username,
+            'actor' => \is_string($me['uri'] ?? null) && str_starts_with($me['uri'], 'https://') ? $me['uri'] : null,
+            'privacy' => \in_array($source['privacy'] ?? null, ['public', 'unlisted', 'private', 'direct'], true) ? $source['privacy'] : null,
+        ];
+    }
+
+    /**
+     * Rend le compte privé : abonnements à valider, publications réservées aux abonnés par défaut, ni suggéré ni
+     * cherchable, abonnés et abonnements cachés.
+     */
+    public function makePrivate(string $domain, #[\SensitiveParameter] string $token): void
+    {
+        $this->json('PATCH', $domain, '/api/v1/accounts/update_credentials', $token, ['body' => [
+            'locked' => 'true', 'discoverable' => 'false', 'indexable' => 'false', 'hide_collections' => 'true',
+            'source' => ['privacy' => 'private'],
+        ]]);
     }
 
     /**

@@ -29,7 +29,8 @@ final class MastodonComposeController extends AbstractController
         $user = $this->getUser();
         \assert($user instanceof MastodonUser);
         $limits = $publisher->limits($user);
-        $form = $this->createForm(MastodonComposeType::class, options: ['limits' => $limits]);
+        $default = $user->getDefaultVisibility();
+        $form = $this->createForm(MastodonComposeType::class, options: ['limits' => $limits, 'default_visibility' => \in_array($default, ['unlisted', 'private'], true) ? $default : 'public']);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

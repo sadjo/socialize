@@ -55,11 +55,11 @@ final class MastodonSignupController extends AbstractController
             if (!$mastodonSignupLimiter->create((string) $request->getClientIp())->consume()->isAccepted()) {
                 $form->addError(new FormError('Trop de comptes créés depuis votre connexion : réessayez dans une heure.'));
             } else {
-                /** @var array{username: string, email: string, password: string, reason?: ?string, dateOfBirth?: ?\DateTimeImmutable, agreement: bool} $data */
+                /** @var array{username: string, email: string, password: string, reason?: ?string, dateOfBirth?: ?\DateTimeImmutable, private: bool, agreement: bool} $data */
                 $data = $form->getData();
                 try {
                     $token = $this->signup->register($data, $this->generateUrl('app_mastodon_callback', referenceType: UrlGeneratorInterface::ABSOLUTE_URL));
-                    $request->getSession()->set(self::PENDING, ['domain' => $registration->domain, 'username' => $data['username'], 'token' => $token, 'approval' => $registration->approval, 'at' => time()]);
+                    $request->getSession()->set(self::PENDING, ['domain' => $registration->domain, 'username' => $data['username'], 'token' => $token, 'approval' => $registration->approval, 'private' => $data['private'], 'at' => time()]);
 
                     return $this->redirectToRoute('app_mastodon_signup_confirm', status: Response::HTTP_SEE_OTHER);
                 } catch (MastodonSignupRejected $e) {
@@ -91,10 +91,14 @@ final class MastodonSignupController extends AbstractController
                 throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
             }
             try {
-                $user = $this->signup->confirm($pending['domain'], $pending['token']);
+                $result = $this->signup->confirm($pending['domain'], $pending['token'], true === ($pending['private'] ?? false));
+                $user = $result['user'];
                 $request->getSession()->remove(self::PENDING);
                 $security->login($user, 'form_login', 'main');
                 $this->addFlash('success', \sprintf('Bienvenue ! Votre compte %s est prêt.', '@'.$user->getAccount()->getAcct()));
+                if ($result['privacyFailed']) {
+                    $this->addFlash('error', \sprintf('Votre compte n’a pas pu être rendu privé : dans les réglages de %s, cochez « Exiger une validation des abonnements ».', $pending['domain']));
+                }
 
                 return $this->redirectToRoute('app_home', status: Response::HTTP_SEE_OTHER);
             } catch (MastodonUnconfirmed|MastodonException $e) {

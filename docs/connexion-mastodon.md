@@ -91,6 +91,11 @@ les intégrations Immich et Synology Photos.
 - Inscription par l'API du serveur (`MastodonSignup`) : jeton d'application (`client_credentials`, droit
   `write:accounts`, ajouté aux droits de l'application ; une application enregistrée avant est refaite), puis
   `POST /api/v1/accounts`. Les refus s'affichent sous les champs. L'adresse et le mot de passe ne font que passer.
+- **Compte privé**, coché par défaut : une fois l'adresse confirmée, le compte est réglé par
+  `PATCH /api/v1/accounts/update_credentials` (abonnements à valider, publications réservées aux abonnés par défaut,
+  ni suggéré ni cherchable, abonnés et abonnements cachés). La visibilité par défaut du compte (`source.privacy`,
+  gardée à chaque connexion) est celle proposée à la publication depuis Socialize. Les demandes d'abonnement
+  s'acceptent dans Mastodon.
 - Le jeton du nouveau compte attend, chiffré, en session (24 heures au plus) ; « J'ai confirmé mon adresse » connecte
   le compte (`MastodonLogin::loginWithToken`) une fois l'e-mail confirmé (avant : 403, message).
 - Débit : le serveur accepte 5 inscriptions par 30 minutes depuis l'adresse de l'instance ; ici, 3 par heure et par
