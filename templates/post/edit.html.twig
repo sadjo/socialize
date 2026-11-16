@@ -31,7 +31,7 @@
                 {{ form_row(form.caption) }}
                 <div class="counter num" data-compose-target="counter"></div>
                 {{ form_row(form.location) }}
-                {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Visible avec le lien', followers: 'Vos abonnés', groups: 'Vos groupes d’abonnés', private: 'Vous seulement'}}) }}
+                {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Avec le lien, ici seulement', followers: 'Vos abonnés, ici et dans le fédivers', groups: 'Vos groupes d’abonnés, ici seulement', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
                 {{ include('compose/_music.html.twig', {field: form.music}) }}
                 {% if form.publishedAt is defined %}{{ form_row(form.publishedAt) }}{% endif %}

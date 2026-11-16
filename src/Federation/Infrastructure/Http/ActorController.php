@@ -121,7 +121,9 @@ final readonly class ActorController
     {
         $uuid = PublicId::decode($id);
         $comment = $uuid instanceof \Symfony\Component\Uid\Uuid ? $comments->find($uuid) : null;
-        if (null === $comment || Visibility::Public !== $comment->getPost()->getVisibility() && Visibility::Unlisted !== $comment->getPost()->getVisibility()) {
+        // Seuls les commentaires d'une publication publique se lisent sans droit (les autres visibilités ne partent pas
+        // dans le fédivers, ou seulement aux abonnés).
+        if (null === $comment || Visibility::Public !== $comment->getPost()->getVisibility()) {
             throw new NotFoundHttpException();
         }
         if (!ActivityJsonResponse::wanted($request)) {

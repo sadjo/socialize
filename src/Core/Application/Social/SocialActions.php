@@ -96,7 +96,7 @@ final readonly class SocialActions
     {
         $like = $this->likes->findOneFor($account, $post);
         if ($like instanceof Like) {
-            if (!$account->isLocal()) {
+            if ($this->throughServer($account, $post)) {
                 $this->piloted->unlike($account, $post);
             }
             $apUri = $like->getApUri();
@@ -109,7 +109,7 @@ final readonly class SocialActions
             return false;
         }
 
-        if (!$account->isLocal()) {
+        if ($this->throughServer($account, $post)) {
             $this->piloted->like($account, $post);
             if ($this->likes->findOneFor($account, $post) instanceof Like) {
                 return true; // déjà reçu par la fédération
@@ -139,7 +139,7 @@ final readonly class SocialActions
             throw new \DomainException(\sprintf('Un commentaire contient entre 1 et %d caractères.', Comment::MAX_LENGTH));
         }
 
-        if ($account->isLocal()) {
+        if (!$this->throughServer($account, $post)) {
             $comment = new Comment($post, $account, $content);
         } else {
             $apUri = $this->piloted->comment($account, $post, $content);
@@ -159,8 +159,15 @@ final readonly class SocialActions
     }
 
     /**
-     * @param ?Account $by compte qui supprime : un compte piloté d'ici supprime son commentaire sur son serveur
+     * L'interaction d'un compte piloté d'ici passe-t-elle par son serveur ? Oui pour une publication du fédivers ou
+     * qui y part (publique, abonnés). Non pour une publication restée sur l'instance (non répertoriée, groupes) : son
+     * serveur ne la connaît pas, l'interaction reste ici.
      */
+    private function throughServer(Account $account, Post $post): bool
+    {
+        return !$account->isLocal() && (!$post->getAccount()->isLocal() || $post->getVisibility()->isFederated());
+    }
+
     public function deleteComment(Comment $comment, ?Account $by = null): void
     {
         if ($by instanceof Account && !$by->isLocal() && $comment->getAccount()->getId()->equals($by->getId())) {

@@ -7,6 +7,7 @@ namespace App\Tests\Integration;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Domain\Social\Comment;
 use App\Core\Domain\Social\Follow;
 use App\Core\Domain\Social\FollowState;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
@@ -105,6 +106,39 @@ final class MastodonInteractionsTest extends AppWebTestCase
         $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
         $this->client->submit($crawler->filter('#post-'.$post->getPublicId().'-comment-form')->form(), ['content' => 'Merci']);
         self::assertSame('direct', FakeMastodon::requestsTo('POST', '/api/v1/statuses')[0]['body']['visibility'] ?? null, 'Rien n’est montré aux abonnés d’alice.');
+    }
+
+    /**
+     * Publication d'un groupe (restée sur l'instance) : un compte Mastodon membre du groupe la voit, et son J'aime
+     * comme son commentaire restent ici, sans passer par son serveur, qui ne la connaît pas.
+     */
+    public function testAGroupMemberConnectedWithMastodonSeesAndInteractsWithAGroupPost(): void
+    {
+        $this->connect();
+        $this->register('camille');
+        $em = self::getContainer()->get('doctrine')->getManager();
+        $em->persist(new Follow($this->alice(), $this->camille()));
+        $em->flush();
+        $groups = self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class);
+        $family = $groups->create($this->camille(), 'Famille');
+        $post = self::getContainer()->get(PostComposer::class)->publish($this->camille(), 'En famille', [['file' => $this->jpeg(200, 250), 'alt' => null]], Visibility::Groups, audienceGroups: [$family]);
+
+        $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertResponseStatusCodeSame(404, 'Pas encore membre du groupe.');
+        // Services repris après la requête du client (qui relance le noyau).
+        self::getContainer()->get(\App\Core\Application\Social\AudienceGroups::class)->setMembers(self::getContainer()->get(\App\Core\Infrastructure\Doctrine\AudienceGroupRepository::class)->find($family->getId()) ?? throw new \LogicException(), [$this->alice()->getId()->toRfc4122()]);
+        $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertResponseIsSuccessful();
+
+        $this->toggleLike($post);
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        $this->client->submit($crawler->filter('#post-'.$post->getPublicId().'-comment-form')->form(), ['content' => 'Belle journée']);
+        self::assertSame(1, $this->reload($post)->getLikesCount());
+        self::assertSame(1, $this->reload($post)->getCommentsCount());
+        self::assertSame([], array_filter(FakeMastodon::$requests, static fn (array $r): bool => str_contains($r['url'], '/statuses') || str_contains($r['url'], '/search')), 'Rien ne passe par son serveur.');
+        $comment = self::getContainer()->get(CommentRepository::class)->findOneBy(['post' => $post->getId()]);
+        self::assertInstanceOf(Comment::class, $comment);
+        self::assertNull($comment->getApUri());
     }
 
     public function testFollowingGoesThroughTheMastodonServer(): void

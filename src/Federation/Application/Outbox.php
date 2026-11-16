@@ -50,7 +50,7 @@ final readonly class Outbox
         if (!$post->isFederable()) {
             return;
         }
-        $this->sendCreate($post, $this->recipients($post, $post->getVisibility(), $this->access->groupAudience($post)));
+        $this->sendCreate($post, $this->recipients($post, $post->getVisibility()));
     }
 
     /**
@@ -72,23 +72,14 @@ final readonly class Outbox
     }
 
     /**
-     * Boîtes de réception à qui livrer une publication : ses membres distants abonnés (boîte personnelle) pour une
-     * publication réservée à des groupes, sinon les abonnés distants.
-     *
-     * @param list<Account> $audience membres abonnés des groupes
+     * Boîtes de réception à qui livrer une publication : ses abonnés distants, si sa visibilité part dans le fédivers
+     * (publique ou réservée aux abonnés).
      *
      * @return list<string>
      */
-    private function recipients(Post $post, Visibility $visibility, array $audience): array
+    private function recipients(Post $post, Visibility $visibility): array
     {
-        return match ($visibility) {
-            Visibility::Private => [],
-            Visibility::Groups => array_values(array_unique(array_filter(array_map(
-                static fn (Account $m): ?string => $m->isLocal() ? null : ($m->getInboxUrl() ?? $m->getDeliveryInbox()),
-                $audience,
-            )))),
-            default => $this->followerInboxes($post->getAccount()),
-        };
+        return $visibility->isFederated() ? $this->followerInboxes($post->getAccount()) : [];
     }
 
     /**
@@ -113,8 +104,8 @@ final readonly class Outbox
         }
         $previous = $event->previousVisibility;
         $current = $post->getVisibility();
-        $wasFederated = Visibility::Private !== $previous;
-        $isFederated = Visibility::Private !== $current;
+        $wasFederated = $previous->isFederated();
+        $isFederated = $current->isFederated();
         if (!$wasFederated && !$isFederated) {
             return;
         }
@@ -131,7 +122,7 @@ final readonly class Outbox
                 return;
             }
             $note = $this->serializer->note($post);
-            $this->deliver($author, $this->recipients($post, $current, $audience), [
+            $this->deliver($author, $this->recipients($post, $current), [
                 'id' => $this->urls->activity($author, 'update'),
                 'type' => 'Update',
                 'actor' => $this->urls->actor($author),
@@ -143,12 +134,12 @@ final readonly class Outbox
             return;
         }
         if ($wasFederated) {
-            $this->sendDeletes($post, $previous, $previousAudience, $this->recipients($post, $previous, $previousAudience));
+            $this->sendDeletes($post, $previous, $previousAudience, $this->recipients($post, $previous));
             $post->retireFromFediverse();
             $this->em->flush();
         }
         if ($isFederated) {
-            $this->sendCreate($post, $this->recipients($post, $current, $audience));
+            $this->sendCreate($post, $this->recipients($post, $current));
         }
     }
 
@@ -182,7 +173,7 @@ final readonly class Outbox
     public function onPostArchived(PostArchived $event): void
     {
         $post = $event->post;
-        if (!$post->getAccount()->isLocal() || Visibility::Private === $post->getVisibility()) {
+        if (!$post->getAccount()->isLocal() || !$post->getVisibility()->isFederated()) {
             return;
         }
         $this->sendCurrentDelete($post);
@@ -207,12 +198,12 @@ final readonly class Outbox
             return;
         }
         $audience = $this->access->groupAudience($post);
-        $this->sendDeletes($post, $post->getVisibility(), $audience, $this->recipients($post, $post->getVisibility(), $audience));
+        $this->sendDeletes($post, $post->getVisibility(), $audience, $this->recipients($post, $post->getVisibility()));
         $post->retireFromFediverse();
         $this->em->flush();
         // Une publication importée sans annonce n'a jamais été envoyée : elle ne l'est pas davantage ici.
         if ($post->isFederable() && $post->shouldAnnounce()) {
-            $this->sendCreate($post, $this->recipients($post, $post->getVisibility(), $audience));
+            $this->sendCreate($post, $this->recipients($post, $post->getVisibility()));
         }
     }
 
@@ -243,7 +234,7 @@ final readonly class Outbox
     private function sendCurrentDelete(Post $post): void
     {
         $audience = $this->access->groupAudience($post);
-        $this->sendDeletes($post, $post->getVisibility(), $audience, $this->recipients($post, $post->getVisibility(), $audience));
+        $this->sendDeletes($post, $post->getVisibility(), $audience, $this->recipients($post, $post->getVisibility()));
     }
 
     /**
@@ -408,15 +399,10 @@ final readonly class Outbox
         $author = $comment->getAccount();
         $post = $comment->getPost();
         $postAuthor = $post->getAccount();
-        if (!$author->isLocal() || Visibility::Private === $post->getVisibility() || $post->isArchived()) {
+        // Publication qui ne part pas dans le fédivers (privée, non répertoriée, réservée à des groupes) : ses
+        // commentaires non plus.
+        if (!$author->isLocal() || !$post->getVisibility()->isFederated() || $post->isArchived()) {
             return null;
-        }
-        // Publication réservée à des groupes : le commentaire reste entre ses membres (et son auteur).
-        if (Visibility::Groups === $post->getVisibility()) {
-            return array_values(array_filter([
-                ...$this->recipients($post, Visibility::Groups, $this->access->groupAudience($post)),
-                ...($postAuthor->isLocal() ? [] : [$postAuthor->getDeliveryInbox()]),
-            ]));
         }
 
         return array_values(array_filter([
