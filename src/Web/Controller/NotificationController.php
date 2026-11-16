@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace App\Web\Controller;
 
 use App\Core\Application\Notification\Notifications;
+use App\Core\Application\Notification\PushNotifications;
+use App\Core\Application\Notification\PushSender;
 use App\Core\Domain\Notification\Notification;
+use App\Web\Controller\Payload\PushDevice;
+use App\Web\Form\NotificationPreferencesType;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -23,19 +29,71 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class NotificationController extends AbstractController
 {
     private const string TOKEN = 'notifications';
+    private const string DEVICE_TOKEN = 'push-device';
 
     public function __construct(
         private readonly Notifications $notifications,
         private readonly CurrentAccount $currentAccount,
+        private readonly PushNotifications $push,
+        private readonly PushSender $sender,
     ) {
     }
 
-    #[Route('/notifications', name: 'app_notifications', methods: ['GET'])]
-    public function index(): Response
+    #[Route('/notifications', name: 'app_notifications', methods: ['GET', 'POST'])]
+    public function index(Request $request): Response
     {
-        return $this->render('notification/index.html.twig', [
-            'notifications' => $this->notifications->of($this->currentAccount->require()),
+        $account = $this->currentAccount->require();
+        $preferences = $this->push->preferences($account);
+        $form = $this->createForm(NotificationPreferencesType::class, [
+            'posts' => $preferences->posts(), 'stories' => $preferences->stories(), 'likes' => $preferences->likes(), 'comments' => $preferences->comments(),
         ]);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var array{posts: bool, stories: bool, likes: bool, comments: bool} $data */
+            $data = $form->getData();
+            $this->push->choose($account, $data['posts'], $data['stories'], $data['likes'], $data['comments']);
+            $this->addFlash('success', 'Choix des notifications enregistré.');
+
+            return $this->back();
+        }
+
+        return $this->render('notification/index.html.twig', [
+            'notifications' => $this->notifications->of($account),
+            'preferences_form' => $form,
+            'vapid_key' => $this->sender->publicKey(),
+            'devices' => $this->push->devicesCount($account),
+        ]);
+    }
+
+    /**
+     * Appareil abonné aux notifications (envoyé par le navigateur après l'accord de la personne).
+     */
+    #[Route('/notifications/appareils', name: 'app_push_subscribe', methods: ['POST'])]
+    public function subscribe(#[MapRequestPayload] PushDevice $device, Request $request): JsonResponse
+    {
+        $this->checkDeviceToken($request);
+        if (!$device->keys instanceof Payload\PushDeviceKeys) {
+            return $this->json(['error' => 'Clés de chiffrement manquantes.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $this->push->subscribe($this->currentAccount->require(), $device->endpoint, $device->keys->p256dh, $device->keys->auth);
+
+        return $this->json(['ok' => true]);
+    }
+
+    #[Route('/notifications/appareils/retirer', name: 'app_push_unsubscribe', methods: ['POST'])]
+    public function unsubscribe(#[MapRequestPayload] PushDevice $device, Request $request): JsonResponse
+    {
+        $this->checkDeviceToken($request);
+        $this->push->unsubscribe($this->currentAccount->require(), $device->endpoint);
+
+        return $this->json(['ok' => true]);
+    }
+
+    private function checkDeviceToken(Request $request): void
+    {
+        if (!$this->isCsrfTokenValid(self::DEVICE_TOKEN, (string) $request->headers->get('X-CSRF-Token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
+        }
     }
 
     /**
