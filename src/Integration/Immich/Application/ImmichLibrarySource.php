@@ -19,7 +19,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 /**
  * Photothèque Immich comme source de médias à publier (jetons « i-<id> »).
  * L'EXIF connu d'Immich (date, lieu, objectif, GPS) complète celui de l'original ; les médias publiés rejoignent
- * l'album « Publié sur Socialize » si le compte l'a demandé.
+ * l'album « Publié sur Socialize » si le compte l'a demandé. D'une photo live, « i-<id> » publie la photo fixe,
+ * « i-<id>-live » sa courte vidéo (avec l'EXIF de la photo, qui seule rejoint l'album).
  */
 final readonly class ImmichLibrarySource implements LibrarySource
 {
@@ -38,7 +39,7 @@ final readonly class ImmichLibrarySource implements LibrarySource
 
     public function fetch(Account $author, string $reference): LibraryMedia
     {
-        if (!preg_match('/^[0-9a-f-]{36}$/i', $reference)) {
+        if (!preg_match('/^([0-9a-f-]{36})('.preg_quote(LibrarySource::LIVE, '/').')?$/i', $reference, $m)) {
             throw new MediaProcessingException('La sélection de médias est invalide. Rechargez la page et réessayez.');
         }
         $connection = $this->connections->of($author) ?? throw new MediaProcessingException('Connectez Immich dans les réglages pour publier depuis votre photothèque.');
@@ -46,10 +47,11 @@ final readonly class ImmichLibrarySource implements LibrarySource
 
         $path = null;
         try {
-            $asset = $this->client->asset($server, $key, $reference);
-            $this->check($asset);
-            $path = $this->filesystem->tempnam(sys_get_temp_dir(), 'socialize-immich-', '.'.(pathinfo($asset->fileName, \PATHINFO_EXTENSION) ?: ($asset->video ? 'mp4' : 'jpg')));
-            $this->client->download($server, $key, $asset->id, $path);
+            $asset = $this->client->asset($server, $key, $m[1]);
+            $file = isset($m[2]) ? $this->client->asset($server, $key, $asset->liveVideoId ?? throw new MediaProcessingException(\sprintf('« %s » n’est pas une photo live.', $asset->fileName))) : $asset;
+            $this->check($file);
+            $path = $this->filesystem->tempnam(sys_get_temp_dir(), 'socialize-immich-', '.'.(pathinfo($file->fileName, \PATHINFO_EXTENSION) ?: ($file->video ? 'mov' : 'jpg')));
+            $this->client->download($server, $key, $file->id, $path);
 
             return new LibraryMedia($asset->id, new File($path), $asset->exif);
         } catch (ImmichException $e) {

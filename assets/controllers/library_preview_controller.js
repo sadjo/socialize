@@ -31,15 +31,22 @@ export default class extends Controller {
             entries: () => this.tileTargets.map(tileEntry),
             index,
             select: {
-                chosen: (i) => this.pick(i)?.getAttribute('aria-pressed') === 'true',
-                // Même effet qu'un toucher sur la vignette (contrôleur compose) : la sélection reste unique.
-                toggle: (i) => {
-                    const pick = this.pick(i);
+                // Photo live : deux versions au choix, la photo fixe ou la live (bouton caché .imm-pick-live).
+                choices: (i) => (this.pick(i, 'live') ? [{ key: 'still', label: 'Photo fixe' }, { key: 'live', label: 'Live' }] : null),
+                chosen: (i, choice) => this.chosen(this.pick(i, choice)),
+                // Même effet qu'un toucher sur la vignette (contrôleur compose) : la sélection reste unique, et une
+                // seule version d'une photo live est choisie (choisir l'autre remplace la première).
+                toggle: (i, choice) => {
+                    const pick = this.pick(i, choice);
                     if (!pick) return '';
-                    const before = pick.getAttribute('aria-pressed') === 'true';
+                    if (this.chosen(pick)) {
+                        pick.click();
+                        return '';
+                    }
+                    const other = choice ? this.pick(i, choice === 'live' ? 'still' : 'live') : null;
+                    if (this.chosen(other)) other.click();
                     pick.click();
-                    const after = pick.getAttribute('aria-pressed') === 'true';
-                    return !before && !after ? 'Le nombre maximal de médias est atteint : retirez-en un pour en choisir un autre.' : '';
+                    return this.chosen(pick) ? '' : 'Le nombre maximal de médias est atteint : retirez-en un pour en choisir un autre.';
                 },
             },
             onShow: (i) => this.reveal(this.tileTargets[i]),
@@ -51,8 +58,13 @@ export default class extends Controller {
         this.viewer.open();
     }
 
-    pick(index) {
-        return this.tileTargets[index]?.querySelector('.imm-pick');
+    // Bouton de choix d'une vignette ; « live » : la version live d'une photo live.
+    pick(index, choice = null) {
+        return this.tileTargets[index]?.querySelector(choice === 'live' ? '.imm-pick-live' : '.imm-pick');
+    }
+
+    chosen(button) {
+        return button?.getAttribute('aria-pressed') === 'true';
     }
 
     // La vignette affichée reste visible dans la liste (et la suite de la liste se charge en arrivant au bout).

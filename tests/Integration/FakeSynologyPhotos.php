@@ -133,7 +133,7 @@ final class FakeSynologyPhotos
             // Vidéo encore sans version lisible (seulement « flv ») : pas de lecture dans l'aperçu.
             self::VIDEO_ANNIVERSAIRE => self::item(self::VIDEO_ANNIVERSAIRE, 'video', 'Anniversaire.AVI', '2026-06-01 18:00:00', 0, duration: 3000, converted: ['flv']),
         ] : [
-            self::PHOTO_PLAGE => self::item(self::PHOTO_PLAGE, 'photo', 'IMG_5001.jpg', '2026-11-09 17:30:00', 1, ['camera' => 'iPhone 16 Pro', 'lens' => 'iPhone 16 Pro back camera 6.86mm f/1.78'], ['latitude' => 48.6493, 'longitude' => -2.0257], ['city' => 'Saint-Malo', 'country' => 'France']),
+            self::PHOTO_PLAGE => self::item(self::PHOTO_PLAGE, self::$livePhotos ? 'live' : 'photo', 'IMG_5001.jpg', '2026-11-09 17:30:00', 1, ['camera' => 'iPhone 16 Pro', 'lens' => 'iPhone 16 Pro back camera 6.86mm f/1.78'], ['latitude' => 48.6493, 'longitude' => -2.0257], ['city' => 'Saint-Malo', 'country' => 'France']),
             self::VIDEO_PORT => self::item(self::VIDEO_PORT, 'video', 'VID_5002.mp4', '2026-11-08 09:10:00', 1, duration: 4000, converted: ['high', 'flv']),
             self::PHOTO_ANCIENNE => self::item(self::PHOTO_ANCIENNE, 'photo', 'IMG_0003.jpg', '2025-05-01 12:00:00', 1),
         ];
@@ -262,7 +262,7 @@ final class FakeSynologyPhotos
         $zip = new \ZipArchive();
         $zip->open($path, \ZipArchive::OVERWRITE);
         $zip->addFromString('Live/IMG_'.$id.'_photo.JPG', $this->jpeg(800, 600));
-        $zip->addFromString('Live/IMG_'.$id.'.MOV', str_repeat('v', 500000));
+        $zip->addFromString('Live/IMG_'.$id.'.MOV', $this->video());
         $zip->close();
         $content = (string) file_get_contents($path);
         unlink($path);
@@ -275,6 +275,12 @@ final class FakeSynologyPhotos
         if (self::VIDEO_PORT !== $id) {
             return self::$livePhotos ? $this->livePhoto($id) : $this->jpeg(800, 600);
         }
+
+        return $this->video();
+    }
+
+    private function video(): string
+    {
         if (null === self::$video) {
             $path = sys_get_temp_dir().'/fake-synology-video.mp4';
             if (!is_file($path)) {

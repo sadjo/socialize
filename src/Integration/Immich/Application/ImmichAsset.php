@@ -10,7 +10,9 @@ namespace App\Integration\Immich\Application;
 final readonly class ImmichAsset
 {
     /**
-     * @param array<string, string> $exif métadonnées gardées dans l'original publié
+     * @param array<string, string> $exif        métadonnées gardées dans l'original publié
+     * @param ?string               $liveVideoId photo live (iPhone, Android) : sa courte vidéo, un média caché d'Immich
+     * @param bool                  $hidden      média caché de la photothèque (la vidéo d'une photo live)
      */
     public function __construct(
         public string $id,
@@ -23,6 +25,8 @@ final readonly class ImmichAsset
         public ?string $description,
         public ?string $place,
         public array $exif,
+        public ?string $liveVideoId = null,
+        public bool $hidden = false,
     ) {
     }
 
@@ -66,7 +70,14 @@ final readonly class ImmichAsset
             description: $string($exif, 'description'),
             place: '' !== $place ? $place : null,
             exif: $kept,
+            liveVideoId: \is_string($data['livePhotoVideoId'] ?? null) && '' !== $data['livePhotoVideoId'] ? $data['livePhotoVideoId'] : null,
+            hidden: 'hidden' === ($data['visibility'] ?? null) || false === ($data['isVisible'] ?? null),
         );
+    }
+
+    public function live(): bool
+    {
+        return null !== $this->liveVideoId;
     }
 
     public function durationLabel(): ?string

@@ -81,7 +81,7 @@ final class ImmichTest extends AppWebTestCase
 
         $this->client->request('GET', '/immich/phototheque', server: ['HTTP_TURBO_FRAME' => 'immich-library']);
         self::assertSelectorExists('turbo-frame#immich-library:not([src])');
-        self::assertSelectorCount(3, '.imm-tile');
+        self::assertSelectorCount(4, '.imm-tile', 'La vidéo cachée d’une photo live n’a pas de vignette à elle.');
         self::assertSelectorTextContains('.imm-day', 'Lundi 9 novembre 2026 · Honfleur, France');
         $video = '.imm-tile[data-preview-video="/immich/video/'.FakeImmich::VIDEO_LAC.'"]';
         self::assertSelectorExists($video.' .imm-pick .gi');
@@ -96,7 +96,7 @@ final class ImmichTest extends AppWebTestCase
 
         // Aller au 8 novembre : les médias pris ce jour-là et avant, pas ceux du 9.
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08');
-        self::assertSelectorCount(2, '.imm-tile');
+        self::assertSelectorCount(3, '.imm-tile');
         self::assertSelectorTextContains('.imm-day', 'Dimanche 8 novembre 2026');
         self::assertSelectorNotExists('.imm-pick[data-compose-token-param="i-'.FakeImmich::PHOTO_HONFLEUR.'"]');
         $this->client->request('GET', '/immich/phototheque?date=2026-11-08&album='.FakeImmich::ALBUM_NORMANDIE);
@@ -104,7 +104,7 @@ final class ImmichTest extends AppWebTestCase
         $this->client->request('GET', '/immich/phototheque?date=2026-01-01');
         self::assertSelectorTextContains('turbo-frame', 'jusqu’au 1 janvier 2026');
         $this->client->request('GET', '/immich/phototheque?date=pas-une-date');
-        self::assertSelectorCount(3, '.imm-tile', 'Une date invalide est ignorée.');
+        self::assertSelectorCount(4, '.imm-tile', 'Une date invalide est ignorée.');
 
         $this->client->request('GET', '/immich/apercu/'.FakeImmich::PHOTO_ETRETAT);
         self::assertResponseIsSuccessful();
@@ -133,6 +133,50 @@ final class ImmichTest extends AppWebTestCase
         }
         $this->client->request('GET', '/publier');
         self::assertSelectorNotExists('.src-tabs');
+    }
+
+    public function testALivePhotoShowsItsStillAndOffersBothVersions(): void
+    {
+        $this->login($this->connected('camille', addToAlbum: true));
+
+        // Immich liste la photo et sa courte vidéo (cachée, sans vignette) : seule la photo fixe a une vignette.
+        $this->client->request('GET', '/immich/phototheque');
+        self::assertSelectorNotExists('[data-compose-token-param="i-'.FakeImmich::LIVE_MOTION.'"]');
+        $live = '.imm-tile[data-preview-thumb="/immich/apercu/'.FakeImmich::PHOTO_LIVE.'"]';
+        self::assertSelectorExists($live.'[data-preview-live="/immich/video/'.FakeImmich::LIVE_MOTION.'"]:not([data-preview-video])', 'L’aperçu joue la courte vidéo.');
+        self::assertSelectorTextContains($live.' .imm-pick .gi.live', 'LIVE');
+        self::assertSelectorExists($live.' .imm-pick[data-compose-token-param="i-'.FakeImmich::PHOTO_LIVE.'"][data-compose-video-param="false"]', 'Toucher la vignette choisit la photo fixe.');
+        self::assertSelectorExists($live.' .imm-pick-live[hidden][data-compose-token-param="i-'.FakeImmich::PHOTO_LIVE.'-live"][data-compose-video-param="true"][data-action="compose#toggleLibrary"]');
+        self::assertStringContainsString('Photo live du', (string) $this->client->getCrawler()->filter($live)->attr('data-preview-label'));
+
+        $this->client->request('GET', '/immich/video/'.FakeImmich::LIVE_MOTION);
+        self::assertResponseIsSuccessful();
+
+        // Version live : la courte vidéo, avec l'EXIF de la photo ; c'est la photo qui rejoint l'album.
+        $post = $this->publish(['i-'.FakeImmich::PHOTO_LIVE.'-live'], ['i-'.FakeImmich::PHOTO_LIVE.'-live' => 'Le lac en mouvement']);
+        $media = array_values($post->getMedia()->toArray());
+        self::assertCount(1, $media);
+        self::assertTrue($media[0]->isVideo());
+        self::assertSame('Le lac en mouvement', $media[0]->getAltText());
+        self::assertSame('Annecy', $media[0]->getExif()['immich-city'] ?? null);
+        self::assertSame('/assets/'.FakeImmich::LIVE_MOTION.'/original', array_last(array_column(FakeImmich::requestsTo('GET', '#/original$#'), 'path')));
+
+        // Photo fixe.
+        $post = $this->publish(['i-'.FakeImmich::PHOTO_LIVE], []);
+        $media = array_values($post->getMedia()->toArray());
+        self::assertFalse($media[0]->isVideo());
+        self::assertSame('/assets/'.FakeImmich::PHOTO_LIVE.'/original', array_last(array_column(FakeImmich::requestsTo('GET', '#/original$#'), 'path')));
+
+        $album = array_find(FakeImmich::$albums, static fn (array $a): bool => 'Publié sur Socialize' === $a['name']);
+        self::assertSame([FakeImmich::PHOTO_LIVE, FakeImmich::PHOTO_LIVE], $album['assets'] ?? null);
+
+        // Une photo ordinaire n'a pas de version live.
+        $crawler = $this->client->request('GET', '/publier');
+        $values = $this->values($crawler->selectButton('Publier')->form()->getPhpValues());
+        $values['compose_post']['order'] = 'i-'.FakeImmich::PHOTO_ETRETAT.'-live';
+        $this->client->request('POST', '/publier', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('.field-errors', 'n’est pas une photo live');
     }
 
     public function testAPostMixesImmichAndDeviceMediaInTheChosenOrder(): void

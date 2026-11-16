@@ -10,12 +10,15 @@ use App\Integration\SynologyPhotos\Application\SynologyPhotosException;
 use App\Integration\SynologyPhotos\Application\SynologyPhotosItem;
 use App\Integration\SynologyPhotos\Domain\SynologyPhotosConnection;
 use App\Integration\SynologyPhotos\Infrastructure\SynologyPhotosClient;
+use App\Media\Application\MediaRules;
 use App\Web\Form\SynologyPhotosSettingsType;
 use App\Web\Http\ReleaseSession;
 use App\Web\Http\UpstreamRelay;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Form\FormError;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,6 +37,7 @@ final class SynologyPhotosController extends AbstractController
         private readonly SynologyPhotosConnections $connections,
         private readonly SynologyPhotosClient $client,
         private readonly CurrentAccount $currentAccount,
+        private readonly Filesystem $filesystem,
     ) {
     }
 
@@ -166,6 +170,33 @@ final class SynologyPhotosController extends AbstractController
         }
 
         return UpstreamRelay::respond($upstream, $this->client->chunks($upstream), 'video/', 'video/mp4', 3600);
+    }
+
+    /**
+     * Courte vidéo d'une photo live, pour l'aperçu. Synology Photos ne la donne que dans l'archive de la photo : elle
+     * en est extraite dans un fichier temporaire, servi par plages puis supprimé.
+     */
+    #[Route('/synology-photos/live/{space}/{id}', name: 'app_synology_photos_live', requirements: ['space' => '[pt]', 'id' => '\d{1,18}'], methods: ['GET'])]
+    #[ReleaseSession]
+    public function live(string $space, int $id): BinaryFileResponse
+    {
+        $connection = $this->connection();
+        $path = $this->filesystem->tempnam(sys_get_temp_dir(), 'socialize-synology-live-', '.mov');
+        try {
+            [$server, $session] = $this->connections->session($connection);
+            $this->client->liveVideo($server, $session, $this->space($space), $id, $path, (int) MediaRules::MAX_VIDEO_SIZE * 1024 * 1024);
+        } catch (SynologyPhotosException $e) {
+            $this->filesystem->remove($path);
+            $this->connections->noteFailure($connection, $e);
+            throw new NotFoundHttpException('Vidéo de la photo live introuvable dans Synology Photos.', $e);
+        }
+
+        $response = new BinaryFileResponse($path, headers: ['Content-Type' => (string) new \finfo(\FILEINFO_MIME_TYPE)->file($path)], autoEtag: true);
+        $response->deleteFileAfterSend();
+        $response->setPrivate();
+        $response->setMaxAge(3600);
+
+        return $response;
     }
 
     /**

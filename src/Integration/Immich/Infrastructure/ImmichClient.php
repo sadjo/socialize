@@ -51,7 +51,8 @@ final readonly class ImmichClient
 
     /**
      * Photothèque, de la plus récente à la plus ancienne, éventuellement limitée à un album
-     * et aux médias pris avant une date (pour aller directement à un jour).
+     * et aux médias pris avant une date (pour aller directement à un jour). Les médias cachés (la vidéo d'une photo
+     * live, sans vignette) n'y sont pas : la photo live les représente.
      *
      * @return array{assets: list<ImmichAsset>, next: ?int}
      */
@@ -69,7 +70,10 @@ final readonly class ImmichClient
         $items = \is_array($assets['items'] ?? null) ? $assets['items'] : [];
 
         return [
-            'assets' => array_values(array_map(ImmichAsset::fromApi(...), array_filter($items, \is_array(...)))),
+            'assets' => array_values(array_filter(
+                array_map(ImmichAsset::fromApi(...), array_filter($items, \is_array(...))),
+                static fn (ImmichAsset $asset): bool => !$asset->hidden,
+            )),
             'next' => is_numeric($assets['nextPage'] ?? null) ? (int) $assets['nextPage'] : null,
         ];
     }

@@ -9,8 +9,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Fausse instance Immich (v3) branchée sur le client HTTP d'Immich des tests : trois médias (deux photos,
- * une vidéo), un album, et l'API utilisée par Socialize. État statique : le noyau (donc ce service)
+ * Fausse instance Immich (v3) branchée sur le client HTTP d'Immich des tests : quatre médias (deux photos,
+ * une vidéo, une photo live et sa courte vidéo, cachée et sans vignette comme dans Immich), un album, et l'API utilisée par Socialize. État statique : le noyau (donc ce service)
  * est recréé à chaque requête du client de test ; reset() au début de chaque test.
  */
 final class FakeImmich
@@ -20,6 +20,8 @@ final class FakeImmich
     public const string PHOTO_ETRETAT = '0199a1b2-0000-7000-8000-000000000001';
     public const string PHOTO_HONFLEUR = '0199a1b2-0000-7000-8000-000000000002';
     public const string VIDEO_LAC = '0199a1b2-0000-7000-8000-000000000003';
+    public const string PHOTO_LIVE = '0199a1b2-0000-7000-8000-000000000004';
+    public const string LIVE_MOTION = '0199a1b2-0000-7000-8000-000000000005';
     public const string ALBUM_NORMANDIE = '0199a1b2-0000-7000-8000-00000000a001';
 
     /** Serveur injoignable (erreur réseau). */
@@ -84,7 +86,7 @@ final class FakeImmich
             'PUT' === $method && (bool) preg_match('#^/albums/([^/]+)/assets$#', $path, $m) => $this->addToAlbum($m[1], $body),
             'POST' === $method && '/search/metadata' === $path => $this->search($body),
             'GET' === $method && (bool) preg_match('#^/assets/([^/]+)$#', $path, $m) && isset(self::assets()[$m[1]]) => $this->json(self::assets()[$m[1]]),
-            'GET' === $method && (bool) preg_match('#^/assets/([^/]+)/thumbnail$#', $path, $m) && isset(self::assets()[$m[1]]) => new MockResponse($this->jpeg(120, 120), ['response_headers' => ['content-type' => 'image/jpeg']]),
+            'GET' === $method && (bool) preg_match('#^/assets/([^/]+)/thumbnail$#', $path, $m) && isset(self::assets()[$m[1]]) && 'hidden' !== self::assets()[$m[1]]['visibility'] => new MockResponse($this->jpeg(120, 120), ['response_headers' => ['content-type' => 'image/jpeg']]),
             // Vidéo lisible, par plages comme Immich.
             'GET' === $method && (bool) preg_match('#^/assets/([^/]+)/video/playback$#', $path, $m) && 'VIDEO' === (self::assets()[$m[1]]['type'] ?? null) => $this->playback($this->original($m[1]), $range),
             'GET' === $method && (bool) preg_match('#^/assets/([^/]+)/original$#', $path, $m) && isset(self::assets()[$m[1]]) => new MockResponse($this->original($m[1]), ['response_headers' => ['content-type' => 'application/octet-stream']]),
@@ -100,6 +102,9 @@ final class FakeImmich
         return [
             self::PHOTO_HONFLEUR => self::asset(self::PHOTO_HONFLEUR, 'IMAGE', 'IMG_4204.jpg', 'image/jpeg', '2026-11-09T10:20:00.000Z', ['make' => 'Apple', 'model' => 'iPhone 16 Pro', 'latitude' => 49.4194, 'longitude' => 0.233, 'city' => 'Honfleur', 'country' => 'France', 'description' => 'Le Vieux Bassin']),
             self::PHOTO_ETRETAT => self::asset(self::PHOTO_ETRETAT, 'IMAGE', 'IMG_4200.jpg', 'image/jpeg', '2026-11-08T08:12:00.000Z', ['make' => 'FUJIFILM', 'model' => 'X-T5', 'lensModel' => 'XF16-55mm F2.8 R LM WR', 'fNumber' => 8, 'latitude' => 49.7072, 'longitude' => 0.2036, 'city' => 'Étretat', 'country' => 'France', 'description' => 'Lever de soleil sur la falaise']),
+            // Photo live : la photo, puis sa courte vidéo (média caché), listées toutes deux par la recherche.
+            self::PHOTO_LIVE => ['livePhotoVideoId' => self::LIVE_MOTION] + self::asset(self::PHOTO_LIVE, 'IMAGE', 'IMG_4300.HEIC', 'image/heic', '2026-10-20T15:00:00.000Z', ['make' => 'Apple', 'model' => 'iPhone 16 Pro', 'city' => 'Annecy', 'country' => 'France', 'description' => 'Le lac en mouvement']),
+            self::LIVE_MOTION => ['visibility' => 'hidden'] + self::asset(self::LIVE_MOTION, 'VIDEO', 'IMG_4300.MOV', 'video/quicktime', '2026-10-20T15:00:00.000Z', [], 1500),
             self::VIDEO_LAC => self::asset(self::VIDEO_LAC, 'VIDEO', 'VID_7300.mp4', 'video/mp4', '2026-10-18T09:40:00.000Z', ['latitude' => 45.9812, 'longitude' => 6.8925, 'city' => 'Chamonix-Mont-Blanc', 'country' => 'France'], 4000),
         ];
     }
@@ -113,7 +118,7 @@ final class FakeImmich
     {
         return [
             'id' => $id, 'type' => $type, 'originalFileName' => $name, 'originalMimeType' => $mime,
-            'localDateTime' => $taken, 'fileCreatedAt' => $taken, 'duration' => $duration, 'width' => 800, 'height' => 600,
+            'localDateTime' => $taken, 'fileCreatedAt' => $taken, 'duration' => $duration, 'width' => 800, 'height' => 600, 'visibility' => 'timeline',
             'exifInfo' => $exif + ['dateTimeOriginal' => $taken, 'fileSizeInByte' => 120000],
         ];
     }
@@ -181,7 +186,7 @@ final class FakeImmich
 
     private function original(string $id): string
     {
-        if (self::VIDEO_LAC !== $id) {
+        if (!\in_array($id, [self::VIDEO_LAC, self::LIVE_MOTION], true)) {
             return $this->jpeg(800, 600);
         }
         if (null === self::$video) {

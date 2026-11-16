@@ -475,6 +475,11 @@ pre.code{margin:0;padding:14px 16px;border-radius:14px;background:var(--bg);bord
 .imm-tile:has(.imm-pick[aria-pressed="true"]){outline:3px solid var(--accent);outline-offset:-3px}
 .imm-tile:has(.imm-pick[aria-pressed="true"]) img{transform:scale(.9);border-radius:6px}
 .imm-pick[aria-pressed="true"] .sel{background:var(--accent);border-color:var(--accent);color:var(--on-grad)}
+/* Photo live : badge LIVE ; la version live choisie (bouton caché .imm-pick-live) marque la vignette et le badge. */
+.imm-tile .gi.live{padding:1px 5px;border-radius:4px;background:oklch(0 0 0 / .4);letter-spacing:.06em;text-shadow:none}
+.imm-tile:has(.imm-pick-live[aria-pressed="true"]){outline:3px solid var(--accent);outline-offset:-3px}
+.imm-tile:has(.imm-pick-live[aria-pressed="true"]) img{transform:scale(.9);border-radius:6px}
+.imm-tile:has(.imm-pick-live[aria-pressed="true"]) .sel,.imm-tile:has(.imm-pick-live[aria-pressed="true"]) .gi.live{background:var(--accent);border-color:var(--accent);color:var(--on-grad)}
 .preview .src-badge{position:absolute;left:6px;bottom:6px;font-size:.68rem;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--media-shade);color:var(--on-media)}
 
 /* ---------- Import ---------- */
@@ -715,6 +720,9 @@ label.act{cursor:pointer}
 .lb-info .lb-details{opacity:.8;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-info .lb-note:not(:empty){font-size:.8rem;color:oklch(0.88 0.12 75)}
 .lb-select{flex:none;min-width:120px}
+.lb-choices{flex:none;display:flex;gap:8px}
+/* Photo live : deux boutons (photo fixe, live), plus serrés sur un téléphone. */
+@media (max-width:480px){.lb-choices:has(.lb-select + .lb-select) .lb-select{min-width:0;padding-inline:10px;font-size:.82rem}}
 .lb-select:not(.pri){background:oklch(1 0 0 / .14);color:#fff;border-color:oklch(1 0 0 / .3)}
 .lb-remove{flex:none;background:oklch(1 0 0 / .14);color:#fff;border-color:oklch(1 0 0 / .3)}
 .lb-remove:hover{background:oklch(0.55 0.2 25 / .85);border-color:transparent}

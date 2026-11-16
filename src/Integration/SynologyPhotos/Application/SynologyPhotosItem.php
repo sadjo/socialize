@@ -25,6 +25,7 @@ final readonly class SynologyPhotosItem
      * @param ?string                   $cacheKey      clé de la vignette (demandée par l'API des vignettes)
      * @param array<string, string>     $exif          métadonnées gardées dans l'original publié
      * @param ?string                   $streamQuality version convertie lue dans l'aperçu (vidéo ; null : aucune)
+     * @param bool                      $live          photo live (iPhone) : la photo et sa courte vidéo forment un seul élément
      */
     public function __construct(
         public int $id,
@@ -38,6 +39,7 @@ final readonly class SynologyPhotosItem
         public ?string $place,
         public array $exif,
         public ?string $streamQuality = null,
+        public bool $live = false,
     ) {
     }
 
@@ -86,6 +88,7 @@ final readonly class SynologyPhotosItem
             place: '' !== $place ? $place : null,
             exif: $kept,
             streamQuality: array_find(self::STREAM_QUALITIES, static fn (string $quality): bool => \in_array($quality, $converted, true)),
+            live: 'live' === ($data['type'] ?? null),
         );
     }
 

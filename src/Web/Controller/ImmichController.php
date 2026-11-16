@@ -13,6 +13,7 @@ use App\Web\Form\ImmichSettingsType;
 use App\Web\Http\ReleaseSession;
 use App\Web\Http\UpstreamRelay;
 use App\Web\Security\CurrentAccount;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -34,6 +35,7 @@ final class ImmichController extends AbstractController
         private readonly ImmichConnections $connections,
         private readonly ImmichClient $client,
         private readonly CurrentAccount $currentAccount,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -151,8 +153,9 @@ final class ImmichController extends AbstractController
         [$server, $key] = $this->connections->credentials($this->connection());
         try {
             $upstream = $this->client->playback($server, $key, $asset, UpstreamRelay::rangeHeaders($request));
-        } catch (ImmichException) {
-            throw new NotFoundHttpException('Vidéo introuvable dans Immich.');
+        } catch (ImmichException $e) {
+            $this->logger->warning('Vidéo Immich {asset} non relayée : {reason}', ['asset' => $asset, 'reason' => $e->getMessage()]);
+            throw new NotFoundHttpException('Vidéo introuvable dans Immich.', $e);
         }
 
         return UpstreamRelay::respond($upstream, $this->client->chunks($upstream), 'video/', 'video/mp4', 3600);
@@ -166,8 +169,10 @@ final class ImmichController extends AbstractController
         [$server, $key] = $this->connections->credentials($this->connection());
         try {
             $upstream = $this->client->thumbnail($server, $key, $asset, $size);
-        } catch (ImmichException) {
-            throw new NotFoundHttpException('Image introuvable dans Immich.');
+        } catch (ImmichException $e) {
+            // La page d'erreur dit seulement « introuvable » : la vraie cause (droit, délai, erreur d'Immich) va au journal.
+            $this->logger->warning('Image Immich {asset} ({size}) non relayée : {reason}', ['asset' => $asset, 'size' => $size, 'reason' => $e->getMessage()]);
+            throw new NotFoundHttpException('Image introuvable dans Immich.', $e);
         }
 
         return UpstreamRelay::respond($upstream, $this->client->chunks($upstream), 'image/', 'image/webp');
