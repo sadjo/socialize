@@ -19,7 +19,7 @@
                 <span class="ico">{{ ui.icon('image') }}</span>
                 <span class="grow">
                     <b>@{{ connection.username }}</b><br>
-                    <small>connecté le {{ connection.connectedAt|format_datetime('long', 'short', locale: 'fr') }} · autorisation valable jusqu’au {{ connection.tokenExpiresAt|format_date('long', locale: 'fr') }}, renouvelée automatiquement</small>
+                    <small>connecté le {{ connection.connectedAt|format_datetime('long', 'short', locale: 'fr') }}{% if connection.unifiedLogin %} · connexion unifiée · {{ connection.canDelete ? 'publications supprimées aussi sur Instagram quand vous les supprimez ici' : 'suppression sur Instagram impossible : ajoutez le droit instagram_manage_contents à la configuration, puis reconnectez' }}{% else %} · autorisation valable jusqu’au {{ connection.tokenExpiresAt|format_date('long', locale: 'fr') }}, renouvelée automatiquement{% endif %}</small>
                 </span>
                 {% if expired %}
                     <span class="chip">{{ ui.icon('flag', 'xs') }}À reconnecter</span>
@@ -35,7 +35,8 @@
                         <legend class="lab">{{ form.visibilities.vars.label }}</legend>
                         <div class="choices">
                             {% for box in form.visibilities %}
-                                <label class="chk">{{ form_widget(box) }}<span>{{ box.vars.label }}</span></label>
+                                {# Case puis étiquette : la pastille cochée est surlignée (.choices input:checked + label). #}
+                                {{ form_widget(box) }}<label for="{{ box.vars.id }}">{{ box.vars.label }}</label>
                             {% endfor %}
                         </div>
                         <p class="help">La case reste modifiable à chaque publication. Sur Instagram, un compte professionnel est public : une publication réservée à vos abonnés y sera visible de tous.</p>

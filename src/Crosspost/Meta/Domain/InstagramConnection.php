@@ -47,6 +47,10 @@ class InstagramConnection
     #[ORM\Column(options: ['default' => false])]
     private bool $unifiedLogin = false;
 
+    /** Droit instagram_manage_contents accordé (connexion unifiée) : ses publications se suppriment sur Instagram. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $canDelete = false;
+
     public function __construct(
         #[ORM\OneToOne]
         #[ORM\JoinColumn(unique: true, nullable: false, onDelete: 'CASCADE')]
@@ -110,9 +114,10 @@ class InstagramConnection
     /**
      * Nouvelle connexion (ou reconnexion) : nouveau compte et nouveau jeton.
      */
-    public function reconnect(string $instagramUserId, string $username, string $tokenEncrypted, \DateTimeImmutable $expiresAt, \DateTimeImmutable $now, bool $unifiedLogin = false): void
+    public function reconnect(string $instagramUserId, string $username, string $tokenEncrypted, \DateTimeImmutable $expiresAt, \DateTimeImmutable $now, bool $unifiedLogin = false, bool $canDelete = false): void
     {
         $this->unifiedLogin = $unifiedLogin;
+        $this->canDelete = $unifiedLogin && $canDelete;
         $this->instagramUserId = $instagramUserId;
         $this->username = $username;
         $this->renew($tokenEncrypted, $expiresAt, $now);
@@ -127,9 +132,15 @@ class InstagramConnection
         $this->expiredAt = null;
     }
 
-    public function viaUnifiedLogin(): void
+    public function viaUnifiedLogin(bool $canDelete = false): void
     {
         $this->unifiedLogin = true;
+        $this->canDelete = $canDelete;
+    }
+
+    public function canDelete(): bool
+    {
+        return $this->unifiedLogin && $this->canDelete;
     }
 
     public function isUnifiedLogin(): bool

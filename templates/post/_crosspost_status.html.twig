@@ -2,18 +2,32 @@
    Variables : crosspost, post #}
 {% import '_macros.html.twig' as ui %}
 {% if crosspost %}
+    {% set relaunch_token = csrf_token('instagram-retry-' ~ crosspost.id) %}
     <div class="crosspost-status small">
         {% if crosspost.status.value == 'published' %}
-            {{ ui.icon('check', 'xs') }}Publiée sur Instagram{% if crosspost.permalink %} · <a class="lnk" href="{{ crosspost.permalink }}" target="_blank" rel="noopener">voir sur Instagram</a>{% endif %}
-            · <span title="Instagram ne permet pas de modifier ni de supprimer une publication de l’extérieur">les modifications et la suppression se font sur Instagram</span>
+            {{ ui.icon('check', 'xs') }}Publiée sur Instagram{% if crosspost.publishedAt %} le {{ crosspost.publishedAt|format_datetime('short', 'short', locale: 'fr') }}{% endif %}
+            {%- if crosspost.permalink %} · <a class="lnk" href="{{ crosspost.permalink }}" target="_blank" rel="noopener">voir sur Instagram</a>{% else %} · lien en attente d’Instagram{% endif %}
+            {% set conn = instagram_connection() %}
+            · <span>{{ conn and conn.canDelete ? 'supprimée aussi sur Instagram si vous la supprimez ici' : 'les modifications et la suppression se font sur Instagram' }}</span>
+            <form method="post" action="{{ path('app_instagram_retry', {id: crosspost.id}) }}" data-turbo-confirm="Republier sur Instagram ? {{ conn and conn.canDelete ? 'La publication Instagram actuelle sera supprimée, puis remplacée.' : 'La publication Instagram actuelle restera : supprimez-la dans l’application Instagram pour éviter un doublon.' }}">
+                <input type="hidden" name="_token" value="{{ relaunch_token }}">
+                <button class="btn sm">Republier</button>
+            </form>
         {% elseif crosspost.status.value == 'failed' %}
             {{ ui.icon('flag', 'xs') }}<span>Échec de l’envoi vers Instagram : {{ crosspost.error }}</span>
             <form method="post" action="{{ path('app_instagram_retry', {id: crosspost.id}) }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('instagram-retry-' ~ crosspost.id) }}">
+                <input type="hidden" name="_token" value="{{ relaunch_token }}">
                 <button class="btn sm">Réessayer</button>
             </form>
         {% else %}
             {{ ui.icon('upload', 'xs') }}Envoi vers Instagram en cours…
+            {% if can_relaunch_instagram(crosspost) %}
+                <span>bloqué (dernière étape {{ crosspost.updatedAt|ago }}).</span>
+                <form method="post" action="{{ path('app_instagram_retry', {id: crosspost.id}) }}">
+                    <input type="hidden" name="_token" value="{{ relaunch_token }}">
+                    <button class="btn sm">Relancer l’envoi</button>
+                </form>
+            {% endif %}
         {% endif %}
     </div>
 {% elseif post is defined and can_send_to_instagram(post) %}

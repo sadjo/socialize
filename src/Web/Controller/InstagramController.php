@@ -193,7 +193,8 @@ final class InstagramController extends AbstractController
     }
 
     /**
-     * Nouvel essai d'un envoi qui a échoué.
+     * Relance d'un envoi : après un échec, s'il est bloqué, ou pour republier (la publication Instagram précédente
+     * est d'abord supprimée si possible).
      */
     #[Route('/instagram/envois/{id}/reessayer', name: 'app_instagram_retry', requirements: ['id' => Requirement::UUID], methods: ['POST'])]
     public function retry(string $id, Request $request, InstagramCrosspostRepository $crossposts, InstagramPublishing $publishing): RedirectResponse
@@ -205,8 +206,12 @@ final class InstagramController extends AbstractController
         if (!$this->isCsrfTokenValid('instagram-retry-'.$id, $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
         }
-        $publishing->retry($crosspost);
-        $this->addFlash('success', 'Nouvel envoi vers Instagram en cours.');
+        if (!$publishing->canRelaunch($crosspost)) {
+            $this->addFlash('error', 'L’envoi vers Instagram est en cours : il pourra être relancé s’il n’a pas abouti dans un quart d’heure.');
+        } else {
+            $notice = $publishing->retry($crosspost);
+            $this->addFlash('success', 'Nouvel envoi vers Instagram en cours.'.(null !== $notice ? ' '.$notice : ''));
+        }
         $post = $crosspost->getPost();
 
         return $post instanceof \App\Core\Domain\Post\Post

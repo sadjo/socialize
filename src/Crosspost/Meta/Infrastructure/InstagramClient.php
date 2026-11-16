@@ -28,6 +28,8 @@ final readonly class InstagramClient
     public const string FACEBOOK_GRAPH = 'https://graph.facebook.com';
     /** Droits demandés par la configuration « Facebook Login for Business » de la connexion unifiée. */
     public const array UNIFIED_SCOPES = ['instagram_basic', 'instagram_content_publish'];
+    /** Droit facultatif de la configuration : suppression des publications Instagram. */
+    public const string DELETE_SCOPE = 'instagram_manage_contents';
     public const array SCOPES = ['instagram_business_basic', 'instagram_business_content_publish'];
 
     /** Jeton refusé (expiré, révoqué, droits retirés). */
@@ -225,6 +227,18 @@ final readonly class InstagramClient
         }
 
         return \is_string($data['permalink'] ?? null) ? $data['permalink'] : null;
+    }
+
+    /**
+     * Supprime une publication Instagram (publication, Reel, story ou carrousel entier). Possible seulement par
+     * graph.facebook.com (connexion unifiée), avec le droit instagram_manage_contents.
+     */
+    public function deleteMedia(string $mediaId, #[\SensitiveParameter] string $token): void
+    {
+        $data = $this->request('DELETE', $this->graph(rawurlencode($mediaId), true), ['query' => ['access_token' => $token]]);
+        if (true !== ($data['success'] ?? null)) {
+            throw new InstagramException('Instagram n’a pas confirmé la suppression.');
+        }
     }
 
     /**

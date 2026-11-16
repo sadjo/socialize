@@ -19,12 +19,29 @@ final readonly class CrosspostExtension
     public function __construct(
         private InstagramCrosspostRepository $crossposts,
         private InstagramPublishing $publishing,
+        private \App\Crosspost\Meta\Application\InstagramConnections $connections,
+        private \App\Web\Security\CurrentAccount $currentAccount,
     ) {
     }
 
     /**
      * Bouton « Publier sur Instagram » d'une publication déjà en ligne, pas encore envoyée.
      */
+    /**
+     * Connexion Instagram du compte connecté (droits de suppression…), ou null.
+     */
+    #[AsTwigFunction('instagram_connection')]
+    public function connection(): ?\App\Crosspost\Meta\Domain\InstagramConnection
+    {
+        return $this->connections->usable($this->currentAccount->get());
+    }
+
+    #[AsTwigFunction('can_relaunch_instagram')]
+    public function canRelaunch(InstagramCrosspost $crosspost): bool
+    {
+        return $this->publishing->canRelaunch($crosspost);
+    }
+
     #[AsTwigFunction('can_send_to_instagram')]
     public function canSendToInstagram(Post $post): bool
     {

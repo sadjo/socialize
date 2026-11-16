@@ -176,16 +176,18 @@ final readonly class InstagramConnections
             throw new InstagramException('Aucun compte Instagram professionnel n’est confié à cette configuration : ajoutez-le comme ressource (« Compte Instagram ») dans la configuration de l’application Meta.');
         }
         $ig = $accounts[0];
+        // Suppression sur Instagram : droit facultatif de la configuration (droits inconnus : on essaiera).
+        $canDelete = [] === $grant['scopes'] || \in_array(InstagramClient::DELETE_SCOPE, $grant['scopes'], true);
 
         $now = $this->clock->now();
         // Sans expiration (utilisateur système) : gardée dix ans, sans renouvellement.
         $expiresAt = null !== $grant['expiresAt'] ? $now->setTimestamp($grant['expiresAt']) : $now->modify('+10 years');
         $connection = $this->connections->forAccount($account);
         if ($connection instanceof InstagramConnection) {
-            $connection->reconnect($ig['userId'], $ig['username'], $this->vault->encrypt($grant['token']), $expiresAt, $now, unifiedLogin: true);
+            $connection->reconnect($ig['userId'], $ig['username'], $this->vault->encrypt($grant['token']), $expiresAt, $now, unifiedLogin: true, canDelete: $canDelete);
         } else {
             $connection = new InstagramConnection($account, $ig['userId'], $ig['username'], $this->vault->encrypt($grant['token']), $expiresAt, $now);
-            $connection->viaUnifiedLogin();
+            $connection->viaUnifiedLogin($canDelete);
             $this->em->persist($connection);
         }
         $this->em->flush();

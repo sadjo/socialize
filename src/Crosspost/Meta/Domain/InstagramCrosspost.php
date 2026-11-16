@@ -118,6 +118,42 @@ class InstagramCrosspost
     }
 
     /**
+     * Identifiant de la publication Instagram (gardé pour la retrouver et la supprimer).
+     */
+    public function getInstagramMediaId(): ?string
+    {
+        return $this->instagramMediaId;
+    }
+
+    /**
+     * Publiée, mais Instagram n'a pas encore donné son lien : il est redemandé un peu plus tard.
+     */
+    public function awaitsPermalink(): bool
+    {
+        return CrosspostStatus::Published === $this->status && null === $this->permalink && null !== $this->instagramMediaId;
+    }
+
+    public function permalinkFound(?string $permalink, \DateTimeImmutable $now): void
+    {
+        $this->permalink = $permalink;
+        ++$this->checks;
+        $this->updatedAt = $now;
+    }
+
+    /**
+     * Envoi en cours depuis longtemps sans aboutir (message perdu, worker arrêté) : il peut être relancé.
+     */
+    public function isStuck(\DateTimeImmutable $now): bool
+    {
+        return !$this->isDone() && $this->updatedAt < $now->modify('-15 minutes');
+    }
+
+    public function getUpdatedAt(): \DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    /**
      * @return list<string>
      */
     public function getMediaContainers(): array
@@ -185,6 +221,7 @@ class InstagramCrosspost
 
     public function published(string $mediaId, ?string $permalink, \DateTimeImmutable $now): void
     {
+        $this->checks = 0;
         $this->status = CrosspostStatus::Published;
         $this->instagramMediaId = $mediaId;
         $this->permalink = $permalink;
@@ -203,15 +240,22 @@ class InstagramCrosspost
     }
 
     /**
-     * « Réessayer » après un échec : tout recommence.
+     * Relance (après un échec, un envoi bloqué ou pour republier) : tout recommence. Rend l'identifiant de la
+     * publication Instagram précédente, s'il y en a une.
      */
-    public function retry(\DateTimeImmutable $now): void
+    public function retry(\DateTimeImmutable $now): ?string
     {
+        $previous = $this->instagramMediaId;
         $this->status = CrosspostStatus::Pending;
         $this->mediaContainers = [];
         $this->containerId = null;
+        $this->instagramMediaId = null;
+        $this->permalink = null;
+        $this->publishedAt = null;
         $this->error = null;
         $this->checks = 0;
         $this->updatedAt = $now;
+
+        return $previous;
     }
 }

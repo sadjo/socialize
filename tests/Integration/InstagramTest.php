@@ -76,8 +76,11 @@ final class InstagramTest extends AppWebTestCase
         self::assertSame('jeton-long-1', self::getContainer()->get(InstagramVault::class)->decrypt($connection->getTokenEncrypted()));
         self::assertGreaterThan(new \DateTimeImmutable('+59 days'), $connection->getTokenExpiresAt());
 
-        // Règles : abonnés aussi, et stories.
+        // Règles : abonnés aussi, et stories. Chaque case précède son étiquette (pastille surlignée une fois cochée).
         $crawler = $this->client->request('GET', '/reglages/instagram');
+        $public = $crawler->filter('.choices input[value="public"]');
+        self::assertSame('checked', $public->attr('checked'), 'Public coché par défaut.');
+        self::assertSame($public->attr('id'), $crawler->filter('.choices input[value="public"] + label')->attr('for'));
         $form = $crawler->selectButton('Enregistrer les règles')->form();
         $values = $form->getPhpValues();
         self::assertIsArray($values['instagram_rules'] ?? null);
@@ -195,6 +198,79 @@ final class InstagramTest extends AppWebTestCase
         self::assertSame(CrosspostStatus::Published, $this->crosspostOf($post)->getStatus());
         $hosts = array_unique(array_map(static fn (array $r): string => $r['host'], array_filter(FakeInstagram::$requests, static fn (array $r): bool => str_ends_with($r['path'], '/media_publish'))));
         self::assertSame(['graph.facebook.com'], array_values($hosts));
+    }
+
+    /**
+     * Connexion unifiée avec le droit instagram_manage_contents : republier remplace la publication Instagram, et
+     * supprimer la publication ici la supprime sur Instagram.
+     */
+    public function testRepublishingAndDeletingFollowOnInstagram(): void
+    {
+        $camille = $this->unifiedConnected('camille');
+        self::assertTrue($this->connection()?->canDelete());
+        FakeInstagram::$permalinkMisses = 1;
+        $post = $this->publish($camille, 'Lac');
+        $crosspost = $this->crosspostOf($post);
+        self::assertSame('media-1', $crosspost->getInstagramMediaId());
+        self::assertSame('https://www.instagram.com/p/media-1/', $crosspost->getPermalink(), 'Lien redemandé quand Instagram ne l’a pas donné tout de suite.');
+
+        // Republier : l'ancienne publication est supprimée, la nouvelle la remplace (et son lien est gardé).
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertSelectorTextContains('.crosspost-status', 'supprimée aussi sur Instagram si vous la supprimez ici');
+        $this->client->submit($crawler->selectButton('Republier')->form());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'La publication Instagram précédente a été supprimée.');
+        self::assertSame(['media-1'], FakeInstagram::$deleted);
+        $crosspost = $this->crosspostOf($post);
+        self::assertSame(CrosspostStatus::Published, $crosspost->getStatus());
+        self::assertSame('media-2', $crosspost->getInstagramMediaId());
+        self::assertSame('https://www.instagram.com/p/media-2/', $crosspost->getPermalink());
+
+        // Supprimer ici : supprimée sur Instagram.
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        $this->client->submit($crawler->filter('form[action="/p/'.$post->getPublicId().'/supprimer"]')->form());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Elle est supprimée aussi sur Instagram.');
+        self::assertSame(['media-1', 'media-2'], FakeInstagram::$deleted);
+    }
+
+    public function testWithoutTheRightTheInstagramCopyStays(): void
+    {
+        FakeInstagram::$scopes = ['instagram_basic', 'instagram_content_publish'];
+        $camille = $this->unifiedConnected('camille');
+        self::assertFalse($this->connection()?->canDelete());
+        $post = $this->publish($camille, 'Lac');
+
+        $this->login($camille);
+        $this->client->request('GET', '/reglages/instagram');
+        self::assertSelectorTextContains('.zip', 'ajoutez le droit instagram_manage_contents');
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        $this->client->submit($crawler->filter('form[action="/p/'.$post->getPublicId().'/supprimer"]')->form());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Sa copie sur Instagram reste');
+        self::assertSame([], FakeInstagram::$deleted);
+    }
+
+    public function testAStuckSendingCanBeRelaunched(): void
+    {
+        $camille = $this->connected('camille');
+        $post = $this->publish($camille, 'Lac');
+        $crosspost = $this->crosspostOf($post);
+        // Envoi resté « en cours » depuis vingt minutes (message perdu).
+        $updated = self::getContainer()->get(\Doctrine\DBAL\Connection::class)->update('instagram_crossposts', [
+            'status' => CrosspostStatus::Processing->value,
+            'updated_at' => new \DateTimeImmutable('-20 minutes')->format('Y-m-d H:i:s'),
+        ], ['id' => $crosspost->getId()->toBinary()]);
+        self::assertSame(1, $updated);
+        self::getContainer()->get('doctrine')->getManager()->clear();
+
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertSelectorTextContains('.crosspost-status', 'bloqué');
+        $this->client->submit($crawler->selectButton('Relancer l’envoi')->form());
+        self::assertSame(CrosspostStatus::Published, $this->crosspostOf($post)->getStatus());
+        self::assertCount(2, FakeInstagram::$published);
     }
 
     public function testThePublishBoxFollowsTheRulesAndOnlyAppearsWhenConnected(): void
@@ -409,6 +485,17 @@ final class InstagramTest extends AppWebTestCase
         $this->login($this->register('hugo', publisher: false));
         $this->client->request('GET', '/reglages/instagram');
         self::assertResponseStatusCodeSame(403);
+    }
+
+    private function unifiedConnected(string $username): User
+    {
+        $user = $this->register($username);
+        $connections = self::getContainer()->get(InstagramConnections::class);
+        $connections->saveApp($user->getAccount(), '987650000111', 'secret-meta', '24680000222');
+        FakeInstagram::$secret = 'secret-meta';
+        $connections->connect($this->reloadUser($user)->getAccount(), FakeInstagram::CODE, 'http://localhost/reglages/instagram/retour');
+
+        return $user;
     }
 
     private function connected(string $username): User
