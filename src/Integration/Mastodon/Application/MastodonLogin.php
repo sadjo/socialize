@@ -105,7 +105,8 @@ final readonly class MastodonLogin
     {
         $this->checkAllowed($domain);
         $token = ['token' => $plainToken, 'scopes' => $scopes];
-        $account = $this->account($domain, $token['token']);
+        $me = $this->client->verifyCredentials($domain, $token['token']);
+        $account = $this->account($domain, $me);
 
         $now = $this->clock->now();
         $user = $this->users->forAccount($account);
@@ -113,7 +114,7 @@ final readonly class MastodonLogin
             $user = new MastodonUser($account, $now);
             $this->em->persist($user);
         }
-        $user->loggedIn($this->vault->encrypt($token['token']), $token['scopes'], $now);
+        $user->loggedIn($this->vault->encrypt($token['token']), $token['scopes'], $now, $me['privacy']);
         $this->em->flush();
 
         // Historique de son compte, pour son profil : à chaque connexion, puis régulièrement (RefreshMastodonAccounts).
@@ -183,9 +184,11 @@ final readonly class MastodonLogin
      * Compte distant du jeton. Son acteur ActivityPub doit être sur le serveur qui a délivré le jeton : un serveur ne
      * peut pas faire passer un de ses utilisateurs pour un compte d'un autre serveur.
      */
-    private function account(string $domain, #[\SensitiveParameter] string $token): Account
+    /**
+     * @param array{username: string, actor: ?string, privacy: ?string} $me compte du jeton (verify_credentials)
+     */
+    private function account(string $domain, array $me): Account
     {
-        $me = $this->client->verifyCredentials($domain, $token);
         try {
             $account = null !== $me['actor'] && $this->hostOf($me['actor']) === $domain
                 ? $this->remoteAccounts->byUri($me['actor'], true)

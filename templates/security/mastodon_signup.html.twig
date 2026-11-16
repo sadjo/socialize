@@ -25,6 +25,7 @@
                 {{ form_row(form.password) }}
                 {% if form.dateOfBirth is defined %}{{ form_row(form.dateOfBirth) }}{% endif %}
                 {% if form.reason is defined %}{{ form_row(form.reason) }}{% endif %}
+                <label class="chk">{{ form_widget(form.private) }}<span>{{ form.private.vars.label }}<br><small>{{ form.private.vars.help }}</small></span></label>
                 {% if registration.rules is not empty %}
                     <details class="mastodon-rules">
                         <summary class="small">Règles de {{ registration.domain }} ({{ registration.rules|length }})</summary>

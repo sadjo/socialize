@@ -64,6 +64,12 @@ final class MastodonSignupType extends AbstractType
                 'constraints' => [new Assert\NotBlank(), new Assert\Length(max: 500)],
             ]);
         }
+        $builder->add('private', CheckboxType::class, [
+            'label' => 'Compte privé',
+            'help' => 'Vous validez chaque personne qui veut vous suivre, vos publications sont réservées à vos abonnés par défaut, et votre compte n’est ni suggéré ni cherchable. Décochez pour un compte public.',
+            'required' => false,
+            'data' => true,
+        ]);
         $builder->add('agreement', CheckboxType::class, [
             'label' => \sprintf('J’accepte les règles et les conditions d’utilisation de %s', $registration->domain),
             'constraints' => [new Assert\IsTrue(message: 'Acceptez les règles du serveur pour créer votre compte.')],

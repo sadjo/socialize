@@ -59,7 +59,8 @@ final class MastodonComposeType extends AbstractType
                 'label' => 'Visibilité',
                 'expanded' => true,
                 'choices' => ['Public' => 'public', 'Non listé' => 'unlisted', 'Abonnés' => 'private'],
-                'data' => 'public',
+                // Visibilité par défaut de son compte (« Abonnés » pour un compte privé).
+                'data' => $options['default_visibility'],
                 'constraints' => [new Assert\Choice(choices: ['public', 'unlisted', 'private'])],
             ])
             ->add('contentWarning', TextType::class, [
@@ -75,5 +76,7 @@ final class MastodonComposeType extends AbstractType
     {
         $resolver->setRequired('limits');
         $resolver->setAllowedTypes('limits', MastodonLimits::class);
+        $resolver->setDefault('default_visibility', 'public');
+        $resolver->setAllowedValues('default_visibility', ['public', 'unlisted', 'private']);
     }
 }

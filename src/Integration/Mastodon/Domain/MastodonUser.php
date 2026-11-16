@@ -51,6 +51,10 @@ class MastodonUser implements AccountUser
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $lastLoginAt;
 
+    /** Visibilité par défaut de ses publications sur son serveur (public, unlisted, private, direct), à la connexion. */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $defaultVisibility = null;
+
     public function __construct(
         #[ORM\OneToOne]
         #[ORM\JoinColumn(unique: true, nullable: false, onDelete: 'CASCADE')]
@@ -120,11 +124,17 @@ class MastodonUser implements AccountUser
         return $this->scopes;
     }
 
-    public function loggedIn(string $tokenEncrypted, string $scopes, \DateTimeImmutable $now): void
+    public function loggedIn(string $tokenEncrypted, string $scopes, \DateTimeImmutable $now, ?string $defaultVisibility = null): void
     {
         $this->tokenEncrypted = $tokenEncrypted;
         $this->scopes = mb_substr($scopes, 0, 255);
         $this->lastLoginAt = $now;
+        $this->defaultVisibility = $defaultVisibility ?? $this->defaultVisibility;
+    }
+
+    public function getDefaultVisibility(): ?string
+    {
+        return $this->defaultVisibility;
     }
 
     public function loggedOut(): void

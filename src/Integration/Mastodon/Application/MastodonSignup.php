@@ -94,20 +94,34 @@ final readonly class MastodonSignup
     }
 
     /**
-     * Connexion avec le compte créé, une fois son adresse confirmée.
+     * Connexion avec le compte créé, une fois son adresse confirmée ; compte rendu privé d'abord s'il a été choisi
+     * (le serveur refuse tout réglage avant la confirmation).
+     *
+     * @return array{user: MastodonUser, privacyFailed: bool} privacyFailed : le compte n'a pas pu être rendu privé
      *
      * @throws MastodonUnconfirmed adresse pas encore confirmée
      * @throws MastodonException
      */
-    public function confirm(string $domain, string $tokenEncrypted): MastodonUser
+    public function confirm(string $domain, string $tokenEncrypted, bool $private = false): array
     {
         try {
             $token = $this->vault->decrypt($tokenEncrypted);
         } catch (\RuntimeException $e) {
             throw new MastodonException('Inscription interrompue : connectez-vous avec Mastodon.', $e->getCode(), previous: $e);
         }
+        $privacyFailed = false;
+        if ($private) {
+            try {
+                $this->client->makePrivate($domain, $token);
+            } catch (MastodonUnconfirmed $e) {
+                throw $e;
+            } catch (MastodonException) {
+                // Connectée tout de même : la personne réglera son compte sur son serveur.
+                $privacyFailed = true;
+            }
+        }
 
-        return $this->login->loginWithToken($domain, $token, MastodonClient::APP_SCOPES);
+        return ['user' => $this->login->loginWithToken($domain, $token, MastodonClient::APP_SCOPES), 'privacyFailed' => $privacyFailed];
     }
 
     /**

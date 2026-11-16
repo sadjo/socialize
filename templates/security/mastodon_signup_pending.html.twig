@@ -9,6 +9,7 @@
     <section class="card stack">
         <h1>Confirmez votre adresse</h1>
         <p>Votre compte <b>@{{ pending.username }}@{{ pending.domain }}</b> est créé. {{ pending.domain }} vient de vous envoyer un e-mail : ouvrez le lien qu’il contient pour confirmer votre adresse, puis revenez ici.</p>
+        {% if pending.private|default(false) %}<p class="small">Votre compte sera <b>privé</b> : vous validerez chaque personne qui veut vous suivre, depuis Mastodon (application ou site de {{ pending.domain }}), et vos publications seront réservées à vos abonnés par défaut.</p>{% endif %}
         {% if pending.approval %}<p class="small">L’équipe de {{ pending.domain }} doit aussi valider votre inscription. Si elle ne l’a pas encore fait, revenez vous connecter avec Mastodon une fois acceptée.</p>{% endif %}
         {% if error %}<p class="field-errors" role="alert">{{ error }}</p>{% endif %}
         <form method="post" action="{{ path('app_mastodon_signup_confirm') }}" class="form">
