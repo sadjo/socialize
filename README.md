@@ -146,12 +146,22 @@ médias, story. L'état apparaît sur la page de la publication, avec « Réessa
 Le jeton (60 jours) est renouvelé automatiquement.
 
 Application Meta : créer une application sur [developers.facebook.com](https://developers.facebook.com) (type
-Business, cas d'usage « API Instagram avec connexion Instagram ») et y déclarer l'adresse de retour
-`https://<instance>/reglages/instagram/retour`. Chaque compte qui peut publier renseigne la sienne dans Réglages ›
-Instagram › Application Meta (identifiant et clé secrète, chiffrée en base, jamais réaffichée). L'instance peut aussi
-en fournir une par défaut, pour les comptes qui n'en ont pas : `INSTAGRAM_APP_ID` (variable) et `INSTAGRAM_APP_SECRET`
-(secret), facultatifs. Sans validation de l'application par Meta (accès standard), seuls les comptes Instagram ajoutés
-comme **testeurs** de l'application peuvent se connecter.
+Business). Chaque compte qui peut publier renseigne la sienne dans Réglages › Instagram › Application Meta
+(identifiant, clé secrète chiffrée en base et jamais réaffichée, identifiant de configuration le cas échéant).
+L'instance peut aussi en fournir une par défaut : `INSTAGRAM_APP_ID` (variable) et `INSTAGRAM_APP_SECRET` (secret),
+facultatifs.
+
+- **Application récente (« connexion unifiée »)**, imposée par Meta aux applications créées depuis l'automne 2026 :
+  cas d'usage « Gérer les messages et le contenu sur Instagram », portefeuille d'entreprise relié, configuration
+  Facebook Login for Business avec un jeton d'utilisateur système (expiration « Jamais »), la ressource « Compte
+  Instagram » et les droits `instagram_basic` et `instagram_content_publish`. Saisir l'ID de l'app, sa clé secrète
+  (Paramètres › Général) et l'identifiant de la configuration ; déclarer `https://<instance>/reglages/instagram/retour`
+  dans la configuration et dans Facebook Login for Business › Paramètres › URI de redirection OAuth valides.
+  L'API est alors jointe sur graph.facebook.com, et le jeton n'est pas renouvelé (il n'expire pas).
+- **Application plus ancienne (« connexion Instagram »)** : ID et clé secrète de l'app Instagram (Configuration de
+  l'API avec connexion Instagram), adresse de retour déclarée au même endroit, identifiant de configuration vide.
+  Sans validation de l'application par Meta, seuls les comptes Instagram ajoutés comme **testeurs** peuvent se
+  connecter.
 
 Sans application Meta, ou pour un compte Instagram personnel : « Partager vers Instagram » (menu « … » d'une
 publication, page Mes stories) ouvre le menu de partage du téléphone avec les photos en JPEG et les vidéos, et copie

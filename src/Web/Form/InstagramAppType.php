@@ -15,7 +15,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Application Meta propre au compte (Réglages › Instagram) : identifiant et clé secrète de l'application Instagram.
  * La clé secrète n'est jamais réaffichée ; laissée vide, celle déjà enregistrée est gardée.
  *
- * @extends AbstractType<array{appId: ?string, secret?: ?string}>
+ * @extends AbstractType<array{appId: ?string, secret?: ?string, configId?: ?string}>
  */
 final class InstagramAppType extends AbstractType
 {
@@ -23,8 +23,8 @@ final class InstagramAppType extends AbstractType
     {
         $builder
             ->add('appId', TextType::class, [
-                'label' => 'Identifiant de l’application Instagram',
-                'help' => 'Dans l’application Meta : Cas d’utilisation › API Instagram › Configuration de l’API avec connexion Instagram.',
+                'label' => 'Identifiant de l’application',
+                'help' => 'Application récente (connexion unifiée) : l’« ID de l’app » affiché en haut du tableau de bord Meta. Application plus ancienne (connexion Instagram) : l’« ID de l’app Instagram » de la page Configuration de l’API avec connexion Instagram.',
                 'attr' => ['autocomplete' => 'off', 'inputmode' => 'numeric', 'spellcheck' => 'false'],
                 'constraints' => [
                     new Assert\NotBlank(message: 'Indiquez l’identifiant de l’application.'),
@@ -32,12 +32,20 @@ final class InstagramAppType extends AbstractType
                 ],
             ])
             ->add('secret', PasswordType::class, [
-                'label' => 'Clé secrète de l’application Instagram',
+                'label' => 'Clé secrète de l’application',
+                // Connexion unifiée : Paramètres de l'app › Général ; connexion Instagram : clé secrète de l'app Instagram.
                 'help' => true === $options['has_secret'] ? 'Enregistrée (chiffrée). Laissez vide pour la garder.' : null,
                 'required' => !$options['has_secret'],
                 'always_empty' => true,
                 'attr' => ['autocomplete' => 'off'],
                 'constraints' => [new Assert\Length(max: 128)],
+            ])
+            ->add('configId', TextType::class, [
+                'label' => 'Identifiant de configuration (connexion unifiée)',
+                'required' => false,
+                'help' => 'Applications récentes seulement : Facebook Login for Business › Configurations, configuration « Jeton d’accès d’utilisateur système », expiration « Jamais », ressource « Compte Instagram », droits instagram_basic et instagram_content_publish. Laissez vide pour une application avec connexion Instagram.',
+                'attr' => ['autocomplete' => 'off', 'inputmode' => 'numeric', 'spellcheck' => 'false'],
+                'constraints' => [new Assert\Regex('/^\d{5,32}$/', message: 'L’identifiant de configuration est une suite de chiffres.')],
             ]);
     }
 

@@ -65,15 +65,16 @@
 
     <section class="card stack" id="application-meta">
         <h2>Application Meta</h2>
-        <p class="small">La connexion à Instagram passe par une application Meta (developers.facebook.com, cas d’utilisation « API Instagram avec connexion Instagram »). Vous pouvez utiliser la vôtre{{ instance_app ? ' à la place de celle de l’instance' }}. Déclarez-y l’adresse de retour <code>{{ redirect_uri }}</code> et ajoutez votre compte Instagram comme testeur tant que l’application n’est pas validée.</p>
+        <p class="small">La connexion à Instagram passe par une application Meta (developers.facebook.com, cas d’utilisation « Gérer les messages et le contenu sur Instagram »). Vous pouvez utiliser la vôtre{{ instance_app ? ' à la place de celle de l’instance' }}. Déclarez-y l’adresse de retour <code>{{ redirect_uri }}</code> : pour une application récente (connexion unifiée), dans la configuration et dans Facebook Login for Business › Paramètres › URI de redirection OAuth valides ; pour une application plus ancienne, dans la configuration de l’API avec connexion Instagram.</p>
         {% if own_app %}
-            <p class="small">{{ ui.icon('check', 'xs') }} Votre application <b>{{ own_app.appId }}</b>, enregistrée le {{ own_app.updatedAt|format_datetime('long', 'short', locale: 'fr') }}.</p>
+            <p class="small">{{ ui.icon('check', 'xs') }} Votre application <b>{{ own_app.appId }}</b>{{ own_app.configId ? ' (connexion unifiée, configuration ' ~ own_app.configId ~ ')' }}, enregistrée le {{ own_app.updatedAt|format_datetime('long', 'short', locale: 'fr') }}.</p>
         {% elseif instance_app %}
             <p class="small">Aucune application à vous : celle de l’instance est utilisée.</p>
         {% endif %}
         {{ form_start(app_form, {attr: {class: 'form'}}) }}
             {{ form_row(app_form.appId) }}
             {{ form_row(app_form.secret) }}
+            {{ form_row(app_form.configId) }}
             <div class="navbtns"><span></span><button class="btn pri">Enregistrer l’application</button></div>
         {{ form_end(app_form) }}
         {% if own_app %}

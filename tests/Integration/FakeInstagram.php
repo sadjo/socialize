@@ -32,11 +32,13 @@ final class FakeInstagram
     public static array $containers = [];
     /** @var list<string> conteneurs publiés, dans l'ordre */
     public static array $published = [];
-    /** @var list<array{method: string, path: string, params: array<string, string>}> */
+    /** @var list<array{method: string, host: string, path: string, params: array<string, string>}> */
     public static array $requests = [];
 
     /** Clé secrète de l'application Meta attendue à l'échange du code. */
     public static string $secret = 'secret-de-test';
+    /** Connexion unifiée : jeton d'utilisateur système (graph.facebook.com), sans expiration. */
+    public const string SYSTEM_TOKEN = 'jeton-systeme';
 
     private static int $next = 0;
 
@@ -67,7 +69,7 @@ final class FakeInstagram
         /** @var array<string, string> $params */
         $params = array_filter([...$query, ...$body], \is_string(...));
         $path = (string) parse_url($url, \PHP_URL_PATH);
-        self::$requests[] = ['method' => $method, 'path' => $path, 'params' => $params];
+        self::$requests[] = ['method' => $method, 'host' => (string) parse_url($url, \PHP_URL_HOST), 'path' => $path, 'params' => $params];
         $host = (string) parse_url($url, \PHP_URL_HOST);
 
         if ('api.instagram.com' === $host && 'POST' === $method && '/oauth/access_token' === $path) {
@@ -75,7 +77,24 @@ final class FakeInstagram
                 ? $this->json(['data' => [['access_token' => 'jeton-court', 'user_id' => self::USER_ID, 'permissions' => 'instagram_business_basic,instagram_business_content_publish']]])
                 : $this->error(400, 'Invalid authorization code', 36);
         }
-        if ('graph.instagram.com' !== $host) {
+        if ('graph.facebook.com' === $host) {
+            // Connexion unifiée : échange du code, lecture du jeton ; le reste comme graph.instagram.com.
+            if ('/v27.0/oauth/access_token' === $path) {
+                return self::CODE === ($params['code'] ?? null) && self::$secret === ($params['client_secret'] ?? null)
+                    ? $this->json(['access_token' => self::SYSTEM_TOKEN, 'token_type' => 'bearer'])
+                    : $this->error(400, 'Invalid verification code format.', 100);
+            }
+            if ('/v27.0/debug_token' === $path) {
+                return $this->json(['data' => ['is_valid' => true, 'expires_at' => 0, 'scopes' => ['instagram_basic', 'instagram_content_publish']]]);
+            }
+            if (self::SYSTEM_TOKEN !== ($params['access_token'] ?? null)) {
+                return $this->error(400, 'Invalid OAuth access token', 190);
+            }
+            if ('/v27.0/me/assigned_instagram_accounts' === $path) {
+                return $this->json(['data' => [['id' => self::USER_ID, 'username' => self::USERNAME]]]);
+            }
+            $params['access_token'] = self::$token;
+        } elseif ('graph.instagram.com' !== $host) {
             return new MockResponse('', ['error' => 'Hôte inconnu']);
         }
         if ('/access_token' === $path) {

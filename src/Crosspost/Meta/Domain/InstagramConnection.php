@@ -40,6 +40,13 @@ class InstagramConnection
     #[ORM\Column(options: ['default' => false])]
     private bool $autoStories = false;
 
+    /**
+     * Connexion faite par la « connexion unifiée » de Meta (applications récentes) : l'API se joint alors sur
+     * graph.facebook.com, et le jeton (utilisateur système) n'est pas renouvelé.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $unifiedLogin = false;
+
     public function __construct(
         #[ORM\OneToOne]
         #[ORM\JoinColumn(unique: true, nullable: false, onDelete: 'CASCADE')]
@@ -103,8 +110,9 @@ class InstagramConnection
     /**
      * Nouvelle connexion (ou reconnexion) : nouveau compte et nouveau jeton.
      */
-    public function reconnect(string $instagramUserId, string $username, string $tokenEncrypted, \DateTimeImmutable $expiresAt, \DateTimeImmutable $now): void
+    public function reconnect(string $instagramUserId, string $username, string $tokenEncrypted, \DateTimeImmutable $expiresAt, \DateTimeImmutable $now, bool $unifiedLogin = false): void
     {
+        $this->unifiedLogin = $unifiedLogin;
         $this->instagramUserId = $instagramUserId;
         $this->username = $username;
         $this->renew($tokenEncrypted, $expiresAt, $now);
@@ -117,6 +125,16 @@ class InstagramConnection
         $this->tokenExpiresAt = $expiresAt;
         $this->refreshedAt = $now;
         $this->expiredAt = null;
+    }
+
+    public function viaUnifiedLogin(): void
+    {
+        $this->unifiedLogin = true;
+    }
+
+    public function isUnifiedLogin(): bool
+    {
+        return $this->unifiedLogin;
     }
 
     public function isExpired(\DateTimeImmutable $now): bool

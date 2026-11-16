@@ -9,6 +9,7 @@ use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\StoryPublished;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\CrosspostTarget;
+use App\Core\Domain\Post\Post;
 use App\Crosspost\Meta\Domain\CrosspostStatus;
 use App\Crosspost\Meta\Domain\InstagramConnection;
 use App\Crosspost\Meta\Domain\InstagramCrosspost;
@@ -80,6 +81,39 @@ final readonly class InstagramPublishing
         }
     }
 
+    /**
+     * Peut-on envoyer après coup cette publication déjà en ligne ? (rédigée ici, parue, non archivée, pas importée
+     * d'Instagram, pas encore envoyée, compte Instagram connecté).
+     */
+    public function canSendExisting(Post $post): bool
+    {
+        return $post->getAccount()->isLocal()
+            && !$post->isImported()
+            && !$post->isPending()
+            && !$post->isArchived()
+            && !$this->crossposts->forPost($post) instanceof InstagramCrosspost
+            && $this->connections->usable($post->getAccount()) instanceof InstagramConnection;
+    }
+
+    /**
+     * Envoi après coup d'une publication déjà en ligne (bouton « Publier sur Instagram » de sa page).
+     */
+    public function sendExisting(Post $post): InstagramCrosspost
+    {
+        $existing = $this->crossposts->forPost($post);
+        if ($existing instanceof InstagramCrosspost) {
+            return $existing;
+        }
+        if (!$this->canSendExisting($post)) {
+            throw new InstagramException($post->isImported() ? 'Cette publication vient de votre archive Instagram : elle y est déjà.' : 'Cette publication ne peut pas être envoyée sur Instagram (en préparation, archivée, ou Instagram non connecté).');
+        }
+        $post->addCrosspost(CrosspostTarget::Instagram);
+        $crosspost = InstagramCrosspost::forPost($post, $this->clock->now());
+        $this->start($crosspost);
+
+        return $crosspost;
+    }
+
     public function retry(InstagramCrosspost $crosspost): void
     {
         if (CrosspostStatus::Failed !== $crosspost->getStatus()) {
@@ -138,7 +172,9 @@ final readonly class InstagramPublishing
      */
     private function send(InstagramCrosspost $crosspost, InstagramConnection $connection, string $token): int
     {
-        $quota = $this->client->quota($connection->getInstagramUserId(), $token);
+        // Connexion unifiée : même API, jointe sur graph.facebook.com.
+        $unified = $connection->isUnifiedLogin();
+        $quota = $this->client->quota($connection->getInstagramUserId(), $token, $unified);
         if (null !== $quota['total'] && $quota['used'] >= $quota['total']) {
             throw new InstagramException(\sprintf('Quota de publications d’Instagram atteint (%d en 24 h) : réessayez plus tard.', $quota['total']));
         }
@@ -159,7 +195,7 @@ final readonly class InstagramPublishing
                     $files[] = $copy['path'];
                     $params['image_url'] = $copy['url'];
                 }
-                $id = $this->client->createContainer($userId, $token, $params);
+                $id = $this->client->createContainer($userId, $token, $params, $unified);
                 $crosspost->sent([$id], $id, $files, $this->clock->now());
                 $this->em->flush();
 
@@ -183,7 +219,7 @@ final readonly class InstagramPublishing
                     $files[] = $copy['path'];
                     $params = ['image_url' => $copy['url'], 'caption' => $caption] + $this->alt($only);
                 }
-                $id = $this->client->createContainer($userId, $token, array_filter($params, static fn (string $v): bool => '' !== $v));
+                $id = $this->client->createContainer($userId, $token, array_filter($params, static fn (string $v): bool => '' !== $v), $unified);
                 $crosspost->sent([$id], $id, $files, $this->clock->now());
                 $this->em->flush();
 
@@ -202,7 +238,7 @@ final readonly class InstagramPublishing
                     $files[] = $copy['path'];
                     $params = ['image_url' => $copy['url'], 'is_carousel_item' => 'true'] + $this->alt($item);
                 }
-                $children[] = $this->client->createContainer($userId, $token, $params);
+                $children[] = $this->client->createContainer($userId, $token, $params, $unified);
             }
             $crosspost->sent($children, null, $files, $this->clock->now());
             $this->em->flush();
@@ -221,12 +257,13 @@ final readonly class InstagramPublishing
      */
     private function check(InstagramCrosspost $crosspost, InstagramConnection $connection, string $token): ?int
     {
+        $unified = $connection->isUnifiedLogin();
         $userId = $connection->getInstagramUserId();
         $containerId = $crosspost->getContainerId();
         $waiting = null !== $containerId ? [$containerId] : $crosspost->getMediaContainers();
 
         foreach ($waiting as $id) {
-            $status = $this->client->containerStatus($id, $token);
+            $status = $this->client->containerStatus($id, $token, $unified);
             if (\in_array($status, ['ERROR', 'EXPIRED'], true)) {
                 return $this->fail($crosspost, 'EXPIRED' === $status
                     ? 'Instagram n’a pas publié à temps : réessayez.'
@@ -248,15 +285,15 @@ final readonly class InstagramPublishing
                 'media_type' => 'CAROUSEL',
                 'children' => implode(',', $crosspost->getMediaContainers()),
                 'caption' => $this->caption($post->getCaption(), $post->getContentWarning()),
-            ], static fn (string $v): bool => '' !== $v));
+            ], static fn (string $v): bool => '' !== $v), $unified);
             $crosspost->carouselCreated($carousel, $this->clock->now());
             $this->em->flush();
 
             return 5;
         }
 
-        $mediaId = $this->client->publish($userId, $token, $containerId);
-        $crosspost->published($mediaId, $this->client->permalink($mediaId, $token), $this->clock->now());
+        $mediaId = $this->client->publish($userId, $token, $containerId, $unified);
+        $crosspost->published($mediaId, $this->client->permalink($mediaId, $token, $unified), $this->clock->now());
         $this->em->flush();
         $this->files->remove($crosspost->getId()->toBase58());
 

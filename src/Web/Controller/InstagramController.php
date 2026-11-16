@@ -66,13 +66,13 @@ final class InstagramController extends AbstractController
 
         // Application Meta propre au compte (sinon celle de l'instance, si elle en a une).
         $own = $this->connections->ownApp($account);
-        $appForm = $this->createForm(InstagramAppType::class, ['appId' => $own?->getAppId()], ['has_secret' => $own instanceof InstagramAppSettings]);
+        $appForm = $this->createForm(InstagramAppType::class, ['appId' => $own?->getAppId(), 'configId' => $own?->getConfigId()], ['has_secret' => $own instanceof InstagramAppSettings]);
         $appForm->handleRequest($request);
         if ($appForm->isSubmitted() && $appForm->isValid()) {
-            /** @var array{appId: string, secret: ?string} $data */
+            /** @var array{appId: string, secret: ?string, configId: ?string} $data */
             $data = $appForm->getData();
             try {
-                $this->connections->saveApp($account, $data['appId'], $data['secret']);
+                $this->connections->saveApp($account, $data['appId'], $data['secret'], $data['configId']);
                 $this->addFlash('success', 'Application Meta enregistrée.');
 
                 return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
@@ -167,6 +167,29 @@ final class InstagramController extends AbstractController
         $this->addFlash('success', 'Instagram déconnecté. Les publications déjà envoyées restent sur Instagram.');
 
         return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Envoi après coup d'une publication déjà en ligne.
+     */
+    #[Route('/p/{id}/instagram', name: 'app_post_instagram', requirements: ['id' => Requirement::UID_BASE58], methods: ['POST'])]
+    public function sendPost(string $id, Request $request, \App\Core\Infrastructure\Doctrine\PostRepository $posts, InstagramPublishing $publishing): RedirectResponse
+    {
+        $post = $posts->findByPublicId($id);
+        if (!$post instanceof \App\Core\Domain\Post\Post || !$post->isOwnedBy($this->currentAccount->require())) {
+            throw new NotFoundHttpException();
+        }
+        if (!$this->isCsrfTokenValid('instagram-send-'.$id, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
+        }
+        try {
+            $publishing->sendExisting($post);
+            $this->addFlash('success', 'Envoi vers Instagram en cours.');
+        } catch (InstagramException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_post_show', ['id' => $id], Response::HTTP_SEE_OTHER);
     }
 
     /**

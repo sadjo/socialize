@@ -19,7 +19,15 @@ final readonly class InstagramApp
         #[Autowire(env: 'INSTAGRAM_APP_SECRET')]
         #[\SensitiveParameter]
         public string $secret,
+        /** Configuration « Facebook Login for Business » : connexion unifiée (applications récentes). */
+        #[Autowire(env: 'default::INSTAGRAM_CONFIG_ID')]
+        public ?string $configId = null,
     ) {
+    }
+
+    public function isUnified(): bool
+    {
+        return null !== $this->configId && '' !== trim($this->configId);
     }
 
     public function isConfigured(): bool
