@@ -1,6 +1,6 @@
 # Note de conception : se connecter avec un compte Mastodon
 
-> Prochain jalon : jalon 9 (voir la feuille de route dans le README).
+> Jalon 9 (voir le README).
 
 ## Contexte
 
@@ -140,39 +140,39 @@ d'émettre une activité signée :
 
 ## 6. Import Instagram vers le compte Mastodon
 
-- Un administrateur l'autorise, comme aujourd'hui pour un compte Socialize : la page des droits des comptes
-  (`AccountRights`) liste aussi les comptes Mastodon connectés et leur donne `ROLE_INSTAGRAM_IMPORTER`.
-- Même écran d'import (`ImportController`, archive en plusieurs parties). Pour un compte Mastodon,
-  `ArchiveImporter` ne crée pas de `Post` local : chaque publication de l'archive est préparée (conversion des
-  médias, EXIF), puis envoyée à Mastodon par `PublishToMastodon`. Elle revient ensuite dans le profil par la
-  fédération.
-- Différences avec l'import actuel :
-  - pas de stories (celles de l'archive sont ignorées, et l'écran le dit) ;
-  - pas de dates d'origine : Mastodon date un statut de son envoi. La date de prise de vue peut être ajoutée au
-    texte (« Publié sur Instagram le … ») ;
-  - pas de groupes d'abonnés. Visibilité proposée par défaut : « non listé », pour ne pas inonder les fils
-    publics ;
-  - les limites de Mastodon s'appliquent : 4 médias par statut (un carrousel plus long est découpé en plusieurs
-    statuts en fil), longueur du texte, et surtout le **débit**. Mastodon accepte environ 300 statuts par
-    3 heures et 30 envois de médias par 30 minutes. L'envoi est donc cadencé (`symfony/rate-limiter`, messages
-    Messenger différés), et la page de suivi de l'import affiche la progression et la fin estimée.
-- Une publication déjà envoyée n'est pas renvoyée si l'import reprend : l'élément d'import garde l'identifiant
-  du statut Mastodon, et l'envoi utilise une clé d'idempotence.
+- Un administrateur le permet dans Administration › Comptes, section « Comptes Mastodon » (rôle
+  `ROLE_INSTAGRAM_IMPORTER` gardé dans `MastodonUser`).
+- Même écran d'import (envoi de l'archive en plusieurs parties, analyse, choix par publication). Pour un compte
+  Mastodon, `PilotedArchiveImporter` (module d'import) ne crée rien ici : chaque publication part sur son serveur par
+  l'interface `PilotedPublishing` du cœur, que `MastodonPublishing` implémente.
+- Différences avec l'import ordinaire :
+  - pas de stories (ignorées) ni de groupes d'abonnés ;
+  - pas de dates d'origine : la date Instagram est ajoutée au texte (« Publiée sur Instagram le … »), la légende
+    étant raccourcie si besoin ;
+  - visibilité : « Public, sans l'annoncer » devient non listé, « Abonnés seulement » abonnés, une publication
+    privée ou archivée un message direct sans destinataire (visible par soi seul) ;
+  - un carrousel plus long que la limite du serveur part en fil de messages (« (2/3) »…) ;
+  - débit : une publication à la fois, puis une pause d'une minute par média (36 secondes au moins), pour rester
+    sous les limites de Mastodon (30 médias par 30 minutes, 300 messages par 3 heures). Une erreur 429 met l'envoi
+    en pause jusqu'à l'heure indiquée par le serveur. Le journal de l'import donne la fin estimée au lancement.
+- Pas de doublon : un élément déjà publié (même empreinte, même compte) est sauté ; chaque message a sa clé
+  d'idempotence.
 
 ## Ce qui n'est pas proposé à ces comptes
 
 - Création de stories.
-- Groupes d'abonnés, musique, crosspost Instagram, réglages du profil, administration.
+- Groupes d'abonnés, musique, lieu, Immich et Synology Photos, crosspost Instagram, réglages du profil,
+  modification d'une publication, administration.
 - Notifications Socialize et notifications sur l'appareil : Mastodon s'en charge déjà.
 
 ## Ordre de réalisation proposé
 
 1. Connexion, déconnexion, profil (lecture seule), stories des comptes suivis.
 2. J'aime, commentaires, abonnements.
-3. Publication, modification, suppression.
+3. Publication et suppression.
 4. Import Instagram vers le compte Mastodon.
 
-Chaque étape fait l'objet de sa propre branche `feature/...`.
+Les quatre étapes sont sur la branche `feature/connexion-mastodon`.
 
 ## Vérification
 

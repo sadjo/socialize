@@ -40,6 +40,9 @@ final class FakeMastodon
     /** Nombre maximal de médias par publication annoncé par le serveur. */
     public static int $maxMedia = 4;
 
+    /** Le serveur limite une fois le débit (erreur 429) à la prochaine publication. */
+    public static bool $rateLimitOnce = false;
+
     /** Refus de la publication (erreur 422 avec ce message). */
     public static ?string $statusError = null;
 
@@ -57,6 +60,7 @@ final class FakeMastodon
         self::$maxMedia = 4;
         self::$media = [];
         self::$statusError = null;
+        self::$rateLimitOnce = false;
     }
 
     /**
@@ -127,6 +131,7 @@ final class FakeMastodon
             'POST' === $method && (bool) preg_match('#^/api/v1/statuses/([^/]+)/(un)?favourite$#', $path, $m) => isset(self::$known[$m[1]])
                 ? $this->json(['id' => $m[1], 'favourited' => '' === ($m[2] ?? '')])
                 : $this->json(['error' => 'Record not found'], 404),
+            'POST' === $method && '/api/v1/statuses' === $path && self::$rateLimitOnce => $this->rateLimited(),
             'POST' === $method && '/api/v1/statuses' === $path => null !== self::$statusError ? $this->json(['error' => self::$statusError], 422) : $this->status($body),
             'DELETE' === $method && (bool) preg_match('#^/api/v1/statuses/([^/]+)$#', $path, $m) => $this->json(['id' => $m[1]]),
             'POST' === $method && (bool) preg_match('#^/api/v1/accounts/([^/]+)/(un)?follow$#', $path, $m) => '' === ($m[2] ?? '')
@@ -134,6 +139,15 @@ final class FakeMastodon
                 : $this->json(['id' => $m[1], 'following' => false, 'requested' => false]),
             default => $this->json(['error' => 'Record not found'], 404),
         };
+    }
+
+    private function rateLimited(): MockResponse
+    {
+        self::$rateLimitOnce = false;
+
+        return new MockResponse((string) json_encode(['error' => 'Too many requests']), ['http_code' => 429, 'response_headers' => [
+            'content-type' => 'application/json', 'x-ratelimit-reset' => gmdate('Y-m-d\TH:i:s.000\Z', time() + 120),
+        ]]);
     }
 
     /**

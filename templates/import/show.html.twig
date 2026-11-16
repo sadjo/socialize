@@ -36,7 +36,7 @@
             {{ include('import/_progress.html.twig') }}
             <div class="navbtns">
                 <span class="row wrap">
-                    <a class="btn" href="{{ path('app_profile_archives', {username: import.account.acct}) }}">{{ ui.icon('album', 'sm') }}Mes archives</a>
+                    {% if not is_granted('ROLE_MASTODON') %}<a class="btn" href="{{ path('app_profile_archives', {username: import.account.acct}) }}">{{ ui.icon('album', 'sm') }}Mes archives</a>{% endif %}
                     <a class="btn" href="{{ path('app_profile', {username: import.account.acct}) }}">Voir mon profil</a>
                 </span>
                 {% if videos.processing == 0 %}
@@ -93,6 +93,9 @@
                 </fieldset>
                 {% if groups is not empty %}
                     {{ form_row(form.defaultGroup) }}
+                {% elseif is_granted('ROLE_MASTODON') %}
+                    {% do form.defaultGroup.setRendered %}
+                    <div class="note">{{ ui.icon('globe', 'sm') }}<span>Sur votre compte {{ import.account.domain }} : « Public, sans l’annoncer » devient <b>non listé</b>, « Abonnés seulement » <b>abonnés</b>, et une publication privée ou archivée un message visible par vous seul.</span></div>
                 {% else %}
                     {% do form.defaultGroup.setRendered %}
                     <p class="small">Pour réserver des publications « Abonnés seulement » à la famille ou aux amis, <a class="lnk" href="{{ path('app_settings_groups') }}">créez d’abord un groupe d’abonnés</a>.</p>
@@ -142,9 +145,17 @@
 
             <section class="card stack">
                 <h2>Autres options</h2>
-                <label class="chk">{{ form_widget(form.keepOriginalDates) }}<span>{{ form.keepOriginalDates.vars.label }}<br><small>Les publications apparaissent à leur date Instagram sur votre profil.</small></span></label>
-                <label class="chk">{{ form_widget(form.importStories) }}<span>{{ form.importStories.vars.label }}<br><small>Elles ont expiré depuis longtemps : elles restent visibles par vous seul.</small></span></label>
-                <div class="note">{{ ui.icon('shield', 'sm') }}<span>Les copies publiques des photos ne contiennent ni EXIF ni position ; l’original garde tout. Relancer un import ne crée jamais de doublon.</span></div>
+                {% if is_granted('ROLE_MASTODON') %}
+                    {# Vers un compte Mastodon : ni dates d'origine ni stories, et un envoi cadencé. #}
+                    {% do form.keepOriginalDates.setRendered %}
+                    {% do form.importStories.setRendered %}
+                    <div class="note">{{ ui.icon('send', 'sm') }}<span>Les publications partent sur votre compte {{ import.account.domain }}, sans copie ici. Mastodon date chaque message de son envoi : la date Instagram est ajoutée au texte. Les stories ne sont pas envoyées, et un carrousel plus long que la limite de votre serveur part en fil de messages.</span></div>
+                    <div class="note">{{ ui.icon('reel', 'sm') }}<span>Pour respecter les limites de Mastodon (30 médias par demi-heure), l’envoi est cadencé : environ une publication par minute, davantage pour un carrousel. Vous pouvez fermer cette page, l’envoi continue. Relancer un import ne crée jamais de doublon.</span></div>
+                {% else %}
+                    <label class="chk">{{ form_widget(form.keepOriginalDates) }}<span>{{ form.keepOriginalDates.vars.label }}<br><small>Les publications apparaissent à leur date Instagram sur votre profil.</small></span></label>
+                    <label class="chk">{{ form_widget(form.importStories) }}<span>{{ form.importStories.vars.label }}<br><small>Elles ont expiré depuis longtemps : elles restent visibles par vous seul.</small></span></label>
+                    <div class="note">{{ ui.icon('shield', 'sm') }}<span>Les copies publiques des photos ne contiennent ni EXIF ni position ; l’original garde tout. Relancer un import ne crée jamais de doublon.</span></div>
+                {% endif %}
                 <div class="navbtns"><span></span><button class="btn pri">Lancer l’import{{ ui.icon('right', 'sm') }}</button></div>
             </section>
         {{ form_end(form) }}

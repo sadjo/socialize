@@ -4,7 +4,7 @@ Réseau photo et vidéo auto-hébergé, compatible avec le fédivers (Mastodon, 
 Socialize permet d'importer une archive Instagram sans perte, de choisir ses médias dans [Immich](https://immich.app)
 ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règles réglables.
 
-> **État : jalon 8.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
+> **État : jalon 9.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
 > stories, archives, fédération ActivityPub (Mastodon, Pixelfed), import d'une archive Instagram et publication
 > depuis Immich ou Synology Photos : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
 > Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
@@ -17,9 +17,12 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > Notifications des « J'aime » et commentaires reçus (d'ici ou du fédivers), lues ou non lues, supprimables ;
 > notifications sur le téléphone (Web Push, application ajoutée à l'écran d'accueil) : nouvelles publications et
 > stories des comptes suivis, J'aime et commentaires, au choix de chacun.
-> Jalons suivants : connexion avec un compte Mastodon (jalon 9 : profil, interactions, publication et import
-> Instagram vers ce compte, voir [`docs/connexion-mastodon.md`](docs/connexion-mastodon.md)), crosspost Facebook
-> (jalon 10), API REST et serveur MCP (jalon 11) ; à prévoir : notifications réglables par compte.
+> Connexion avec un compte Mastodon (variable `MASTODON_LOGIN`) : la personne pilote son compte depuis Socialize,
+> sans compte ici. Son profil montre ses publications, elle voit les stories des comptes suivis, aime, commente et
+> suit par l'API de son serveur, y publie photos et vidéos, et peut y importer son archive Instagram si
+> l'administrateur le permet (voir [`docs/connexion-mastodon.md`](docs/connexion-mastodon.md)).
+> Jalons suivants : crosspost Facebook (jalon 10), API REST et serveur MCP (jalon 11) ; à prévoir : notifications
+> réglables par compte.
 
 - Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
 - Stack : PHP 8.5, Symfony 8.1, FrankenPHP (mode worker), Doctrine ORM, Symfony Messenger, Twig + Symfony UX.

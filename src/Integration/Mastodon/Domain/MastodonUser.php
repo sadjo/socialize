@@ -6,6 +6,7 @@ namespace App\Integration\Mastodon\Domain;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Account\AccountUser;
+use App\Core\Domain\Account\User;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonUserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -40,7 +41,7 @@ class MastodonUser implements AccountUser
     private string $scopes = '';
 
     /**
-     * Droits donnés par un administrateur de l'instance (import Instagram, plus tard).
+     * Droits donnés par un administrateur de l'instance (import Instagram).
      *
      * @var list<string>
      */
@@ -92,6 +93,21 @@ class MastodonUser implements AccountUser
     public function isAdmin(): bool
     {
         return false;
+    }
+
+    /**
+     * Import d'une archive Instagram vers son compte Mastodon, permis par un administrateur.
+     */
+    public function canImportInstagram(): bool
+    {
+        return \in_array(User::ROLE_INSTAGRAM_IMPORTER, $this->roles, true);
+    }
+
+    public function allowInstagramImport(bool $allow): void
+    {
+        $this->roles = $allow
+            ? array_values(array_unique([...$this->roles, User::ROLE_INSTAGRAM_IMPORTER]))
+            : array_values(array_filter($this->roles, static fn (string $role): bool => User::ROLE_INSTAGRAM_IMPORTER !== $role));
     }
 
     public function getTokenEncrypted(): ?string

@@ -203,6 +203,16 @@ class ImportItem
         $this->message = $message;
     }
 
+    /**
+     * Publiée ailleurs que sur l'instance (compte Mastodon piloté d'ici) : rien à relier ici.
+     */
+    public function importedElsewhere(string $message): void
+    {
+        $this->status = ItemStatus::Imported;
+        $this->targetId = null;
+        $this->message = mb_substr($message, 0, 500);
+    }
+
     public function skip(ItemStatus $status, string $message): void
     {
         $this->status = $status;

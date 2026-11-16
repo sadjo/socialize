@@ -6,6 +6,7 @@ namespace App\Integration\Mastodon\Infrastructure;
 
 use App\Integration\Mastodon\Application\MastodonException;
 use App\Integration\Mastodon\Application\MastodonLimits;
+use App\Integration\Mastodon\Application\MastodonRateLimited;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
@@ -216,6 +217,25 @@ final readonly class MastodonClient
     }
 
     /**
+     * Délai avant de réessayer après une erreur 429 : en-tête X-RateLimit-Reset de Mastodon (date), sinon Retry-After
+     * (secondes), sinon 5 minutes.
+     *
+     * @param array<string, list<string>> $headers
+     *
+     * @return positive-int
+     */
+    private function retryAfter(array $headers): int
+    {
+        $reset = $headers['x-ratelimit-reset'][0] ?? null;
+        if (null !== $reset && false !== ($at = strtotime($reset))) {
+            return max(1, $at - time());
+        }
+        $after = $headers['retry-after'][0] ?? null;
+
+        return null !== $after && is_numeric($after) ? max(1, (int) $after) : 300;
+    }
+
+    /**
      * @param array<string, mixed> $options
      *
      * @return array<mixed>
@@ -241,6 +261,9 @@ final readonly class MastodonClient
             $status = $response->getStatusCode();
             if (401 === $status || 403 === $status) {
                 throw new MastodonException(\sprintf('%s a refusé l’accès : reconnectez-vous avec Mastodon.', $domain));
+            }
+            if (429 === $status) {
+                throw new MastodonRateLimited(\sprintf('%s limite le nombre d’envois : reprise plus tard.', $domain), $this->retryAfter($response->getHeaders(false)));
             }
             if (404 === $status) {
                 throw new MastodonException(\sprintf('%s ne trouve pas cet élément.', $domain));
