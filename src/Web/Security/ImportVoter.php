@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Security;
 
-use App\Core\Domain\Account\User;
+use App\Core\Domain\Account\AccountUser;
 use App\Import\Instagram\Domain\InstagramImport;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
@@ -28,6 +28,6 @@ final class ImportVoter extends Voter
     {
         $user = $token->getUser();
 
-        return $user instanceof User && $subject->isOwnedBy($user->getAccount());
+        return $user instanceof AccountUser && $subject->isOwnedBy($user->getAccount());
     }
 }

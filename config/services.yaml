@@ -8,6 +8,8 @@ parameters:
     # Archives Instagram reçues (supprimées à la fin de l'import) et taille maximale d'une archive (20 Go).
     app.import_dir: '%app.storage_dir%/imports'
     app.import_max_size: 21474836480
+    # Médias en attente d'envoi vers un compte Mastodon (supprimés après l'envoi), partagés avec les workers.
+    app.mastodon_upload_dir: '%app.storage_dir%/mastodon'
     # Domaine des adresses du fédivers (@nom@domaine), déduit de DEFAULT_URI.
     app.local_domain: '%env(key:host:url:DEFAULT_URI)%'
 
@@ -44,6 +46,12 @@ services:
     synology_photos.http_client:
         alias: http_client
 
+    # Client HTTP des serveurs Mastodon (remplacé dans les tests) : un serveur Mastodon est public, et son adresse
+    # vient de la personne qui se connecte.
+    mastodon.http_client:
+        class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
+        arguments: ['@http_client']
+
     # Client HTTP d'Openverse et des fournisseurs de musique (remplacé dans les tests) : les adresses
     # de fichiers viennent d'Openverse, le réseau privé de l'instance leur est fermé.
     openverse.http_client:
@@ -53,6 +61,7 @@ services:
 when@test:
     parameters:
         app.import_dir: '%kernel.project_dir%/var/test-storage/imports'
+        app.mastodon_upload_dir: '%kernel.project_dir%/var/test-storage/mastodon'
     services:
         # Faux envoi des notifications sur les appareils (Web Push).
         App\Tests\Support\FakePushSender: ~
@@ -78,6 +87,12 @@ when@test:
         # Faux Synology Photos pour les tests (voir tests/Integration).
         App\Tests\Integration\FakeSynologyPhotos:
             public: true
+        # Faux serveur Mastodon pour les tests (voir tests/Integration).
+        App\Tests\Integration\FakeMastodon:
+            public: true
+        mastodon.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            arguments: ['@App\Tests\Integration\FakeMastodon']
         synology_photos.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
             arguments: ['@App\Tests\Integration\FakeSynologyPhotos']

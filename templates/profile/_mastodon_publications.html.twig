@@ -1,0 +1,19 @@
+{# Publications envoyées sur le compte Mastodon (connexion Mastodon) : en cours d'envoi, ou en échec récent.
+   Variables : publications (list<MastodonPublication>) #}
+{% import '_macros.html.twig' as ui %}
+{% if publications is not empty %}
+    <section class="card pending-posts" aria-label="Publications envoyées sur Mastodon">
+        <h2>{{ ui.icon('send', 'sm') }}Envois vers {{ publications|first.user.account.domain }}</h2>
+        {% for publication in publications %}
+            <article class="pending-post">
+                <div class="grow">
+                    <b>{{ publication.excerpt ? (publication.excerpt|length > 80 ? publication.excerpt|slice(0, 80) ~ '…' : publication.excerpt) : 'Publication sans texte' }}</b>
+                    <p class="small">
+                        {{ publication.mediaCount }} média{{ publication.mediaCount > 1 ? 's' }} ·
+                        {% if publication.pending %}envoi en cours…{% else %}<span class="err">non publiée : {{ publication.error }}</span>{% endif %}
+                    </p>
+                </div>
+            </article>
+        {% endfor %}
+    </section>
+{% endif %}

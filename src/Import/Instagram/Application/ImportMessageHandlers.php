@@ -13,6 +13,7 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -24,6 +25,7 @@ final readonly class ImportMessageHandlers
         private InstagramImportRepository $imports,
         private ArchiveAnalyzer $analyzer,
         private ArchiveImporter $importer,
+        private PilotedArchiveImporter $piloted,
         private ArchiveUploads $uploads,
         private EntityManagerInterface $em,
         private MessageBusInterface $bus,
@@ -56,6 +58,22 @@ final readonly class ImportMessageHandlers
     {
         $import = $this->imports->find(Uuid::fromString($message->importId));
         if (!$import instanceof InstagramImport) {
+            return;
+        }
+        if (!$import->getAccount()->isLocal()) {
+            // Vers un compte Mastodon : un élément à la fois, puis une pause qui respecte les limites de son serveur.
+            try {
+                $pause = $this->piloted->importNext($import);
+            } catch (ImportException $e) {
+                $this->failed($import, $e->getMessage());
+
+                return;
+            }
+            $this->em->clear();
+            if (null !== $pause) {
+                $this->bus->dispatch(new ImportInstagramBatch($message->importId), $pause > 0 ? [new DelayStamp($pause * 1000)] : []);
+            }
+
             return;
         }
         try {

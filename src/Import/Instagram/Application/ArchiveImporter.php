@@ -53,8 +53,13 @@ final readonly class ArchiveImporter
 
     public function launch(InstagramImport $import, Placement $placement, bool $keepOriginalDates, bool $importStories, ?string $defaultGroup = null): void
     {
-        $import->start($placement, $keepOriginalDates, $importStories, $defaultGroup);
+        $piloted = !$import->getAccount()->isLocal();
+        // Vers un compte Mastodon : ni dates d'origine (son serveur date chaque message de son envoi) ni stories.
+        $import->start($placement, $keepOriginalDates && !$piloted, $importStories && !$piloted, $piloted ? null : $defaultGroup);
         $import->addLog(\sprintf('Import lancé · %s', $placement->label()));
+        if ($piloted) {
+            $import->addLog(PilotedArchiveImporter::estimate($this->items->posts($import), $placement, $this->clock->now(), (string) $import->getAccount()->getDomain()));
+        }
         $this->em->flush();
         $this->bus->dispatch(new ImportInstagramBatch($import->getId()->toRfc4122()));
     }
@@ -89,7 +94,7 @@ final readonly class ArchiveImporter
         return true;
     }
 
-    private function finish(InstagramImport $import): void
+    public function finish(InstagramImport $import): void
     {
         $counts = $this->items->countByStatus($import);
         $import->addLog(\sprintf(

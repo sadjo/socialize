@@ -22,10 +22,16 @@ framework:
             openverse.cache:
                 adapter: cache.app
                 default_lifetime: 3600
+            # Limites des serveurs Mastodon (nombre de médias, longueur du texte…), gardées un jour.
+            mastodon.cache:
+                adapter: cache.app
+                default_lifetime: 86400
 
 when@test:
     framework:
         cache:
             pools:
                 openverse.cache:
+                    adapter: cache.adapter.array
+                mastodon.cache:
                     adapter: cache.adapter.array

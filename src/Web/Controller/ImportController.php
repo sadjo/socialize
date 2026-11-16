@@ -22,12 +22,14 @@ use App\Import\Instagram\Domain\InstagramImport;
 use App\Import\Instagram\Domain\Placement;
 use App\Import\Instagram\Infrastructure\Doctrine\ImportItemRepository;
 use App\Import\Instagram\Infrastructure\Doctrine\InstagramImportRepository;
+use App\Integration\Mastodon\Domain\MastodonUser;
 use App\Web\Controller\Payload\StartImport;
 use App\Web\Form\ImportOptionsType;
 use App\Web\Security\CurrentAccount;
 use App\Web\Security\ImportVoter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -44,7 +46,8 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Import d'une archive Instagram : envoi par morceaux, analyse, options, choix publication par publication, import.
  */
-#[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
+// Un compte Mastodon connecté publie sur son serveur : il n'a pas besoin du droit de publier ici.
+#[IsGranted(new Expression("is_granted('".User::ROLE_PUBLISHER."') or is_granted('".MastodonUser::ROLE."')"), message: 'Votre compte n’a pas le droit de publier.')]
 #[IsGranted(User::ROLE_INSTAGRAM_IMPORTER, message: 'Votre compte n’a pas le droit d’importer une archive Instagram.')]
 final class ImportController extends AbstractController
 {

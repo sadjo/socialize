@@ -68,5 +68,45 @@
         </table>
         </div>
     </section>
+
+    {% if mastodon_users is not empty %}
+        {# Personnes connectées avec leur compte Mastodon : elles publient sur leur serveur ; seul l'import Instagram
+           vers leur compte se permet ici. #}
+        <section class="card">
+            <h2>Comptes Mastodon ({{ mastodon_users|length }})</h2>
+            <p class="small">Personnes connectées avec leur compte Mastodon. Elles publient sur leur serveur ; l’import Instagram envoie leurs publications sur leur compte Mastodon, sans copie ici.</p>
+            <div class="tbl-wrap">
+            <table class="accounts">
+                <thead><tr><th>Compte</th><th>Droits</th></tr></thead>
+                <tbody>
+                {% for mastodon_user in mastodon_users %}
+                    {% set acct = mastodon_user.account.acct %}
+                    <tr>
+                        <td>
+                            <a class="lnk" href="{{ path('app_profile', {username: acct}) }}">@{{ acct }}</a>{% if not mastodon_user.tokenEncrypted %} <span class="chip">Déconnecté</span>{% endif %}
+                            <span class="acct-meta small">dernière connexion le <time datetime="{{ mastodon_user.lastLoginAt|date('c') }}">{{ mastodon_user.lastLoginAt|format_date('short', locale: 'fr') }}</time></span>
+                        </td>
+                        <td>
+                            <ul class="rights">
+                                <li>
+                                    <span>Import Instagram</span>
+                                    <form method="post" action="{{ path('admin_mastodon_import', {id: mastodon_user.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('mastodon-right-' ~ mastodon_user.id) }}">
+                                        {% if mastodon_user.canImportInstagram() %}
+                                            <button class="btn sm done" name="allow" value="0" title="Import Instagram : retirer le droit à @{{ acct }}">Autorisé · Retirer</button>
+                                        {% else %}
+                                            <button class="btn sm pri" name="allow" value="1" title="Import Instagram : autoriser @{{ acct }}">Autoriser</button>
+                                        {% endif %}
+                                    </form>
+                                </li>
+                            </ul>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </section>
+    {% endif %}
 </div>
 {% endblock %}

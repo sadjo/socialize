@@ -2,7 +2,7 @@
 <aside class="rail">
     {% if app.user %}
         {% set me = app.user.account %}
-        <div class="who">{{ ui.avatar(me, 48) }}<div class="t"><b>{{ me.username }}</b><small>{{ me.displayName }}</small></div><a class="lnk small" href="{{ path('app_profile', {username: me.username}) }}">Profil</a></div>
+        <div class="who">{{ ui.avatar(me, 48) }}<div class="t"><b>{{ me.username }}</b><small>{{ me.displayName }}</small></div><a class="lnk small" href="{{ path('app_profile', {username: me.acct}) }}">Profil</a></div>
         {% if suggestions is defined and suggestions is not empty %}
             <div class="sugg">
                 <span class="small" style="font-weight:600">Suggestions sur cette instance</span>

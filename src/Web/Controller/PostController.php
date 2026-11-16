@@ -7,6 +7,8 @@ namespace App\Web\Controller;
 use App\Core\Application\Post\PostAccess;
 use App\Core\Application\Post\PostArchiver;
 use App\Core\Application\Social\AudienceGroups;
+use App\Core\Application\Social\PilotedActionFailed;
+use App\Core\Application\Social\PilotedActions;
 use App\Core\Application\Social\SocialActions;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
@@ -80,15 +82,21 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/aimer', name: 'app_post_like', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
-    public function like(string $id, Request $request, SocialActions $social): Response
+    public function like(string $id, Request $request, SocialActions $social, LikeRepository $likes): Response
     {
         $this->denyAccessUnlessGranted('ROLE_USER');
         $post = $this->visiblePost($id);
         $this->checkToken($request, 'like-'.$id);
 
-        $liked = 'double-tap' === $request->request->getString('source')
-            ? $this->likeOnce($social, $post)
-            : $social->toggleLike($this->currentAccount->require(), $post);
+        try {
+            $liked = 'double-tap' === $request->request->getString('source')
+                ? $this->likeOnce($social, $post)
+                : $social->toggleLike($this->currentAccount->require(), $post);
+        } catch (PilotedActionFailed $e) {
+            // Compte Mastodon : son serveur a refusé, rien n'a changé.
+            $this->addFlash('error', $e->getMessage());
+            $liked = $likes->findOneFor($this->currentAccount->require(), $post) instanceof \App\Core\Domain\Social\Like;
+        }
 
         if (TurboBundle::STREAM_FORMAT === $request->getPreferredFormat()) {
             $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
@@ -144,7 +152,13 @@ final class PostController extends AbstractController
         }
         $this->checkToken($request, 'delete-comment-'.$id);
 
-        $social->deleteComment($comment);
+        try {
+            $social->deleteComment($comment, $this->currentAccount->get());
+        } catch (PilotedActionFailed $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->redirectToRoute('app_post_show', ['id' => $post->getPublicId(), '_fragment' => 'commentaires'], Response::HTTP_SEE_OTHER);
+        }
 
         if (TurboBundle::STREAM_FORMAT === $request->getPreferredFormat()) {
             $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
@@ -246,7 +260,7 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/supprimer', name: 'app_post_delete', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
-    public function delete(string $id, Request $request, PostComposer $composer, \App\Crosspost\Meta\Application\InstagramPublishing $instagramNotice): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function delete(string $id, Request $request, PostComposer $composer, \App\Crosspost\Meta\Application\InstagramPublishing $instagramNotice, PilotedActions $piloted): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $post = $this->visiblePost($id);
         if (!$post->isOwnedBy($this->currentAccount->get())) {
@@ -254,7 +268,17 @@ final class PostController extends AbstractController
         }
         $this->checkToken($request, 'delete-'.$id);
 
-        $username = $post->getAccount()->getUsername();
+        $username = $post->getAccount()->getAcct();
+        if (!$post->getAccount()->isLocal()) {
+            // Compte Mastodon : la publication est d'abord supprimée sur son serveur.
+            try {
+                $piloted->deletePost($post);
+            } catch (PilotedActionFailed $e) {
+                $this->addFlash('error', $e->getMessage());
+
+                return $this->redirectToRoute('app_post_show', ['id' => $id], Response::HTTP_SEE_OTHER);
+            }
+        }
         $instagram = $instagramNotice->forDeletion($post);
         $composer->delete($post);
         $this->addFlash('success', 'Publication supprimée.'.(null !== $instagram ? ' '.$instagram : ''));

@@ -46,6 +46,7 @@ final readonly class InboxProcessor
         private LoggerInterface $logger,
         private MessageBusInterface $bus,
         private \App\Core\Application\Notification\Notifications $notifications,
+        private \App\Core\Application\Account\PilotedAccounts $piloted,
     ) {
     }
 
@@ -216,8 +217,9 @@ final readonly class InboxProcessor
         }
 
         $visibility = $this->visibility($note);
-        // Seules les publications des comptes suivis (ou qui mentionnent un compte local) sont gardées.
-        if (!$visibility instanceof Visibility || (!$this->follows->hasLocalFollower($actor) && !$this->mentionsLocal($note))) {
+        // Seules les publications des comptes suivis, qui mentionnent un compte local, ou pilotés d'ici (connexion
+        // Mastodon : son profil) sont gardées.
+        if (!$visibility instanceof Visibility || (!$this->follows->hasLocalFollower($actor) && !$this->mentionsLocal($note) && !$this->piloted->isPiloted($actor))) {
             return;
         }
 

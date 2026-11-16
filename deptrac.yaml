@@ -16,6 +16,7 @@ deptrac:
     - { name: IntegrationImmich, collectors: [{ type: classLike, value: '^App\\Integration\\Immich\\.*' }] }
     - { name: IntegrationSynologyPhotos, collectors: [{ type: classLike, value: '^App\\Integration\\SynologyPhotos\\.*' }] }
     - { name: IntegrationOpenverse, collectors: [{ type: classLike, value: '^App\\Integration\\Openverse\\.*' }] }
+    - { name: IntegrationMastodon, collectors: [{ type: classLike, value: '^App\\Integration\\Mastodon\\.*' }] }
     - { name: Api,               collectors: [{ type: classLike, value: '^App\\Api\\.*' }] }
     - { name: Mcp,               collectors: [{ type: classLike, value: '^App\\Mcp\\.*' }] }
     - { name: Web,               collectors: [{ type: classLike, value: '^App\\Web\\.*' }] }
@@ -29,7 +30,8 @@ deptrac:
     IntegrationImmich: [Core, Media]
     IntegrationSynologyPhotos: [Core, Media]
     IntegrationOpenverse: [Core, Media]
+    IntegrationMastodon: [Core, Media, Federation]
     Api: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
     Mcp: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
-    Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
-    Admin: [Core, Federation]
+    Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse, IntegrationMastodon]
+    Admin: [Core, Federation, IntegrationMastodon]
