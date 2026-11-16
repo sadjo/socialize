@@ -43,6 +43,7 @@ final class MastodonLoginTest extends AppWebTestCase
 
         $crawler = $this->client->request('GET', '/connexion');
         self::assertSelectorTextContains('.mastodon-login', 'Compte sur remote.test');
+        self::assertSelectorExists('.mastodon-login form[data-turbo="false"]', 'Redirection vers un autre domaine : pas de Turbo.');
         $this->client->submit($crawler->selectButton('Se connecter avec Mastodon')->form());
         $authorize = (string) $this->client->getResponse()->headers->get('Location');
         self::assertStringStartsWith('https://remote.test/oauth/authorize?', $authorize);

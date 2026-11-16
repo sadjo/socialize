@@ -22,10 +22,11 @@
     </section>
     {% set mastodon_servers = mastodon_login_servers() %}
     {% if mastodon_servers is not null %}
-        {# Connexion avec un compte Mastodon : départ vers la page d'autorisation de son serveur. #}
+        {# Connexion avec un compte Mastodon : départ vers la page d'autorisation de son serveur. Sans Turbo : il
+           suivrait la redirection vers un autre domaine en arrière-plan, et rien ne se passerait. #}
         <section class="card mastodon-login">
             <h2>Avec votre compte Mastodon</h2>
-            <form method="post" action="{{ path('app_mastodon_login') }}" class="form">
+            <form method="post" action="{{ path('app_mastodon_login') }}" class="form" data-turbo="false">
                 <div class="field">
                     <label for="mastodon-server">Votre serveur Mastodon</label>
                     {% if mastodon_servers|length == 1 %}
