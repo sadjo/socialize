@@ -95,7 +95,10 @@ export default class extends Controller {
 
     /* Une vignette de photothèque ajoute le média à la sélection, ou l'en retire s'il y est déjà. */
     toggleLibrary({ params: { token, src, video, label, description, place }, currentTarget }) {
-        const index = this.items.findIndex((item) => item.token === token);
+        // Une seule version d'une photo live (« <jeton> » fixe, « <jeton>-live ») : toucher la vignette retire celle
+        // qui est choisie, quelle qu'elle soit.
+        const base = (t) => t.replace(/-live$/, '');
+        const index = this.items.findIndex((item) => base(item.token) === base(token));
         if (index >= 0) {
             this.items.splice(index, 1);
         } else if (this.items.length >= this.maxValue) {
@@ -104,7 +107,7 @@ export default class extends Controller {
         } else {
             // Aperçu en grand de la vignette (image, vidéo, date), repris par la loupe des médias choisis.
             const tile = currentTarget.closest('[data-library-preview-target="tile"]');
-            this.items.push({ kind: 'library', token, src, video: Boolean(video), label: label || '', alt: '', preview: tile ? tileEntry(tile) : null });
+            this.items.push({ kind: 'library', token, src, video: Boolean(video), label: label || '', alt: '', preview: tile ? tileEntry(tile, { live: token.endsWith('-live') }) : null });
             // Légende et lieu préremplis depuis la photothèque, seulement s'ils sont encore vides.
             if (description && this.hasCaptionTarget && this.captionTarget.value.trim() === '') {
                 this.captionTarget.value = description;

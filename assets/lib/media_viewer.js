@@ -5,17 +5,23 @@ import { setSound, soundOn } from './sound.js';
  * balayage), avec la date et le lieu en bas. Sert à la liste d'une photothèque (Immich, Synology Photos ;
  * bouton « Choisir ») et aux médias déjà choisis pour la publication ou la story (bouton « Retirer »).
  *
- * Un média (« entrée ») : { thumb, image, video, label, details, note } ; thumb s'affiche aussitôt, agrandi,
- * puis image le remplace une fois prête ; video, si présent, est lu à la place.
+ * Un média (« entrée ») : { thumb, image, video, live, label, details, note } ; thumb s'affiche aussitôt, agrandi,
+ * puis image le remplace une fois prête ; video, si présent, est lu à la place. live (photo live) : courte vidéo
+ * jouée par-dessus la photo au survol de la souris, ou tant que le doigt reste appuyé sur la photo.
  */
 
-/** Entrée d'une vignette de photothèque (attributs data-preview-*). */
-export function tileEntry(tile) {
+/**
+ * Entrée d'une vignette de photothèque (attributs data-preview-*). Photo live (data-preview-live : sa courte vidéo) :
+ * avec live, l'aperçu montre la photo fixe, animée au survol de la souris ou en maintenant le doigt dessus ; sans,
+ * la photo fixe seule.
+ */
+export function tileEntry(tile, { live = true } = {}) {
     const data = tile.dataset;
     return {
         thumb: data.previewThumb || '',
         image: data.previewImage || '',
         video: data.previewVideo || '',
+        live: live && data.previewLive ? data.previewLive : '',
         label: data.previewLabel || '',
         details: data.previewDetails || '',
         note: data.previewKind === 'video' && !data.previewVideo
@@ -33,7 +39,10 @@ export class MediaViewer {
      * @param {object}   options
      * @param {function} options.entries  liste des entrées, relue à chaque passage (elle peut s'allonger)
      * @param {number}   options.index    entrée affichée d'abord
-     * @param {object}   [options.select] bouton « Choisir » : { chosen(index), toggle(index) → message d'erreur ou '' }
+     * @param {object}   [options.select] bouton « Choisir » : { chosen(index, choice), toggle(index, choice) → message
+     *                                    d'erreur ou '', choices(index) → [{ key, label }] ou null } ; avec plusieurs
+     *                                    versions (photo live : fixe ou live), un bouton par version, choice = sa clé
+     *                                    (null sinon)
      * @param {function} [options.remove] bouton « Retirer » : retire l'entrée (la liste raccourcit)
      * @param {function} [options.onShow] appelé avec l'index affiché
      * @param {function} [options.onClose]
@@ -70,7 +79,7 @@ export class MediaViewer {
             <button type="button" class="ib lb-next" aria-label="Média suivant"><svg class="i" aria-hidden="true"><use href="#i-right"/></svg></button>
             <div class="lb-bar">
                 <div class="lb-info"><b class="lb-label"></b><span class="lb-details"></span><span class="lb-note" role="status"></span></div>
-                ${this.select ? '<button type="button" class="btn lb-select" aria-pressed="false"></button>' : ''}
+                ${this.select ? '<div class="lb-choices"></div>' : ''}
                 ${this.remove ? '<button type="button" class="btn lb-remove"><svg class="i xs" aria-hidden="true"><use href="#i-trash"/></svg>Retirer</button>' : ''}
             </div>`;
 
@@ -78,7 +87,7 @@ export class MediaViewer {
             if (e.target.closest('.lb-close') || e.target === dialog || e.target.classList.contains('lb-stage')) dialog.close();
             else if (e.target.closest('.lb-prev')) this.go(-1);
             else if (e.target.closest('.lb-next')) this.go(1);
-            else if (e.target.closest('.lb-select')) this.toggle();
+            else if (e.target.closest('.lb-select')) this.toggle(e.target.closest('.lb-select').dataset.choice || null);
             else if (e.target.closest('.lb-remove')) this.removeCurrent();
         });
         dialog.addEventListener('keydown', (e) => {
@@ -150,11 +159,13 @@ export class MediaViewer {
         }
         element.classList.add('lb-media');
         if (entry.label) element.setAttribute('aria-label', entry.label);
-        stage.replaceChildren(element);
+        stage.replaceChildren(entry.live && !entry.video && element instanceof HTMLImageElement ? this.live(element, entry.live) : element);
 
         this.dialog.querySelector('.lb-label').textContent = entry.label;
         this.dialog.querySelector('.lb-details').textContent = entry.details;
-        this.note(entry.note);
+        this.note(entry.note || (entry.live && !entry.video
+            ? (matchMedia('(hover: hover)').matches ? 'Photo live : passez la souris dessus pour l’animer.' : 'Photo live : maintenez le doigt dessus pour l’animer.')
+            : ''));
         this.renderNav();
         this.renderSelect();
         this.onShow(this.index);
@@ -162,6 +173,57 @@ export class MediaViewer {
         // Image suivante préchargée.
         const next = entries[this.index + 1];
         if (next?.image && !next.video) new Image().src = next.image;
+    }
+
+    /**
+     * Photo live : la photo fixe, et sa courte vidéo par-dessus, jouée (sans le son) au survol de la souris, ou tant
+     * que le doigt reste appuyé ; elle s'efface au retrait de la souris, au lever du doigt ou s'il glisse (balayage).
+     */
+    live(image, src) {
+        const box = document.createElement('div');
+        box.className = 'lb-live';
+        const video = document.createElement('video');
+        video.className = 'lb-media lb-motion';
+        video.muted = true;
+        video.playsInline = true;
+        video.loop = true;
+        video.preload = 'auto';
+        video.src = src;
+        video.setAttribute('aria-hidden', 'true');
+        const badge = document.createElement('span');
+        badge.className = 'lb-live-badge';
+        badge.textContent = 'LIVE';
+        box.append(image, video, badge);
+
+        let hold = null;
+        let start = null;
+        const play = () => {
+            box.classList.add('playing');
+            video.currentTime = 0;
+            video.play().catch(() => box.classList.remove('playing'));
+        };
+        const stop = () => {
+            clearTimeout(hold);
+            hold = null;
+            start = null;
+            box.classList.remove('playing');
+            video.pause();
+        };
+        box.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') play(); });
+        box.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') stop(); });
+        box.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') return;
+            start = { x: e.clientX, y: e.clientY };
+            hold = setTimeout(play, 200);
+        });
+        box.addEventListener('pointermove', (e) => {
+            if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) stop();
+        });
+        ['pointerup', 'pointercancel'].forEach((type) => box.addEventListener(type, (e) => { if (e.pointerType !== 'mouse') stop(); }));
+        // Pas de menu « Enregistrer l'image » à l'appui long.
+        box.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        return box;
     }
 
     renderNav() {
@@ -172,13 +234,24 @@ export class MediaViewer {
         this.dialog.querySelector('.lb-count').textContent = `${this.index + 1} / ${count}`;
     }
 
-    renderSelect() {
-        const button = this.dialog.querySelector('.lb-select');
-        if (!button) return;
-        const chosen = this.select.chosen(this.index);
-        button.setAttribute('aria-pressed', String(chosen));
-        button.classList.toggle('pri', !chosen);
-        button.innerHTML = chosen ? '<svg class="i xs" aria-hidden="true"><use href="#i-check"/></svg>Choisie · Retirer' : 'Choisir';
+    renderSelect(focus = null) {
+        const box = this.dialog.querySelector('.lb-choices');
+        if (!box) return;
+        const choices = this.select.choices?.(this.index) || [{ key: null, label: '' }];
+        box.replaceChildren(...choices.map(({ key, label }) => {
+            const chosen = this.select.chosen(this.index, key);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `btn lb-select${chosen ? '' : ' pri'}`;
+            if (key) button.dataset.choice = key;
+            button.setAttribute('aria-pressed', String(chosen));
+            const check = '<svg class="i xs" aria-hidden="true"><use href="#i-check"/></svg>';
+            button.innerHTML = label
+                ? (chosen ? `${check}${label} · Retirer` : `Choisir : ${label}`)
+                : (chosen ? `${check}Choisie · Retirer` : 'Choisir');
+            return button;
+        }));
+        if (focus !== null) box.querySelector(focus ? `[data-choice="${focus}"]` : '.lb-select')?.focus();
     }
 
     // Retire le média affiché ; la visionneuse passe au suivant (au précédent s'il était le dernier), ou se ferme.
@@ -191,10 +264,10 @@ export class MediaViewer {
         this.render();
     }
 
-    toggle() {
+    toggle(choice = null) {
         if (!this.select) return;
-        this.note(this.select.toggle(this.index) || '');
-        this.renderSelect();
+        this.note(this.select.toggle(this.index, choice) || '');
+        this.renderSelect(choice ?? '');
     }
 
     note(text) {

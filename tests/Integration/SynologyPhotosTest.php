@@ -216,6 +216,39 @@ final class SynologyPhotosTest extends AppWebTestCase
         self::assertSame([], glob(sys_get_temp_dir().'/socialize-synology-*') ?: [], 'Archive et fichier extrait supprimés.');
     }
 
+    /**
+     * Photo live : la vignette montre la photo fixe, l'aperçu aussi, animée par la courte vidéo (extraite de l'archive), et l'une
+     * ou l'autre version se publie.
+     */
+    public function testALivePhotoOffersItsStillAndItsLiveVersion(): void
+    {
+        FakeSynologyPhotos::$livePhotos = true;
+        $this->login($this->connected('camille'));
+
+        $this->client->request('GET', '/synology-photos/phototheque');
+        $live = '.imm-tile[data-preview-live="/synology-photos/live/p/501"]';
+        self::assertSelectorTextContains($live.' .imm-pick .gi.live', 'LIVE');
+        self::assertSelectorExists($live.' .imm-pick[data-compose-token-param="s-p-501"][data-compose-video-param="false"]');
+        self::assertSelectorExists($live.' .imm-pick-live[hidden][data-compose-token-param="s-p-501-live"][data-compose-video-param="true"]');
+        self::assertSelectorNotExists('.imm-tile:not('.substr($live, 9).') .imm-pick-live', 'Seule la photo live a une version live.');
+
+        $this->client->request('GET', '/synology-photos/live/p/501', server: ['HTTP_RANGE' => 'bytes=0-99']);
+        self::assertResponseStatusCodeSame(206);
+        self::assertResponseHeaderSame('Content-Type', 'video/mp4');
+        self::assertResponseHeaderSame('Content-Length', '100');
+
+        $post = $this->publish(['s-p-501-live'], ['s-p-501-live' => 'La mer en mouvement']);
+        $media = array_values($post->getMedia()->toArray());
+        self::assertCount(1, $media);
+        self::assertTrue($media[0]->isVideo());
+        self::assertSame('La mer en mouvement', $media[0]->getAltText());
+        self::assertSame('48.6493', $media[0]->getExif()['gps-latitude'] ?? null, 'Les métadonnées de la photo accompagnent la version live.');
+        self::assertSame([], glob(sys_get_temp_dir().'/socialize-synology-*') ?: [], 'Archive et vidéo extraite supprimées.');
+
+        $post = $this->publish(['s-p-501'], []);
+        self::assertFalse(array_first($post->getMedia()->toArray())?->isVideo());
+    }
+
     public function testAStoryFromSynologyPhotos(): void
     {
         $this->login($this->connected('camille'));

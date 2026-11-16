@@ -214,6 +214,19 @@ final readonly class SynologyPhotosClient
         }
     }
 
+    /**
+     * Courte vidéo d'une photo live, extraite de l'archive que Synology Photos envoie pour la photo et sa vidéo.
+     *
+     * @param SynologyPhotosItem::PERSONAL|SynologyPhotosItem::TEAM $space
+     */
+    public function liveVideo(string $server, string $session, string $space, int $id, string $target, int $maxBytes = \PHP_INT_MAX): void
+    {
+        $this->download($server, $session, $space, $id, $target, '', true, $maxBytes);
+        if (!str_starts_with((string) new \finfo(\FILEINFO_MIME_TYPE)->file($target), 'video/')) {
+            throw new SynologyPhotosException('Synology Photos n’a pas envoyé la vidéo de cette photo live.');
+        }
+    }
+
     private const array IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'heic', 'heif', 'png', 'webp', 'gif', 'tif', 'tiff', 'avif', 'dng'];
     private const array VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v', '3gp', 'avi', 'mkv', 'webm', 'mts', 'm2ts'];
 

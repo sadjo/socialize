@@ -33,7 +33,8 @@ final readonly class SynologyPhotosLibrarySource implements LibrarySource
 
     public function fetch(Account $author, string $reference): LibraryMedia
     {
-        if (!preg_match('/^([pt])-(\d{1,18})$/', $reference, $m)) {
+        // Photo live : « <espace>-<id>-live » publie sa courte vidéo, sans suffixe la photo fixe.
+        if (!preg_match('/^([pt])-(\d{1,18})('.preg_quote(LibrarySource::LIVE, '/').')?$/', $reference, $m)) {
             throw new MediaProcessingException('La sélection de médias est invalide. Rechargez la page et réessayez.');
         }
         /** @var SynologyPhotosItem::PERSONAL|SynologyPhotosItem::TEAM $space */
@@ -43,13 +44,22 @@ final readonly class SynologyPhotosLibrarySource implements LibrarySource
         try {
             [$server, $session] = $this->connections->session($connection);
             $item = $this->client->item($server, $session, $space, (int) $m[2]);
-            $limit = $item->video ? MediaRules::MAX_VIDEO_SIZE : MediaRules::MAX_IMAGE_SIZE;
+            $live = isset($m[3]);
+            if ($live && !$item->live) {
+                throw new MediaProcessingException(\sprintf('« %s » n’est pas une photo live.', $item->fileName));
+            }
+            $limit = $item->video || $live ? MediaRules::MAX_VIDEO_SIZE : MediaRules::MAX_IMAGE_SIZE;
             if (null !== $item->size && $item->size > (int) $limit * 1024 * 1024) {
                 throw new MediaProcessingException(\sprintf('« %s » dépasse la taille maximale (%so).', $item->fileName, $limit));
             }
-            $path = $this->filesystem->tempnam(sys_get_temp_dir(), 'socialize-synology-', '.'.(strtolower(pathinfo($item->fileName, \PATHINFO_EXTENSION)) ?: ($item->video ? 'mp4' : 'jpg')));
+            $extension = $live ? 'mov' : (strtolower(pathinfo($item->fileName, \PATHINFO_EXTENSION)) ?: ($item->video ? 'mp4' : 'jpg'));
+            $path = $this->filesystem->tempnam(sys_get_temp_dir(), 'socialize-synology-', '.'.$extension);
             try {
-                $this->client->download($server, $session, $space, $item->id, $path, $item->fileName, $item->video, (int) $limit * 1024 * 1024);
+                if ($live) {
+                    $this->client->liveVideo($server, $session, $space, $item->id, $path, (int) $limit * 1024 * 1024);
+                } else {
+                    $this->client->download($server, $session, $space, $item->id, $path, $item->fileName, $item->video, (int) $limit * 1024 * 1024);
+                }
             } catch (SynologyPhotosException $e) {
                 $this->filesystem->remove($path);
                 throw $e;
