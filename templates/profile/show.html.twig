@@ -11,49 +11,58 @@
         {% else %}
             <span class="ring seen">{{ ui.avatar(account, 150) }}</span>
         {% endif %}
-        <div class="prof-i">
-            <div class="row">
-                <h1>{{ account.local ? account.username : account.displayName }}</h1>
-                {% if is_owner %}
-                    <a class="btn sm" href="{{ path('app_settings') }}">Modifier le profil</a>
-                {% elseif app.user %}
-                    {% if follow_pending %}
-                        <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
-                            <button class="btn sm done" title="L’instance de ce compte n’a pas encore confirmé">Demande envoyée · Annuler</button>
-                        </form>
-                    {% elseif is_following %}
-                        <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
-                            <button class="btn sm done">Abonné · Ne plus suivre</button>
-                        </form>
+        {% if not app.user %}
+            {# Profil public : nom d'affichage, nom d'utilisateur, adresse à copier, puis adresse dans le fédivers. #}
+            <div class="prof-i prof-public">
+                <div class="names">
+                    <h1>{{ account.displayName }}</h1>
+                    <p class="uname">{{ account.local ? account.username : account.acct }}</p>
+                </div>
+                {% set profile_url = account.local ? url('app_profile', {username: account.username}) : (account.profileUrl ?? url('app_profile', {username: account.acct})) %}
+                <div><button type="button" class="btn sm" data-controller="copy" data-copy-text-value="{{ profile_url }}" data-copy-toast-value="Adresse copiée !" data-action="copy#copy">{{ ui.icon('copy', 'xs') }}Copier l’adresse</button></div>
+                <span class="handle" title="Adresse dans le fédivers (Mastodon, Pixelfed…)">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>
+            </div>
+            {# Sur mobile, sous la photo et les noms, sur toute la largeur. #}
+            <div class="prof-more">
+                {{ block('stats') }}
+                {% if account.bio %}<div class="bio">{{ account.bio|rich_text }}</div>{% endif %}
+            </div>
+        {% else %}
+            <div class="prof-i">
+                <div class="row">
+                    <h1>{{ account.local ? account.username : account.displayName }}</h1>
+                    {% if is_owner %}
+                        <a class="btn sm" href="{{ path('app_settings') }}">Modifier le profil</a>
+                    {% elseif app.user %}
+                        {% if follow_pending %}
+                            <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
+                                <button class="btn sm done" title="L’instance de ce compte n’a pas encore confirmé">Demande envoyée · Annuler</button>
+                            </form>
+                        {% elseif is_following %}
+                            <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
+                                <button class="btn sm done">Abonné · Ne plus suivre</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{{ path('app_profile_follow', {username: account.acct}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
+                                <button class="btn sm pri">Suivre</button>
+                            </form>
+                        {% endif %}
                     {% else %}
-                        <form method="post" action="{{ path('app_profile_follow', {username: account.acct}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
-                            <button class="btn sm pri">Suivre</button>
-                        </form>
+                        <a class="btn sm pri" href="{{ login_url ?? path('app_login') }}">Suivre</a>
                     {% endif %}
-                {% else %}
-                    <a class="btn sm pri" href="{{ login_url ?? path('app_login') }}">Suivre</a>
-                {% endif %}
-                <button type="button" class="btn sm" data-controller="copy" data-copy-text-value="{{ handle(account, local_domain) }}" data-copy-toast-value="Adresse copiée !" data-action="copy#copy">{{ ui.icon('copy', 'xs') }}Copier l’adresse</button>
-            </div>
-            <div class="stats num">
-                <span><b>{{ stats.posts|format_number(locale: 'fr') }}</b> publication{{ stats.posts > 1 ? 's' }}</span>
-                {% if can_view_network %}
-                    <a href="{{ path('app_profile_followers', {username: account.acct}) }}"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</a>
-                    <a href="{{ path('app_profile_following', {username: account.acct}) }}"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</a>
-                {% else %}
-                    <span title="Liste réservée aux abonnés"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</span>
-                    <span title="Liste réservée aux abonnés"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</span>
+                    <button type="button" class="btn sm" data-controller="copy" data-copy-text-value="{{ handle(account, local_domain) }}" data-copy-toast-value="Adresse copiée !" data-action="copy#copy">{{ ui.icon('copy', 'xs') }}Copier l’adresse</button>
+                </div>
+                {{ block('stats') }}
+                <div class="bio"><b>{{ account.displayName }}</b>{% if account.bio %}<br>{{ account.bio|rich_text }}{% endif %}</div>
+                <span class="handle">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>
+                {% if not account.local %}
+                    <p class="small">Compte de <b>{{ account.domain }}</b>. Seules les publications reçues par cette instance sont affichées{% if account.profileUrl %} · <a class="lnk" href="{{ account.profileUrl }}" target="_blank" rel="noopener nofollow">voir le profil sur son instance</a>{% endif %}.</p>
                 {% endif %}
             </div>
-            <div class="bio"><b>{{ account.displayName }}</b>{% if account.bio %}<br>{{ account.bio|rich_text }}{% endif %}</div>
-            <span class="handle">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>
-            {% if not account.local %}
-                <p class="small">Compte de <b>{{ account.domain }}</b>. Seules les publications reçues par cette instance sont affichées{% if account.profileUrl %} · <a class="lnk" href="{{ account.profileUrl }}" target="_blank" rel="noopener nofollow">voir le profil sur son instance</a>{% endif %}.</p>
-            {% endif %}
-        </div>
+        {% endif %}
     </section>
 
     {% if highlights is not empty or is_owner %}
@@ -88,5 +97,19 @@
             <div class="grid3">{{ include('profile/_grid_page.html.twig') }}</div>
         {% endif %}
     </div>
+</div>
+{% endblock %}
+
+{# Compteurs (liens vers les listes quand elles sont visibles), partagés par les deux en-têtes. #}
+{% block stats %}
+<div class="stats num">
+    <span><b>{{ stats.posts|format_number(locale: 'fr') }}</b> publication{{ stats.posts > 1 ? 's' }}</span>
+    {% if can_view_network %}
+        <a href="{{ path('app_profile_followers', {username: account.acct}) }}"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</a>
+        <a href="{{ path('app_profile_following', {username: account.acct}) }}"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</a>
+    {% else %}
+        <span title="Liste réservée aux abonnés"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</span>
+        <span title="Liste réservée aux abonnés"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</span>
+    {% endif %}
 </div>
 {% endblock %}

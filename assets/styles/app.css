@@ -856,3 +856,21 @@ label.act{cursor:pointer}
 .notif-th{flex:none;width:44px;height:55px;object-fit:cover;border-radius:8px}
 .notif-acts{display:flex;flex:none}
 .empty-notifs{display:grid;justify-items:center;gap:8px;text-align:center;color:var(--muted);margin-top:16px}
+
+/* Profil public (visiteur) : nom d'affichage, nom d'utilisateur, adresse ; pied de page « Propulsé par ». */
+.prof-public{gap:10px;align-self:center}
+.prof-more{grid-column:2;display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:767px){
+  .prof-more{grid-column:1/-1}
+  /* Compteurs centrés sous la photo et les noms. */
+  .prof-more .stats{justify-content:center}
+  /* Photo dans les deux premiers cinquièmes de la largeur, noms et adresse dans les trois autres. */
+  .prof-h:has(.prof-public){grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
+  .prof-h:has(.prof-public) .ring{width:100%;box-sizing:border-box}
+  .prof-h:has(.prof-public) .ring .av,.prof-h:has(.prof-public) .ring .avatar-img{width:100%!important;height:auto!important;aspect-ratio:1;font-size:clamp(1.6rem,11vw,3rem)!important}
+}
+.prof-public .names h1{line-height:1.2;overflow-wrap:anywhere}
+.prof-public .uname{color:var(--muted);margin:2px 0 0;overflow-wrap:anywhere}
+.prof-public .handle{align-self:flex-start}
+.powered{text-align:center;color:var(--muted);font-size:.8rem;padding:32px 16px 24px}
+.powered a{color:inherit;text-decoration:underline}
