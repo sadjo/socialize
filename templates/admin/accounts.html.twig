@@ -38,6 +38,12 @@
                         <a class="lnk" href="{{ path('app_profile', {username: user.account.username}) }}">@{{ user.account.username }}</a>{% if user.isAdmin() %} <span class="chip">Administrateur</span>{% endif %}
                         <span class="acct-meta small">{{ user.email }} · créé le <time datetime="{{ user.createdAt|date('c') }}">{{ user.createdAt|format_date('short', locale: 'fr') }}</time></span>
                         <a class="btn sm ghost acct-password" href="{{ path('admin_account_password', {id: user.id}) }}" aria-label="Changer le mot de passe de @{{ user.account.username }}">{{ ui.icon('key', 'xs') }}Mot de passe</a>
+                        {% if user != app.user %}
+                            <form method="post" action="{{ path('admin_account_delete', {id: user.id}) }}" class="acct-delete" data-turbo-confirm="Supprimer le compte @{{ user.account.username }} ? Ses publications, ses stories et ses fichiers sont effacés, et ses abonnés du fédivers prévenus. Cette action est définitive.">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-account-' ~ user.id) }}">
+                                <button class="btn sm ghost danger" aria-label="Supprimer le compte @{{ user.account.username }}">{{ ui.icon('trash', 'xs') }}Supprimer</button>
+                            </form>
+                        {% endif %}
                     </td>
                     <td>
                         <ul class="rights">
@@ -85,6 +91,10 @@
                         <td>
                             <a class="lnk" href="{{ path('app_profile', {username: acct}) }}">@{{ acct }}</a>{% if not mastodon_user.tokenEncrypted %} <span class="chip">Déconnecté</span>{% endif %}
                             <span class="acct-meta small">dernière connexion le <time datetime="{{ mastodon_user.lastLoginAt|date('c') }}">{{ mastodon_user.lastLoginAt|format_date('short', locale: 'fr') }}</time></span>
+                            <form method="post" action="{{ path('admin_mastodon_delete', {id: mastodon_user.id}) }}" class="acct-delete" data-turbo-confirm="Supprimer l’accès de @{{ acct }} ? La personne est déconnectée de Socialize ; elle pourra se reconnecter avec Mastodon.">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-mastodon-' ~ mastodon_user.id) }}">
+                                <button class="btn sm ghost danger" aria-label="Supprimer l’accès de @{{ acct }}">{{ ui.icon('trash', 'xs') }}Supprimer</button>
+                            </form>
                         </td>
                         <td>
                             <ul class="rights">

@@ -18,4 +18,6 @@ parameters:
         # La fausse instance du fédivers n'existe que dans le conteneur de test.
         -
             message: '#Service "App\\Tests\\Federation\\FakeFediverse" is not registered in the container#'
-            path: tests/Federation/FederationTest.php
+            paths:
+                - tests/Federation/FederationTest.php
+                - tests/Admin/DeleteAccountTest.php
