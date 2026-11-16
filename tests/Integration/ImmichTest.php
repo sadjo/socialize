@@ -143,7 +143,7 @@ final class ImmichTest extends AppWebTestCase
         $this->client->request('GET', '/immich/phototheque');
         self::assertSelectorNotExists('[data-compose-token-param="i-'.FakeImmich::LIVE_MOTION.'"]');
         $live = '.imm-tile[data-preview-thumb="/immich/apercu/'.FakeImmich::PHOTO_LIVE.'"]';
-        self::assertSelectorExists($live.'[data-preview-live="/immich/video/'.FakeImmich::LIVE_MOTION.'"]:not([data-preview-video])', 'L’aperçu joue la courte vidéo.');
+        self::assertSelectorExists($live.'[data-preview-live="/immich/video/'.FakeImmich::LIVE_MOTION.'"]:not([data-preview-video])', 'L’aperçu montre la photo fixe, animée par sa courte vidéo au survol ou à l’appui long.');
         self::assertSelectorTextContains($live.' .imm-pick .gi.live', 'LIVE');
         self::assertSelectorExists($live.' .imm-pick[data-compose-token-param="i-'.FakeImmich::PHOTO_LIVE.'"][data-compose-video-param="false"]', 'Toucher la vignette choisit la photo fixe.');
         self::assertSelectorExists($live.' .imm-pick-live[hidden][data-compose-token-param="i-'.FakeImmich::PHOTO_LIVE.'-live"][data-compose-video-param="true"][data-action="compose#toggleLibrary"]');

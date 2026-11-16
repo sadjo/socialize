@@ -28,7 +28,7 @@ export default class extends Controller {
         const index = this.tileTargets.indexOf(currentTarget.closest('.imm-tile'));
         if (index < 0) return;
         this.viewer = new MediaViewer({
-            entries: () => this.tileTargets.map(tileEntry),
+            entries: () => this.tileTargets.map((tile) => tileEntry(tile)),
             index,
             select: {
                 // Photo live : deux versions au choix, la photo fixe ou la live (bouton caché .imm-pick-live).

@@ -715,6 +715,13 @@ label.act{cursor:pointer}
 .lib-preview p.lb-media{background:none;color:#fff;opacity:.8}
 /* L'image remplit l'espace (vignette agrandie, puis image en grand) : pas de saut de taille au remplacement. */
 .lib-preview img.lb-media{width:100%;height:100%;object-fit:contain;background:none;border-radius:0}
+/* Photo live : la vidéo par-dessus la photo fixe, visible pendant le survol ou l'appui long. */
+.lb-live{position:relative;width:100%;height:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:pan-y}
+.lb-live .lb-media{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;background:none;border-radius:0}
+.lb-live .lb-motion{opacity:0;transition:opacity .15s;pointer-events:none}
+.lb-live.playing .lb-motion{opacity:1}
+.lb-live-badge{position:absolute;top:8px;left:50%;translate:-50% 0;padding:2px 8px;border-radius:4px;background:oklch(0 0 0 / .45);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.08em;pointer-events:none}
+.lb-live.playing .lb-live-badge{background:var(--accent);color:var(--on-grad)}
 .lb-bar{position:fixed;left:0;right:0;bottom:0;z-index:1;display:flex;align-items:center;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,oklch(0 0 0 / .65) 30%)}
 .lb-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:.88rem}
 .lb-info .lb-details{opacity:.8;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -217,7 +217,7 @@ final class SynologyPhotosTest extends AppWebTestCase
     }
 
     /**
-     * Photo live : la vignette montre la photo fixe, l'aperçu joue la courte vidéo (extraite de l'archive), et l'une
+     * Photo live : la vignette montre la photo fixe, l'aperçu aussi, animée par la courte vidéo (extraite de l'archive), et l'une
      * ou l'autre version se publie.
      */
     public function testALivePhotoOffersItsStillAndItsLiveVersion(): void

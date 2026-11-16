@@ -5,21 +5,23 @@ import { setSound, soundOn } from './sound.js';
  * balayage), avec la date et le lieu en bas. Sert à la liste d'une photothèque (Immich, Synology Photos ;
  * bouton « Choisir ») et aux médias déjà choisis pour la publication ou la story (bouton « Retirer »).
  *
- * Un média (« entrée ») : { thumb, image, video, label, details, note } ; thumb s'affiche aussitôt, agrandi,
- * puis image le remplace une fois prête ; video, si présent, est lu à la place.
+ * Un média (« entrée ») : { thumb, image, video, live, label, details, note } ; thumb s'affiche aussitôt, agrandi,
+ * puis image le remplace une fois prête ; video, si présent, est lu à la place. live (photo live) : courte vidéo
+ * jouée par-dessus la photo au survol de la souris, ou tant que le doigt reste appuyé sur la photo.
  */
 
 /**
  * Entrée d'une vignette de photothèque (attributs data-preview-*). Photo live (data-preview-live : sa courte vidéo) :
- * avec live, l'aperçu joue la vidéo (sur la photo fixe en attendant) ; sans, il montre la photo fixe seule.
+ * avec live, l'aperçu montre la photo fixe, animée au survol de la souris ou en maintenant le doigt dessus ; sans,
+ * la photo fixe seule.
  */
 export function tileEntry(tile, { live = true } = {}) {
     const data = tile.dataset;
-    const motion = live && data.previewLive ? data.previewLive : '';
     return {
         thumb: data.previewThumb || '',
         image: data.previewImage || '',
-        video: data.previewVideo || motion,
+        video: data.previewVideo || '',
+        live: live && data.previewLive ? data.previewLive : '',
         label: data.previewLabel || '',
         details: data.previewDetails || '',
         note: data.previewKind === 'video' && !data.previewVideo
@@ -157,11 +159,13 @@ export class MediaViewer {
         }
         element.classList.add('lb-media');
         if (entry.label) element.setAttribute('aria-label', entry.label);
-        stage.replaceChildren(element);
+        stage.replaceChildren(entry.live && !entry.video && element instanceof HTMLImageElement ? this.live(element, entry.live) : element);
 
         this.dialog.querySelector('.lb-label').textContent = entry.label;
         this.dialog.querySelector('.lb-details').textContent = entry.details;
-        this.note(entry.note);
+        this.note(entry.note || (entry.live && !entry.video
+            ? (matchMedia('(hover: hover)').matches ? 'Photo live : passez la souris dessus pour l’animer.' : 'Photo live : maintenez le doigt dessus pour l’animer.')
+            : ''));
         this.renderNav();
         this.renderSelect();
         this.onShow(this.index);
@@ -169,6 +173,57 @@ export class MediaViewer {
         // Image suivante préchargée.
         const next = entries[this.index + 1];
         if (next?.image && !next.video) new Image().src = next.image;
+    }
+
+    /**
+     * Photo live : la photo fixe, et sa courte vidéo par-dessus, jouée (sans le son) au survol de la souris, ou tant
+     * que le doigt reste appuyé ; elle s'efface au retrait de la souris, au lever du doigt ou s'il glisse (balayage).
+     */
+    live(image, src) {
+        const box = document.createElement('div');
+        box.className = 'lb-live';
+        const video = document.createElement('video');
+        video.className = 'lb-media lb-motion';
+        video.muted = true;
+        video.playsInline = true;
+        video.loop = true;
+        video.preload = 'auto';
+        video.src = src;
+        video.setAttribute('aria-hidden', 'true');
+        const badge = document.createElement('span');
+        badge.className = 'lb-live-badge';
+        badge.textContent = 'LIVE';
+        box.append(image, video, badge);
+
+        let hold = null;
+        let start = null;
+        const play = () => {
+            box.classList.add('playing');
+            video.currentTime = 0;
+            video.play().catch(() => box.classList.remove('playing'));
+        };
+        const stop = () => {
+            clearTimeout(hold);
+            hold = null;
+            start = null;
+            box.classList.remove('playing');
+            video.pause();
+        };
+        box.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') play(); });
+        box.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') stop(); });
+        box.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') return;
+            start = { x: e.clientX, y: e.clientY };
+            hold = setTimeout(play, 200);
+        });
+        box.addEventListener('pointermove', (e) => {
+            if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) stop();
+        });
+        ['pointerup', 'pointercancel'].forEach((type) => box.addEventListener(type, (e) => { if (e.pointerType !== 'mouse') stop(); }));
+        // Pas de menu « Enregistrer l'image » à l'appui long.
+        box.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        return box;
     }
 
     renderNav() {
