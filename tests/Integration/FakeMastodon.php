@@ -40,6 +40,13 @@ final class FakeMastodon
     /** Nombre maximal de médias par publication annoncé par le serveur. */
     public static int $maxMedia = 4;
 
+    /** Comptes créés par l'API d'inscription (sans le mot de passe), et confirmation de leur adresse. */
+    public const string NEW_TOKEN = 'jeton-du-nouveau-compte';
+    /** @var list<array<string, mixed>> */
+    public static array $signups = [];
+    public static bool $confirmed = false;
+    public static bool $registrationsOpen = true;
+
     /** Le serveur limite une fois le débit (erreur 429) à la prochaine publication. */
     public static bool $rateLimitOnce = false;
 
@@ -61,6 +68,9 @@ final class FakeMastodon
         self::$media = [];
         self::$statusError = null;
         self::$rateLimitOnce = false;
+        self::$signups = [];
+        self::$confirmed = false;
+        self::$registrationsOpen = true;
     }
 
     /**
@@ -114,17 +124,25 @@ final class FakeMastodon
 
         return match (true) {
             'POST' === $method && '/api/v1/apps' === $path => $this->json(['id' => '1', 'client_id' => 'client-socialize', 'client_secret' => 'secret-socialize', 'name' => $body['client_name'] ?? '']),
+            'POST' === $method && '/oauth/token' === $path && 'client_credentials' === ($body['grant_type'] ?? null) => 'write:accounts' === ($body['scope'] ?? null) && 'secret-socialize' === ($body['client_secret'] ?? null)
+                ? $this->json(['access_token' => 'jeton-application', 'token_type' => 'Bearer', 'scope' => 'write:accounts'])
+                : $this->json(['error' => 'invalid_scope'], 400),
+            'POST' === $method && '/api/v1/accounts' === $path => $this->signup($body, $token),
             'POST' === $method && '/oauth/token' === $path => self::CODE === ($body['code'] ?? null) && 'secret-socialize' === ($body['client_secret'] ?? null)
                 ? $this->json(['access_token' => self::TOKEN, 'token_type' => 'Bearer', 'scope' => $body['scope'] ?? '', 'created_at' => time()])
                 : $this->json(['error' => 'invalid_grant'], 400),
             'POST' === $method && '/oauth/revoke' === $path => $this->json([]),
-            'GET' === $method && '/api/v1/accounts/verify_credentials' === $path => self::TOKEN === $token
+            'GET' === $method && '/api/v1/accounts/verify_credentials' === $path && self::NEW_TOKEN === $token && !self::$confirmed => $this->json(['error' => 'Your login is missing a confirmed e-mail address'], 403),
+            'GET' === $method && '/api/v1/accounts/verify_credentials' === $path => \in_array($token, [self::TOKEN, self::NEW_TOKEN], true)
                 ? $this->json(array_filter(['id' => '109', 'username' => 'alice', 'acct' => 'alice', 'display_name' => 'Alice', 'url' => 'https://remote.test/@alice', 'uri' => self::$actor]))
                 : $this->json(['error' => 'The access token is invalid'], 401),
-            'GET' === $method && '/api/v2/instance' === $path => $this->json(['domain' => self::DOMAIN, 'configuration' => [
-                'statuses' => ['max_characters' => 500, 'max_media_attachments' => self::$maxMedia],
-                'media_attachments' => ['supported_mime_types' => ['image/jpeg', 'image/png', 'image/heic', 'video/mp4', 'video/quicktime'], 'image_size_limit' => 16777216, 'video_size_limit' => 103809024],
-            ]]),
+            'GET' === $method && '/api/v2/instance' === $path => $this->json(['domain' => self::DOMAIN,
+                'registrations' => ['enabled' => self::$registrationsOpen, 'approval_required' => false, 'min_age' => 16, 'message' => null],
+                'rules' => [['id' => '1', 'text' => 'Pas de contenu illégal.'], ['id' => '2', 'text' => 'Respectez les autres.']],
+                'configuration' => [
+                    'statuses' => ['max_characters' => 500, 'max_media_attachments' => self::$maxMedia],
+                    'media_attachments' => ['supported_mime_types' => ['image/jpeg', 'image/png', 'image/heic', 'video/mp4', 'video/quicktime'], 'image_size_limit' => 16777216, 'video_size_limit' => 103809024],
+                ]]),
             'POST' === $method && '/api/v2/media' === $path => $this->upload($body),
             'GET' === $method && (bool) preg_match('#^/api/v1/media/([^/]+)$#', $path, $m) => $this->json(['id' => $m[1], 'type' => 'image', 'url' => 'https://remote.test/media/'.$m[1].'.jpg']),
             'GET' === $method && '/api/v2/search' === $path => $this->search($url),
@@ -139,6 +157,26 @@ final class FakeMastodon
                 : $this->json(['id' => $m[1], 'following' => false, 'requested' => false]),
             default => $this->json(['error' => 'Record not found'], 404),
         };
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function signup(array $body, ?string $token): MockResponse
+    {
+        if ('jeton-application' !== $token) {
+            return $this->json(['error' => 'This method requires an authenticated user'], 401);
+        }
+        if ('pris' === ($body['username'] ?? null)) {
+            return $this->json(['error' => 'Validation failed: Username is already taken', 'details' => [
+                'username' => [['error' => 'ERR_TAKEN', 'description' => 'est déjà utilisé']],
+                'password' => [['error' => 'ERR_TOO_SHORT', 'description' => 'est trop court']],
+            ]], 422);
+        }
+        unset($body['password']);
+        self::$signups[] = $body;
+
+        return $this->json(['access_token' => self::NEW_TOKEN, 'token_type' => 'Bearer', 'scope' => 'read write', 'created_at' => time()]);
     }
 
     private function rateLimited(): MockResponse

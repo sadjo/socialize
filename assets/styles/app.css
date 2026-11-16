@@ -556,6 +556,8 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 .auth .mastodon-login .wide{width:100%;justify-content:center}
 .auth .mastodon-other summary{cursor:pointer;color:var(--muted);padding:4px 0}
 .auth .mastodon-other[open] summary{margin-bottom:8px}
+.auth .mastodon-rules summary{cursor:pointer}
+.auth .mastodon-rules ol{margin:8px 0 0;padding-left:1.4em;display:grid;gap:4px}
 .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .choices label{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;font-weight:600;font-size:.9rem}
 .choices label small{font-weight:400}

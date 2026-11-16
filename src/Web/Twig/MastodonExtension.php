@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Web\Twig;
 
 use App\Integration\Mastodon\Application\MastodonLoginPolicy;
+use App\Integration\Mastodon\Application\MastodonSignup;
 use App\Integration\Mastodon\Domain\MastodonPublication;
 use App\Integration\Mastodon\Domain\MastodonUser;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonPublicationRepository;
@@ -22,7 +23,17 @@ final readonly class MastodonExtension
         private MastodonPublicationRepository $publications,
         private Security $security,
         private ClockInterface $clock,
+        private MastodonSignup $signup,
     ) {
+    }
+
+    /**
+     * Serveur où créer un compte Mastodon depuis l'écran de connexion (MASTODON_SIGNUP), ou null.
+     */
+    #[AsTwigFunction('mastodon_signup_server')]
+    public function signupServer(): ?string
+    {
+        return $this->signup->server();
     }
 
     /**

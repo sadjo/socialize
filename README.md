@@ -110,6 +110,7 @@ bin/console app:federation:reorder alice --depuis=2025-09-05     # depuis une da
 | `TRUSTED_PROXIES` | vide | Adresses des reverse proxies de confiance |
 | `REGISTRATION` | `invite` | Inscriptions : `open`, `invite` (seul le premier compte, administrateur, peut s'inscrire) ou `closed` (aucune ; administrateur créé avec `app:user:create`) |
 | `MASTODON_LOGIN` | `closed` | Connexion avec un compte Mastodon : `closed`, `open` (tout serveur) ou la liste des serveurs permis (`mastodon.social,piaille.fr`). mastodon.social, s'il est permis, se connecte d'un clic ; les autres serveurs s'indiquent dans un champ |
+| `MASTODON_SIGNUP` | vide | Création d'un compte Mastodon depuis l'écran de connexion, sur ce serveur (`mastodon.social`) ; il doit aussi être permis par `MASTODON_LOGIN` |
 
 Au démarrage, le conteneur applique les migrations (avec une copie de sécurité préalable de la base SQLite),
 prépare la file Messenger, puis lance FrankenPHP et le consommateur Messenger. La sonde `/healthz` renvoie l'état

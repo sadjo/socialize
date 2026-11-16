@@ -52,6 +52,8 @@
                 </form>
                 {% if mastodon.buttons is not empty %}</details>{% endif %}
             {% endif %}
+            {% set signup_server = mastodon_signup_server() %}
+            {% if signup_server %}<p class="small">Pas encore de compte Mastodon ? <a class="lnk" href="{{ path('app_mastodon_signup') }}">Créer un compte sur {{ signup_server }}</a></p>{% endif %}
         </section>
     {% endif %}
     {% if registration_open and not home_login_only %}<p class="alt">Pas encore de compte ? <a class="lnk" href="{{ path('app_register') }}">Créer un compte</a></p>{% endif %}

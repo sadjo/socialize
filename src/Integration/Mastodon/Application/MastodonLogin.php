@@ -91,6 +91,20 @@ final readonly class MastodonLogin
         $this->checkAllowed($domain);
         $app = $this->apps->forDomain($domain) ?? throw new MastodonException('Connexion interrompue : recommencez.');
         $token = $this->client->token($domain, $app->getClientId(), $this->vault->decrypt($app->getClientSecretEncrypted()), $redirectUri, $code, $verifier);
+
+        return $this->loginWithToken($domain, $token['token'], $token['scopes']);
+    }
+
+    /**
+     * Connexion à partir d'un jeton du serveur (après l'autorisation, ou la création du compte) : compte identifié,
+     * personne connectée (créée à sa première connexion), et historique de son compte mis à jour.
+     *
+     * @throws MastodonUnconfirmed compte tout juste créé, adresse e-mail pas encore confirmée
+     */
+    public function loginWithToken(string $domain, #[\SensitiveParameter] string $plainToken, string $scopes): MastodonUser
+    {
+        $this->checkAllowed($domain);
+        $token = ['token' => $plainToken, 'scopes' => $scopes];
         $account = $this->account($domain, $token['token']);
 
         $now = $this->clock->now();
@@ -142,10 +156,14 @@ final readonly class MastodonLogin
      * Application Socialize sur ce serveur : enregistrée à la première connexion, ou refaite si l'adresse de
      * retour de l'instance a changé.
      */
-    private function app(string $domain, string $redirectUri): MastodonApp
+    /**
+     * @param bool $renew refaite même si elle existe (enregistrée avant que Socialize ne demande le droit de créer
+     *                    un compte)
+     */
+    public function app(string $domain, string $redirectUri, bool $renew = false): MastodonApp
     {
         $app = $this->apps->forDomain($domain);
-        if ($app instanceof MastodonApp && $app->getRedirectUri() === $redirectUri) {
+        if (!$renew && $app instanceof MastodonApp && $app->getRedirectUri() === $redirectUri) {
             return $app;
         }
         $registered = $this->client->registerApp($domain, \sprintf('Socialize (%s)', $this->urls->domain()), $redirectUri, $this->website);
