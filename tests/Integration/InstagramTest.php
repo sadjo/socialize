@@ -156,6 +156,7 @@ final class InstagramTest extends AppWebTestCase
         $this->login($this->register('hugo'));
         $this->client->request('GET', '/publier');
         self::assertSelectorNotExists('[data-controller="crosspost"]', 'Sans Instagram connecté, pas de case.');
+        self::assertSelectorExists('.crosspost-hint a[href="/reglages/instagram"]', 'Lien vers la connexion d’Instagram.');
 
         $this->login($this->connected('camille'));
         $this->client->request('GET', '/publier');

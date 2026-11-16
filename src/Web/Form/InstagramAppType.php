@@ -24,7 +24,7 @@ final class InstagramAppType extends AbstractType
         $builder
             ->add('appId', TextType::class, [
                 'label' => 'Identifiant de l’application Instagram',
-                'help' => 'Dans l’application Meta : Cas d’utilisation › API Instagram › Configuration de l’API avec connexion Instagram.',
+                'help' => 'Dans l’application Meta : Cas d’utilisation › API Instagram › Configuration de l’API avec connexion Instagram, « ID de l’app Instagram ». Ce n’est pas l’identifiant de l’application affiché en haut du tableau de bord (celui de Facebook), qu’Instagram refuse (« Invalid platform app »).',
                 'attr' => ['autocomplete' => 'off', 'inputmode' => 'numeric', 'spellcheck' => 'false'],
                 'constraints' => [
                     new Assert\NotBlank(message: 'Indiquez l’identifiant de l’application.'),
@@ -33,6 +33,7 @@ final class InstagramAppType extends AbstractType
             ])
             ->add('secret', PasswordType::class, [
                 'label' => 'Clé secrète de l’application Instagram',
+                // La clé secrète Instagram (même page), pas celle de l'application Facebook (Paramètres › Général).
                 'help' => true === $options['has_secret'] ? 'Enregistrée (chiffrée). Laissez vide pour la garder.' : null,
                 'required' => !$options['has_secret'],
                 'always_empty' => true,
