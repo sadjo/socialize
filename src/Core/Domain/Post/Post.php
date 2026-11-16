@@ -272,7 +272,8 @@ class Post
      */
     public function redate(\DateTimeImmutable $publishedAt): bool
     {
-        if ($publishedAt->getTimestamp() === $this->publishedAt->getTimestamp()) {
+        // La date se choisit à la minute : la même minute n'est pas un changement (les secondes sont gardées).
+        if (intdiv($publishedAt->getTimestamp(), 60) === intdiv($this->publishedAt->getTimestamp(), 60)) {
             return false;
         }
         $this->publishedAt = $publishedAt;

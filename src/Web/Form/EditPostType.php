@@ -78,7 +78,7 @@ final class EditPostType extends AbstractType
             // Administrateur : date de publication modifiable (heure de Paris), jamais dans le futur.
             $builder->add('publishedAt', DateTimeType::class, [
                 'label' => 'Date de publication',
-                'help' => 'Réservé aux administrateurs. La publication est rangée à cette date, ici et sur le fédivers (où elle est renvoyée).',
+                'help' => 'Réservé aux administrateurs. Ici, la publication est rangée à cette date. Sur le fédivers, elle est renvoyée avec cette date, mais Mastodon la range au moment où il la reçoit (en tête du profil) : à ne changer qu’au besoin.',
                 'widget' => 'single_text',
                 'input' => 'datetime_immutable',
                 'model_timezone' => 'UTC',
