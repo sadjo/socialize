@@ -1,6 +1,6 @@
 # Note de conception : se connecter avec un compte Mastodon
 
-> Idée à l'étude. **Ne pas inscrire dans la feuille de route** (README) pour le moment.
+> Prévu au jalon 11 (voir la feuille de route dans le README).
 
 ## Contexte
 
