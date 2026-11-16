@@ -25,10 +25,30 @@ final class FakeMastodon
     /** @var list<array{method: string, url: string, body: array<string, mixed>, token: ?string}> */
     public static array $requests = [];
 
+    /** Le serveur ne retrouve aucune publication ni aucun compte (recherche vide). */
+    public static bool $searchFails = false;
+
+    /** Abonnement accepté aussitôt (compte non verrouillé sur un serveur qui répond tout de suite). */
+    public static bool $followAccepted = false;
+
+    /** @var array<string, string> adresse ActivityPub par identifiant connu du serveur */
+    public static array $known = [];
+
     public static function reset(): void
     {
         self::$actor = FakeFediverse::ALICE;
         self::$requests = [];
+        self::$searchFails = false;
+        self::$followAccepted = false;
+        self::$known = [];
+    }
+
+    /**
+     * Identifiant donné par le faux serveur à une publication ou un compte du fédivers.
+     */
+    public static function idOf(string $uri): string
+    {
+        return substr(hash('sha256', $uri), 0, 12);
     }
 
     /**
@@ -72,8 +92,44 @@ final class FakeMastodon
             'GET' === $method && '/api/v1/accounts/verify_credentials' === $path => self::TOKEN === $token
                 ? $this->json(array_filter(['id' => '109', 'username' => 'alice', 'acct' => 'alice', 'display_name' => 'Alice', 'url' => 'https://remote.test/@alice', 'uri' => self::$actor]))
                 : $this->json(['error' => 'The access token is invalid'], 401),
+            'GET' === $method && '/api/v2/search' === $path => $this->search($url),
+            'POST' === $method && (bool) preg_match('#^/api/v1/statuses/([^/]+)/(un)?favourite$#', $path, $m) => isset(self::$known[$m[1]])
+                ? $this->json(['id' => $m[1], 'favourited' => '' === ($m[2] ?? '')])
+                : $this->json(['error' => 'Record not found'], 404),
+            'POST' === $method && '/api/v1/statuses' === $path => $this->status($body),
+            'DELETE' === $method && (bool) preg_match('#^/api/v1/statuses/([^/]+)$#', $path, $m) => $this->json(['id' => $m[1]]),
+            'POST' === $method && (bool) preg_match('#^/api/v1/accounts/([^/]+)/(un)?follow$#', $path, $m) => '' === ($m[2] ?? '')
+                ? $this->json(['id' => $m[1], 'following' => self::$followAccepted, 'requested' => !self::$followAccepted])
+                : $this->json(['id' => $m[1], 'following' => false, 'requested' => false]),
             default => $this->json(['error' => 'Record not found'], 404),
         };
+    }
+
+    private function search(string $url): MockResponse
+    {
+        parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
+        $type = \is_string($query['type'] ?? null) ? $query['type'] : '';
+        $uri = \is_string($query['q'] ?? null) ? $query['q'] : '';
+        if (self::$searchFails || !\in_array($type, ['statuses', 'accounts'], true) || !str_starts_with($uri, 'http')) {
+            return $this->json(['accounts' => [], 'statuses' => [], 'hashtags' => []]);
+        }
+        self::$known[self::idOf($uri)] = $uri;
+
+        $results = ['accounts' => [], 'statuses' => [], 'hashtags' => []];
+        $results[$type] = [['id' => self::idOf($uri), 'uri' => $uri]];
+
+        return $this->json($results);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function status(array $body): MockResponse
+    {
+        $uri = 'https://remote.test/users/alice/statuses/'.(\count(self::requestsTo('POST', '/api/v1/statuses')) + 99);
+        self::$known[self::idOf($uri)] = $uri;
+
+        return $this->json(['id' => self::idOf($uri), 'uri' => $uri, 'content' => $body['status'] ?? '', 'visibility' => $body['visibility'] ?? 'public', 'in_reply_to_id' => $body['in_reply_to_id'] ?? null]);
     }
 
     /**

@@ -31,7 +31,10 @@
             <div class="prof-i">
                 <div class="row">
                     <h1>{{ account.local ? account.username : account.displayName }}</h1>
-                    {% if is_owner %}
+                    {% if is_owner and is_granted('ROLE_MASTODON') %}
+                        {# Compte Mastodon : son profil se modifie sur son serveur. #}
+                        {% if account.profileUrl %}<a class="btn sm" href="{{ account.profileUrl }}" target="_blank" rel="noopener">Modifier sur {{ account.domain }}</a>{% endif %}
+                    {% elseif is_owner %}
                         <a class="btn sm" href="{{ path('app_settings') }}">Modifier le profil</a>
                     {% elseif app.user %}
                         {% if follow_pending %}

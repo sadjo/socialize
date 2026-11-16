@@ -17,13 +17,16 @@ use App\Core\Domain\Social\Comment;
 use App\Core\Domain\Social\Follow;
 use App\Core\Domain\Social\FollowState;
 use App\Core\Domain\Social\Like;
+use App\Core\Infrastructure\Doctrine\CommentRepository;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
 /**
- * Interactions entre comptes : suivre, aimer, commenter.
+ * Interactions entre comptes : suivre, aimer, commenter. Celles d'un compte d'un autre serveur piloté d'ici
+ * (connexion Mastodon) passent d'abord par son serveur (PilotedActions), puis sont enregistrées ici pour s'afficher
+ * aussitôt ; l'activité fédérée qui arrive ensuite est reconnue, sans doublon.
  */
 final readonly class SocialActions
 {
@@ -31,8 +34,10 @@ final readonly class SocialActions
         private EntityManagerInterface $em,
         private FollowRepository $follows,
         private LikeRepository $likes,
+        private CommentRepository $comments,
         private EventDispatcherInterface $events,
         private \App\Core\Application\Notification\Notifications $notifications,
+        private PilotedActions $piloted,
     ) {
     }
 
@@ -41,8 +46,16 @@ final readonly class SocialActions
         if ($this->follows->findBetween($follower, $following) instanceof Follow) {
             return;
         }
-        // Un compte distant doit accepter l'abonnement (activité Accept) avant qu'il soit effectif.
-        $follow = new Follow($follower, $following, $following->isLocal() ? FollowState::Accepted : FollowState::Pending);
+        if ($follower->isLocal()) {
+            // Un compte distant doit accepter l'abonnement (activité Accept) avant qu'il soit effectif.
+            $accepted = $following->isLocal();
+        } else {
+            $accepted = $this->piloted->follow($follower, $following);
+            if (null !== $this->follows->findOneBy(['follower' => $follower, 'following' => $following])) {
+                return; // déjà reçu par la fédération pendant l'appel
+            }
+        }
+        $follow = new Follow($follower, $following, $accepted ? FollowState::Accepted : FollowState::Pending);
         $this->em->persist($follow);
         $this->em->flush();
         $this->events->dispatch(new AccountFollowed($follow));
@@ -52,6 +65,9 @@ final readonly class SocialActions
     {
         $follow = $this->follows->findBetween($follower, $following);
         if ($follow instanceof Follow) {
+            if (!$follower->isLocal()) {
+                $this->piloted->unfollow($follower, $following);
+            }
             $apUri = $follow->getApUri();
             $this->em->remove($follow);
             $this->em->flush();
@@ -80,6 +96,9 @@ final readonly class SocialActions
     {
         $like = $this->likes->findOneFor($account, $post);
         if ($like instanceof Like) {
+            if (!$account->isLocal()) {
+                $this->piloted->unlike($account, $post);
+            }
             $apUri = $like->getApUri();
             $this->em->remove($like);
             $post->decrementLikes();
@@ -90,6 +109,12 @@ final readonly class SocialActions
             return false;
         }
 
+        if (!$account->isLocal()) {
+            $this->piloted->like($account, $post);
+            if ($this->likes->findOneFor($account, $post) instanceof Like) {
+                return true; // déjà reçu par la fédération
+            }
+        }
         $like = new Like($account, $post);
         $this->em->persist($like);
         $post->incrementLikes();
@@ -114,7 +139,16 @@ final readonly class SocialActions
             throw new \DomainException(\sprintf('Un commentaire contient entre 1 et %d caractères.', Comment::MAX_LENGTH));
         }
 
-        $comment = new Comment($post, $account, $content);
+        if ($account->isLocal()) {
+            $comment = new Comment($post, $account, $content);
+        } else {
+            $apUri = $this->piloted->comment($account, $post, $content);
+            $comment = $this->comments->findOneBy(['apUri' => $apUri]);
+            if ($comment instanceof Comment) {
+                return $comment; // déjà reçu par la fédération
+            }
+            $comment = Comment::federated($post, $account, $content, $apUri, new \DateTimeImmutable());
+        }
         $this->em->persist($comment);
         $post->incrementComments();
         $this->em->flush();
@@ -124,8 +158,14 @@ final readonly class SocialActions
         return $comment;
     }
 
-    public function deleteComment(Comment $comment): void
+    /**
+     * @param ?Account $by compte qui supprime : un compte piloté d'ici supprime son commentaire sur son serveur
+     */
+    public function deleteComment(Comment $comment, ?Account $by = null): void
     {
+        if ($by instanceof Account && !$by->isLocal() && $comment->getAccount()->getId()->equals($by->getId())) {
+            $this->piloted->deleteComment($comment);
+        }
         $this->events->dispatch(new CommentDeleting($comment));
         $comment->getPost()->decrementComments();
         $this->em->remove($comment);

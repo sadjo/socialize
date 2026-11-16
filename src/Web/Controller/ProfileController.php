@@ -7,6 +7,7 @@ namespace App\Web\Controller;
 use App\Core\Application\Feed\Cursor;
 use App\Core\Application\Post\PostAccess;
 use App\Core\Application\Social\NetworkAccess;
+use App\Core\Application\Social\PilotedActionFailed;
 use App\Core\Application\Social\SocialActions;
 use App\Core\Application\Story\StoryFeed;
 use App\Core\Domain\Account\Account;
@@ -254,7 +255,12 @@ final class ProfileController extends AbstractController
 
         $viewer = $this->currentAccount->require();
         if (!$viewer->getId()->equals($account->getId())) {
-            $follow ? $social->follow($viewer, $account) : $social->unfollow($viewer, $account);
+            try {
+                $follow ? $social->follow($viewer, $account) : $social->unfollow($viewer, $account);
+            } catch (PilotedActionFailed $e) {
+                // Compte Mastodon : son serveur a refusé, rien n'a changé.
+                $this->addFlash('error', $e->getMessage());
+            }
         }
 
         return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_profile', ['username' => $username]), Response::HTTP_SEE_OTHER);

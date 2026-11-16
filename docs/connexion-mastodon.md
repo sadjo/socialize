@@ -105,13 +105,16 @@ les intégrations Immich et Synology Photos.
 
 ## 4. Interactions
 
-Dans `SocialActions` (follow, toggleLike, comment, deleteComment), quand le compte qui agit est un compte distant
-connecté par un `MastodonUser`, l'action passe par `MastodonActions` au lieu d'émettre une activité signée :
+Dans `SocialActions` (follow, toggleLike, comment, deleteComment), quand le compte qui agit est un compte distant,
+l'action passe d'abord par l'interface `PilotedActions` du cœur, que `MastodonActions` implémente, au lieu
+d'émettre une activité signée :
 
 - **J'aime** : statut retrouvé sur son serveur (`/api/v2/search?q=<uri ActivityPub>&resolve=true`), puis
   `favourite` / `unfavourite`. J'aime local enregistré aussitôt, unique par compte et publication.
-- **Commentaire** : `POST /api/v1/statuses` avec `in_reply_to_id` ; commentaire local enregistré avec l'`uri`
-  renvoyé.
+- **Commentaire** : `POST /api/v1/statuses` avec `in_reply_to_id`, en mentionnant l'auteur (comme une application
+  Mastodon) ; commentaire local enregistré avec l'`uri` renvoyé. Visibilité : publique (ou non listée) pour une
+  publication publique (ou non listée), message direct à l'auteur sinon, pour que les abonnés du compte Mastodon
+  ne voient rien d'une publication réservée.
 - **Abonnement** : `POST /api/v1/accounts/:id/follow`. Pour un compte Socialize qui valide ses abonnés, la
   demande suit le parcours actuel.
 - En cas d'échec (jeton révoqué, serveur injoignable) : l'action locale est annulée, et un message propose de se

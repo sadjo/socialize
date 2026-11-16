@@ -90,6 +90,67 @@ final readonly class MastodonClient
     }
 
     /**
+     * Identifiant, sur ce serveur, d'une publication ou d'un compte du fédivers, cherché par son adresse ActivityPub
+     * (le serveur va la chercher s'il ne la connaît pas encore).
+     *
+     * @param 'statuses'|'accounts' $type
+     */
+    public function resolve(string $domain, #[\SensitiveParameter] string $token, string $uri, string $type): ?string
+    {
+        $found = $this->json('GET', $domain, '/api/v2/search', $token, ['query' => ['q' => $uri, 'type' => $type, 'resolve' => 'true', 'limit' => 1]]);
+        $first = \is_array($found[$type] ?? null) ? ($found[$type][0] ?? null) : null;
+
+        return \is_array($first) && \is_string($first['id'] ?? null) ? $first['id'] : null;
+    }
+
+    /**
+     * @param 'favourite'|'unfavourite' $action
+     */
+    public function favourite(string $domain, #[\SensitiveParameter] string $token, string $statusId, string $action = 'favourite'): void
+    {
+        $this->json('POST', $domain, '/api/v1/statuses/'.rawurlencode($statusId).'/'.$action, $token);
+    }
+
+    /**
+     * Publie un statut (ici, une réponse) ; la clé d'idempotence évite un doublon si l'envoi est répété.
+     *
+     * @param 'public'|'unlisted'|'private'|'direct' $visibility
+     *
+     * @return array{id: string, uri: string}
+     */
+    public function postStatus(string $domain, #[\SensitiveParameter] string $token, string $text, ?string $inReplyToId, string $visibility, string $idempotencyKey): array
+    {
+        $status = $this->json('POST', $domain, '/api/v1/statuses', $token, [
+            'json' => array_filter(['status' => $text, 'in_reply_to_id' => $inReplyToId, 'visibility' => $visibility], static fn (mixed $v): bool => null !== $v),
+            'headers' => ['Idempotency-Key' => $idempotencyKey],
+        ]);
+        $id = \is_string($status['id'] ?? null) ? $status['id'] : '';
+        $uri = \is_string($status['uri'] ?? null) ? $status['uri'] : '';
+        if ('' === $id || '' === $uri) {
+            throw new MastodonException(\sprintf('%s n’a pas publié le message.', $domain));
+        }
+
+        return ['id' => $id, 'uri' => $uri];
+    }
+
+    public function deleteStatus(string $domain, #[\SensitiveParameter] string $token, string $statusId): void
+    {
+        $this->json('DELETE', $domain, '/api/v1/statuses/'.rawurlencode($statusId), $token);
+    }
+
+    /**
+     * @param 'follow'|'unfollow' $action
+     *
+     * @return bool vrai si le compte est suivi après l'appel (abonnement accepté)
+     */
+    public function follow(string $domain, #[\SensitiveParameter] string $token, string $accountId, string $action = 'follow'): bool
+    {
+        $relationship = $this->json('POST', $domain, '/api/v1/accounts/'.rawurlencode($accountId).'/'.$action, $token);
+
+        return true === ($relationship['following'] ?? null);
+    }
+
+    /**
      * Révoque le jeton (déconnexion). Un échec n'empêche pas la déconnexion.
      */
     public function revoke(string $domain, string $clientId, #[\SensitiveParameter] string $clientSecret, #[\SensitiveParameter] string $token): void
@@ -107,7 +168,8 @@ final readonly class MastodonClient
      */
     private function json(string $method, string $domain, string $path, ?string $token, array $options = []): array
     {
-        $headers = ['Accept' => 'application/json'];
+        $headers = ['Accept' => 'application/json'] + (\is_array($options['headers'] ?? null) ? $options['headers'] : []);
+        unset($options['headers']);
         if (null !== $token) {
             $headers['Authorization'] = 'Bearer '.$token;
         }
@@ -116,6 +178,13 @@ final readonly class MastodonClient
             $status = $response->getStatusCode();
             if (401 === $status || 403 === $status) {
                 throw new MastodonException(\sprintf('%s a refusé l’accès : reconnectez-vous avec Mastodon.', $domain));
+            }
+            if (404 === $status) {
+                throw new MastodonException(\sprintf('%s ne trouve pas cet élément.', $domain));
+            }
+            if (422 === $status) {
+                $error = json_decode($response->getContent(false), true);
+                throw new MastodonException(\sprintf('%s a refusé : %s', $domain, \is_array($error) && \is_string($error['error'] ?? null) ? $error['error'] : 'demande invalide.'));
             }
             if ($status >= 400) {
                 throw new MastodonException(\sprintf('%s a répondu par une erreur (%d).', $domain, $status));

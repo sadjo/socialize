@@ -11,7 +11,6 @@ use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
 use App\Integration\Mastodon\Application\RefreshMastodonAccounts;
-use App\Integration\Mastodon\Domain\MastodonUser;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonAppRepository;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonUserRepository;
 use App\Media\Application\StoryComposer;
@@ -24,6 +23,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
  */
 final class MastodonLoginTest extends AppWebTestCase
 {
+    use ConnectsWithMastodon;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -130,10 +131,6 @@ final class MastodonLoginTest extends AppWebTestCase
         self::assertResponseStatusCodeSame(204);
         $em->clear();
         self::assertSame(1, self::getContainer()->get(StoryRepository::class)->findByPublicId($story->getPublicId())?->getViewsCount());
-
-        // Interactions : pas encore (étape suivante du jalon).
-        $this->client->request('POST', '/@camille/suivre');
-        self::assertResponseStatusCodeSame(403);
     }
 
     public function testTheAccountMustBeHostedOnTheServerThatAuthenticatedIt(): void
@@ -160,23 +157,5 @@ final class MastodonLoginTest extends AppWebTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('.flashes', 'n’est pas ouverte sur cette instance');
         self::assertSame([], self::getContainer()->get(MastodonUserRepository::class)->findAll());
-    }
-
-    private function connect(): void
-    {
-        $crawler = $this->client->request('GET', '/connexion');
-        $this->client->submit($crawler->selectButton('Se connecter avec Mastodon')->form());
-        parse_str((string) parse_url((string) $this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
-        $this->client->request('GET', '/connexion/mastodon/retour?'.http_build_query(['code' => FakeMastodon::CODE, 'state' => $query['state'] ?? '']));
-        self::assertResponseRedirects('/');
-    }
-
-    private function mastodonUser(): MastodonUser
-    {
-        self::getContainer()->get('doctrine')->getManager()->clear();
-        $user = self::getContainer()->get(MastodonUserRepository::class)->findOneBy([]);
-        self::assertInstanceOf(MastodonUser::class, $user);
-
-        return $user;
     }
 }
