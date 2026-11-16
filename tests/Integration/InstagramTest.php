@@ -76,8 +76,11 @@ final class InstagramTest extends AppWebTestCase
         self::assertSame('jeton-long-1', self::getContainer()->get(InstagramVault::class)->decrypt($connection->getTokenEncrypted()));
         self::assertGreaterThan(new \DateTimeImmutable('+59 days'), $connection->getTokenExpiresAt());
 
-        // Règles : abonnés aussi, et stories.
+        // Règles : abonnés aussi, et stories. Chaque case précède son étiquette (pastille surlignée une fois cochée).
         $crawler = $this->client->request('GET', '/reglages/instagram');
+        $public = $crawler->filter('.choices input[value="public"]');
+        self::assertSame('checked', $public->attr('checked'), 'Public coché par défaut.');
+        self::assertSame($public->attr('id'), $crawler->filter('.choices input[value="public"] + label')->attr('for'));
         $form = $crawler->selectButton('Enregistrer les règles')->form();
         $values = $form->getPhpValues();
         self::assertIsArray($values['instagram_rules'] ?? null);

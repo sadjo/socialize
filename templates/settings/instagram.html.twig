@@ -35,7 +35,8 @@
                         <legend class="lab">{{ form.visibilities.vars.label }}</legend>
                         <div class="choices">
                             {% for box in form.visibilities %}
-                                <label class="chk">{{ form_widget(box) }}<span>{{ box.vars.label }}</span></label>
+                                {# Case puis étiquette : la pastille cochée est surlignée (.choices input:checked + label). #}
+                                {{ form_widget(box) }}<label for="{{ box.vars.id }}">{{ box.vars.label }}</label>
                             {% endfor %}
                         </div>
                         <p class="help">La case reste modifiable à chaque publication. Sur Instagram, un compte professionnel est public : une publication réservée à vos abonnés y sera visible de tous.</p>
