@@ -968,3 +968,4 @@ label.act{cursor:pointer}
 .md-input{min-height:220px;font-family:var(--font-mono);font-size:.88rem;line-height:1.5;resize:vertical}
 .md-preview{min-height:220px;padding:14px;border-radius:var(--r-ctl);background:var(--surface-2);border:1px solid var(--line)}
 .md-status{color:var(--muted)}
+.notif-kind.signup{background:oklch(0.62 0.15 160)}

@@ -105,9 +105,14 @@ final class NotificationController extends AbstractController
         $notification = $this->notification($id, $request);
         $this->notifications->markRead($notification);
         $comment = $notification->getComment();
+        $post = $notification->getPost();
+        // Nouveau compte (administrateurs) : la liste des comptes, où lui accorder ses droits.
+        if (!$post instanceof \App\Core\Domain\Post\Post) {
+            return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
+        }
 
         return $this->redirectToRoute('app_post_show', [
-            'id' => $notification->getPost()->getPublicId(),
+            'id' => $post->getPublicId(),
             '_fragment' => $comment instanceof \App\Core\Domain\Social\Comment ? 'comment-'.$comment->getPublicId() : null,
         ], Response::HTTP_SEE_OTHER);
     }

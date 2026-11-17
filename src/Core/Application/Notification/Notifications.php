@@ -5,17 +5,20 @@ declare(strict_types=1);
 namespace App\Core\Application\Notification;
 
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Event\AccountRegistered;
 use App\Core\Domain\Notification\Notification;
 use App\Core\Domain\Notification\NotificationType;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Social\Comment;
 use App\Core\Infrastructure\Doctrine\NotificationRepository;
+use App\Core\Infrastructure\Doctrine\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
  * Notifications des comptes locaux : « J'aime » et commentaires reçus sur leurs publications, venus d'ici ou du
- * fédivers (jamais pour ses propres actions). Lues ou non lues, supprimées une à une ou toutes ensemble.
+ * fédivers (jamais pour ses propres actions) ; nouveaux comptes, pour les administrateurs. Lues ou non lues, supprimées une à une ou toutes ensemble.
  */
 final readonly class Notifications
 {
@@ -24,6 +27,7 @@ final readonly class Notifications
         private EntityManagerInterface $em,
         private ClockInterface $clock,
         private PushNotifications $push,
+        private UserRepository $users,
     ) {
     }
 
@@ -58,6 +62,21 @@ final readonly class Notifications
             $this->em->flush();
             $this->push->commented($recipient, $comment);
         }
+    }
+
+    /**
+     * Nouveau compte : chaque administrateur est prévenu (sauf la personne elle-même, si elle est le premier compte).
+     */
+    #[AsEventListener]
+    public function accountRegistered(AccountRegistered $event): void
+    {
+        $now = $this->clock->now();
+        foreach ($this->users->admins() as $admin) {
+            if (!$admin->getAccount()->getId()->equals($event->account->getId())) {
+                $this->em->persist(new Notification($admin->getAccount(), $event->account, NotificationType::Signup, null, null, $now));
+            }
+        }
+        $this->em->flush();
     }
 
     /**
