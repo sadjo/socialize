@@ -1,26 +1,30 @@
 /* Styles Socialize, repris de la maquette validée (maquette/socialize.html).
    Disposition : rail de navigation vitré à gauche, colonne de contenu centrée (fil de 470 px), rail contextuel à droite ; sur mobile, en-tête compact + barre d'onglets en bas */
 :root{
-  --bg:oklch(0.155 0.018 285); --surface:oklch(0.2 0.022 285); --surface-2:oklch(0.25 0.026 285);
-  --line:oklch(0.36 0.025 285 / .65); --fg:oklch(0.96 0.008 285); --muted:oklch(0.74 0.022 285); --faint:oklch(0.58 0.02 285);
-  --accent:oklch(0.74 0.15 292); --accent-soft:oklch(0.74 0.15 292 / .16); --coral:oklch(0.74 0.16 28);
-  --glass:oklch(0.19 0.02 285 / .72); --scrim:oklch(0.07 0.01 285 / .74);
-  --ok:oklch(0.78 0.14 160); --warn:oklch(0.82 0.14 80); --bad:oklch(0.72 0.18 25);
-  --on-grad:oklch(0.99 0 0); --on-media:oklch(0.99 0 0); --media-shade:oklch(0.1 0.02 285 / .55);
+  /* Sombre (par défaut) : couleurs du thème sombre d'Instagram — fond noir, gris neutres, bleu d'action. */
+  --bg:#000; --surface:#121212; --surface-2:#262626;
+  --line:#363636; --fg:#f5f5f5; --muted:#a8a8a8; --faint:#737373;
+  --accent:#0095f6; --accent-soft:rgb(0 149 246 / .16); --coral:#ff3040;
+  --glass:rgb(0 0 0 / .8); --scrim:rgb(0 0 0 / .65);
+  --ok:#58c322; --warn:#ffc22e; --bad:#ed4956;
+  --on-grad:oklch(0.99 0 0); --on-media:oklch(0.99 0 0); --media-shade:rgb(0 0 0 / .5);
   --grad:linear-gradient(125deg,oklch(0.6 0.19 268),oklch(0.65 0.2 305) 52%,oklch(0.74 0.16 32));
-  --shadow:0 1px 2px oklch(0 0 0 / .3),0 16px 40px -18px oklch(0 0 0 / .6);
+  --pri:#0095f6; --pri-shadow:0 8px 20px -12px rgb(0 149 246 / .6);
+  --shadow:0 1px 2px rgb(0 0 0 / .4),0 16px 40px -18px rgb(0 0 0 / .7);
   --font-display:"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif;
   --font-text:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --r-card:22px; --r-ctl:12px; --side-w:248px;
   color-scheme:dark;
 }
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+/* Thème choisi dans Réglages › Apparence (attribut data-theme de <html>) : « auto » suit l'appareil. */
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]):not([data-theme="violet"]){
   --bg:oklch(0.975 0.006 285); --surface:oklch(1 0 0); --surface-2:oklch(0.955 0.01 285);
   --line:oklch(0.9 0.012 285); --fg:oklch(0.21 0.025 285); --muted:oklch(0.47 0.025 285); --faint:oklch(0.6 0.02 285);
   --accent:oklch(0.52 0.2 290); --accent-soft:oklch(0.52 0.2 290 / .1); --coral:oklch(0.6 0.2 25);
   --glass:oklch(0.99 0.004 285 / .76); --scrim:oklch(0.2 0.02 285 / .55);
   --ok:oklch(0.52 0.13 160); --warn:oklch(0.6 0.15 70); --bad:oklch(0.55 0.2 25);
+  --pri:var(--grad); --pri-shadow:0 8px 20px -10px oklch(0.6 0.2 300 / .8);
   --shadow:0 1px 2px oklch(0.3 0.02 285 / .08),0 16px 40px -18px oklch(0.3 0.05 285 / .25);
   color-scheme:light}}
 :root[data-theme="light"]{
@@ -29,8 +33,20 @@
   --accent:oklch(0.52 0.2 290); --accent-soft:oklch(0.52 0.2 290 / .1); --coral:oklch(0.6 0.2 25);
   --glass:oklch(0.99 0.004 285 / .76); --scrim:oklch(0.2 0.02 285 / .55);
   --ok:oklch(0.52 0.13 160); --warn:oklch(0.6 0.15 70); --bad:oklch(0.55 0.2 25);
+  --pri:var(--grad); --pri-shadow:0 8px 20px -10px oklch(0.6 0.2 300 / .8);
   --shadow:0 1px 2px oklch(0.3 0.02 285 / .08),0 16px 40px -18px oklch(0.3 0.05 285 / .25);
   color-scheme:light}
+/* Violet nuit : le sombre d'origine de Socialize. */
+:root[data-theme="violet"]{
+  --bg:oklch(0.155 0.018 285); --surface:oklch(0.2 0.022 285); --surface-2:oklch(0.25 0.026 285);
+  --line:oklch(0.36 0.025 285 / .65); --fg:oklch(0.96 0.008 285); --muted:oklch(0.74 0.022 285); --faint:oklch(0.58 0.02 285);
+  --accent:oklch(0.74 0.15 292); --accent-soft:oklch(0.74 0.15 292 / .16); --coral:oklch(0.74 0.16 28);
+  --glass:oklch(0.19 0.02 285 / .72); --scrim:oklch(0.07 0.01 285 / .74);
+  --ok:oklch(0.78 0.14 160); --warn:oklch(0.82 0.14 80); --bad:oklch(0.72 0.18 25);
+  --media-shade:oklch(0.1 0.02 285 / .55);
+  --pri:var(--grad); --pri-shadow:0 8px 20px -10px oklch(0.6 0.2 300 / .8);
+  --shadow:0 1px 2px oklch(0 0 0 / .3),0 16px 40px -18px oklch(0 0 0 / .6);
+  color-scheme:dark}
 
 *{box-sizing:border-box}
 html,body{min-height:100%}
@@ -106,7 +122,7 @@ main{min-width:0;padding-block:28px 110px}
 /* ---------- Boutons & contrôles ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:var(--r-ctl);font-weight:600;font-size:.9rem;background:var(--surface-2);border:1px solid var(--line);white-space:nowrap}
 .btn:hover{filter:brightness(1.08)}
-.btn.pri{background:var(--grad);color:var(--on-grad);border-color:transparent;box-shadow:0 8px 20px -10px oklch(0.6 0.2 300 / .8)}
+.btn.pri{background:var(--pri);color:var(--on-grad);border-color:transparent;box-shadow:var(--pri-shadow)}
 .btn.ghost{background:transparent}
 .btn.sm{height:30px;padding:0 12px;font-size:.82rem;border-radius:10px}
 .btn.done{background:var(--surface-2);color:var(--muted)}
@@ -850,6 +866,13 @@ label.act{cursor:pointer}
 .chip-check{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);font-size:.88rem;font-weight:600;cursor:pointer}
 .chip-check:has(input:checked){background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .choices label.off{opacity:.5;cursor:not-allowed}
+/* Aperçu des thèmes (Réglages › Apparence). */
+.themes label{gap:6px}
+.theme-swatch{display:block;height:44px;border-radius:9px;border:1px solid var(--line);margin-bottom:4px}
+.theme-swatch[data-swatch="auto"]{background:linear-gradient(135deg,#fafafa 50%,#000 50%)}
+.theme-swatch[data-swatch="light"]{background:#fafafa}
+.theme-swatch[data-swatch="dark"]{background:linear-gradient(#000 60%,#262626 60%)}
+.theme-swatch[data-swatch="violet"]{background:oklch(0.155 0.018 285)}
 
 /* Crosspost Instagram : case à la création, état sur la publication, réglages */
 .crosspost{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}

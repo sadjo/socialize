@@ -26,7 +26,6 @@
         {% if me or not home_login_only %}<a class="nav{{ current_route == 'app_register' ? ' on' }}" href="{{ path('app_register') }}">{{ ui.icon('user') }}<span class="lbl">Créer un compte</span></a>{% endif %}
     {% endif %}
     <div class="grow"></div>
-    <button class="nav" type="button" data-controller="theme" data-action="theme#toggle">{{ ui.icon('moon') }}<span class="lbl" data-theme-target="label">Changer de thème</span></button>
     {% if me %}
         <a class="nav" href="{{ path('app_logout') }}">{{ ui.icon('logout') }}<span class="lbl">Déconnexion</span></a>
     {% endif %}
