@@ -419,6 +419,15 @@ final class InstagramTest extends AppWebTestCase
         self::assertArrayNotHasKey('caption', $published[0]['params']);
         self::assertSame(CrosspostStatus::Published, self::getContainer()->get(InstagramCrosspostRepository::class)->forStory($story)?->getStatus());
 
+        // L'auteur voit que la story est en ligne sur Instagram : dans « Mes stories » et dans la visionneuse.
+        $this->login($this->reloadUser($camille));
+        $this->client->request('GET', '/stories/mes-stories');
+        self::assertSelectorTextContains('#story-'.$story->getPublicId().' .crosspost-status', 'Publiée sur Instagram');
+        self::assertSelectorExists('#story-'.$story->getPublicId().' .crosspost-status a[href^="https://www.instagram.com/"]');
+        self::assertSelectorTextNotContains('#story-'.$story->getPublicId().' .crosspost-status', 'si vous la supprimez ici', 'Pas de suppression liée pour une story.');
+        $this->client->request('GET', '/@camille/stories');
+        self::assertStringContainsString('"instagram":{"status":"published"', (string) $this->client->getCrawler()->filter('[data-story-viewer-data-value]')->attr('data-story-viewer-data-value'), 'Visionneuse : état Instagram pour l’auteur.');
+
         // Une vidéo seule devient un Reel, qui doit durer au moins 3 secondes : refusée avant l'envoi.
         $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadUser($camille)->getAccount(), 'Trop court', [['file' => new File($this->mp4()->getPathname()), 'alt' => null]], crosspost: [CrosspostTarget::Instagram]);
         $video = $post->getMedia()->first();

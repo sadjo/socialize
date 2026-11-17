@@ -1,15 +1,16 @@
-{# État de l'envoi vers Instagram (auteur seul), ou bouton pour envoyer une publication déjà en ligne.
-   Variables : crosspost, post #}
+{# État de l'envoi vers Instagram (auteur seul) d'une publication ou d'une story, ou bouton pour envoyer une
+   publication déjà en ligne. Variables : crosspost, post (facultatif) #}
 {% import '_macros.html.twig' as ui %}
 {% if crosspost %}
     {% set relaunch_token = csrf_token('instagram-retry-' ~ crosspost.id) %}
+    {% set is_story = crosspost.story is not null %}
     <div class="crosspost-status small">
         {% if crosspost.status.value == 'published' %}
             {{ ui.icon('check', 'xs') }}Publiée sur Instagram{% if crosspost.publishedAt %} le {{ crosspost.publishedAt|format_datetime('short', 'short', locale: 'fr') }}{% endif %}
             {%- if crosspost.permalink %} · <a class="lnk" href="{{ crosspost.permalink }}" target="_blank" rel="noopener">voir sur Instagram</a>{% else %} · lien en attente d’Instagram{% endif %}
             {% set conn = instagram_connection() %}
-            · <span>{{ conn and conn.canDelete ? 'supprimée aussi sur Instagram si vous la supprimez ici' : 'les modifications et la suppression se font sur Instagram' }}</span>
-            <form method="post" action="{{ path('app_instagram_retry', {id: crosspost.id}) }}" data-turbo-confirm="Republier sur Instagram ? {{ conn and conn.canDelete ? 'La publication Instagram actuelle sera supprimée, puis remplacée.' : 'La publication Instagram actuelle restera : supprimez-la dans l’application Instagram pour éviter un doublon.' }}">
+            {%- if not is_story %} · <span>{{ conn and conn.canDelete ? 'supprimée aussi sur Instagram si vous la supprimez ici' : 'les modifications et la suppression se font sur Instagram' }}</span>{% endif %}
+            <form method="post" action="{{ path('app_instagram_retry', {id: crosspost.id}) }}" data-turbo-confirm="Republier sur Instagram ? {% set what = is_story ? 'La story' : 'La publication' %}{{ conn and conn.canDelete ? what ~ ' Instagram actuelle sera supprimée, puis remplacée.' : what ~ ' Instagram actuelle restera : supprimez-la dans l’application Instagram pour éviter un doublon.' }}">
                 <input type="hidden" name="_token" value="{{ relaunch_token }}">
                 <button class="btn sm">Republier</button>
             </form>

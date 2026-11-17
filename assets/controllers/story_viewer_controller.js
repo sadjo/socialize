@@ -117,13 +117,37 @@ export default class extends Controller {
         if (group.own) {
             const link = Object.assign(document.createElement('a'), { href: this.dataValue.manageUrl, className: 'btn sm', textContent: 'Gérer mes stories' });
             const views = Object.assign(document.createElement('span'), { textContent: `Vue par ${story.views} personne${story.views > 1 ? 's' : ''}` });
-            this.ownTarget.replaceChildren(views, link);
+            const info = document.createElement('span');
+            info.className = 'sv-info';
+            info.append(views);
+            const instagram = this.instagramStatus(story.instagram);
+            if (instagram) info.append(' · ', instagram);
+            this.ownTarget.replaceChildren(info, link);
         }
 
         this.muteTarget.hidden = story.type !== 'video' && !story.music;
         this.musicTarget.hidden = !story.music;
         this.musicTarget.querySelector('span').textContent = story.music?.credit || '';
         this.updateButtons();
+    }
+
+    /* État de l'envoi vers Instagram (auteur seul) : en ligne (avec le lien), en cours, ou échec (détail et nouvel
+       essai dans « Gérer mes stories »). */
+    instagramStatus(instagram) {
+        if (!instagram) return null;
+        const label = {
+            published: 'en ligne sur Instagram',
+            failed: 'échec de l’envoi vers Instagram',
+        }[instagram.status] || 'envoi vers Instagram en cours';
+        const element = instagram.status === 'published' && instagram.permalink
+            ? Object.assign(document.createElement('a'), { href: instagram.permalink, target: '_blank', rel: 'noopener' })
+            : document.createElement('span');
+        element.className = `sv-ig ${instagram.status}`;
+        const icon = document.createElement('span');
+        icon.className = 'mi mi-ig';
+        icon.setAttribute('aria-hidden', 'true');
+        element.append(icon, `${instagram.status === 'published' ? '✓ ' : ''}${label}`);
+        return element;
     }
 
     tick = () => {
