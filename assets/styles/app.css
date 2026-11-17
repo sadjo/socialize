@@ -998,3 +998,5 @@ label.act{cursor:pointer}
 textarea.mention-input{position:relative;z-index:1;background:transparent!important;color:transparent;caret-color:var(--fg)}
 textarea.mention-input::placeholder{color:var(--faint)}
 textarea.mention-input::selection{color:transparent;background:var(--accent-soft)}
+.mention-list li.hint{cursor:default;color:var(--muted)}
+.mention-list li.hint .mi{width:30px;height:18px;margin:0}

@@ -21,7 +21,8 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > publications et stories des comptes suivis, J'aime et commentaires, au choix de chacun.
 > Mentions dans les légendes : `@nom` (compte d'ici), `@nom@instance` (fédivers) et `ig:@nom` (Instagram), avec un
 > pictogramme (éléphant de Mastodon, appareil photo d'Instagram) et des suggestions pendant la saisie dès « @ »
-> (comptes suivis, d'ici puis du fédivers ; Échap les ferme, Ctrl+Espace les rouvre). Les comptes mentionnés sont
+> (comptes suivis, d'ici puis du fédivers ; au second « @ », comptes du fédivers seulement, une adresse complète
+> encore inconnue étant cherchée sur son serveur ; Échap les ferme, Ctrl+Espace les rouvre). Les comptes mentionnés sont
 > prévenus (balise Mention dans le fédivers, notification ici) ; vers Instagram, `ig:@nom` devient une vraie mention.
 > Profil : photo et image de couverture (bandeau 4:1) changées d'un clic et recadrées dans le navigateur
 > (glisser, zoomer), repositionnables plus tard ; l'administrateur peut changer celles d'un compte, et remplacer

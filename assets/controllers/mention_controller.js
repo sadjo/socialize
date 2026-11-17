@@ -60,7 +60,8 @@ export default class extends Controller {
         const before = this.element.value.slice(0, this.element.selectionStart);
         const match = before.match(/(^|[\s(])((ig:)?@([a-z0-9_.]{0,30})(@[a-z0-9.-]*)?)$/i);
         if (!match) return null;
-        return { start: before.length - match[2].length, end: this.element.selectionStart, instagram: Boolean(match[3]), name: match[4], domain: (match[5] || '').slice(1) };
+        // fediverse : second « @ » tapé, saisie d'un compte du fédivers (même sans domaine encore).
+        return { start: before.length - match[2].length, end: this.element.selectionStart, instagram: Boolean(match[3]), name: match[4], fediverse: match[5] !== undefined, domain: (match[5] || '').slice(1) };
     }
 
     /* force : Ctrl+Espace, qui rouvre une liste fermée. */
@@ -82,13 +83,16 @@ export default class extends Controller {
             return;
         }
         this.timer = setTimeout(async () => {
-            const query = token.domain ? `${token.name}@${token.domain}` : token.name;
+            const query = token.fediverse ? `${token.name}@${token.domain}` : token.name;
             try {
                 const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(query)}`, { headers: { Accept: 'application/json' } });
                 const accounts = response.ok ? await response.json() : [];
-                // Avec un nom tapé, toujours la possibilité d'un compte Instagram de ce nom.
-                const suggestions = token.name === '' ? accounts : [...accounts, { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }];
+                // Avec un nom tapé, la possibilité d'un compte Instagram de ce nom ; pas pour une adresse du fédivers.
+                let suggestions = token.name === '' || token.fediverse ? accounts : [...accounts, { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }];
                 if (this.current !== token) return;
+                if (!suggestions.length && token.fediverse) {
+                    suggestions = [{ hint: true, name: 'Compte du fédivers', handle: `Tapez l’adresse complète : @${token.name}@instance.social` }];
+                }
                 if (!suggestions.length) {
                     this.close();
                     return;
@@ -97,7 +101,8 @@ export default class extends Controller {
             } catch {
                 this.close();
             }
-        }, token.name === '' ? 0 : 150);
+            // Domaine en cours de saisie : attente plus longue (une adresse complète est cherchée sur son serveur).
+        }, token.name === '' ? 0 : (token.fediverse ? 400 : 150));
     }
 
     show(items) {
@@ -114,7 +119,12 @@ export default class extends Controller {
         li.id = `${this.list.id}-${index}`;
         li.setAttribute('role', 'option');
         let picture;
-        if (item.instagram) {
+        if (item.hint) {
+            li.setAttribute('aria-disabled', 'true');
+            li.classList.add('hint');
+            picture = document.createElement('span');
+            picture.className = 'mi mi-fedi';
+        } else if (item.instagram) {
             picture = document.createElement('span');
             picture.className = 'ig-badge';
             picture.textContent = 'IG';
@@ -154,6 +164,11 @@ export default class extends Controller {
             this.active = (this.active + step + this.items.length) % this.items.length;
             this.highlight();
         } else if (event.key === 'Enter' || event.key === 'Tab') {
+            // Simple aide de saisie : la touche garde son effet habituel.
+            if (this.items[this.active]?.hint) {
+                this.close();
+                return;
+            }
             event.preventDefault();
             this.pick(this.active);
         } else if (event.key === 'Escape') {
@@ -176,7 +191,10 @@ export default class extends Controller {
     pick(index) {
         const item = this.items[index];
         const token = this.token() || this.current;
-        if (!item || !token) return;
+        if (!item || item.hint || !token) {
+            if (item?.hint) this.close();
+            return;
+        }
         const text = `${item.mention} `;
         this.element.setRangeText(text, token.start, token.end, 'end');
         this.element.dispatchEvent(new Event('input', { bubbles: true }));
