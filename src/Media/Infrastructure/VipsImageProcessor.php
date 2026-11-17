@@ -61,6 +61,18 @@ final class VipsImageProcessor
     }
 
     /**
+     * Image de couverture du profil, au format du bandeau de Mastodon (3:1).
+     */
+    public function cover(string $bytes, int $width = 1500, int $height = 500): string
+    {
+        try {
+            return $this->webp(Image::thumbnail_buffer($bytes, $width, ['height' => $height, 'crop' => 'attention']));
+        } catch (VipsException $e) {
+            throw new MediaProcessingException('Cette image n’a pas pu être lue.', $e->getCode(), previous: $e);
+        }
+    }
+
+    /**
      * Copie JPEG d'une image (les applications comme Instagram ne reçoivent pas toutes le WebP).
      */
     public function jpeg(string $bytes): string

@@ -14,7 +14,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * @extends AbstractType<array{displayName: string, bio: ?string, hideNetwork: bool, avatar: mixed}>
+ * @extends AbstractType<array{displayName: string, bio: ?string, hideNetwork: bool, avatar: mixed, cover: mixed, removeCover: bool}>
  */
 final class ProfileSettingsType extends AbstractType
 {
@@ -36,12 +36,28 @@ final class ProfileSettingsType extends AbstractType
                 'label' => 'Réserver mes listes d’abonnés et d’abonnements à mes abonnés',
                 'required' => false,
             ])
-            ->add('avatar', FileType::class, [
-                'label' => 'Photo de profil',
+            ->add('avatar', FileType::class, self::imageOptions('Photo de profil'))
+            ->add('cover', FileType::class, self::imageOptions('Image de couverture'))
+            ->add('removeCover', CheckboxType::class, [
+                'label' => 'Retirer l’image de couverture',
                 'required' => false,
                 'mapped' => false,
-                'attr' => ['accept' => implode(',', MediaRules::IMAGE_MIME_TYPES)],
-                'constraints' => [new Assert\File(maxSize: MediaRules::MAX_IMAGE_SIZE, mimeTypes: MediaRules::IMAGE_MIME_TYPES, mimeTypesMessage: 'Choisissez une photo (JPEG, PNG, WebP, HEIC…).')],
             ]);
+    }
+
+    /**
+     * Champ fichier d'une image du profil (non lié aux données : le fichier est traité à part).
+     *
+     * @return array<string, mixed>
+     */
+    public static function imageOptions(string $label): array
+    {
+        return [
+            'label' => $label,
+            'required' => false,
+            'mapped' => false,
+            'attr' => ['accept' => implode(',', MediaRules::IMAGE_MIME_TYPES)],
+            'constraints' => [new Assert\File(maxSize: MediaRules::MAX_IMAGE_SIZE, mimeTypes: MediaRules::IMAGE_MIME_TYPES, mimeTypesMessage: 'Choisissez une photo (JPEG, PNG, WebP, HEIC…).')],
+        ];
     }
 }

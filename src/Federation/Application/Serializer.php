@@ -70,6 +70,9 @@ final readonly class Serializer
         if (null !== $account->getAvatarPath()) {
             $actor['icon'] = ['type' => 'Image', 'mediaType' => 'image/webp', 'url' => $this->urls->base().$this->media->path($account->getAvatarPath())];
         }
+        if (null !== $account->getCoverPath()) {
+            $actor['image'] = ['type' => 'Image', 'mediaType' => 'image/webp', 'url' => $this->urls->base().$this->media->path($account->getCoverPath())];
+        }
 
         return $actor;
     }

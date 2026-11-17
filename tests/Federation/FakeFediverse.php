@@ -99,6 +99,7 @@ final class FakeFediverse
             'url' => 'https://remote.test/@alice',
             'endpoints' => ['sharedInbox' => 'https://remote.test/inbox'],
             'icon' => ['type' => 'Image', 'url' => 'https://remote.test/avatars/alice.png'],
+            'image' => ['type' => 'Image', 'url' => 'https://remote.test/headers/alice.png'],
             'publicKey' => ['id' => self::ALICE.'#main-key', 'owner' => self::ALICE, 'publicKeyPem' => self::keys()['public']],
         ];
     }

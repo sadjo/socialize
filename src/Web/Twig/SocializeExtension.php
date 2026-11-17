@@ -34,6 +34,20 @@ final readonly class SocializeExtension
         return $account->isLocal() ? null : $account->getAvatarUrl();
     }
 
+    /**
+     * Image de couverture : fichier déposé ici d'abord, sinon celle de l'instance d'un compte distant.
+     */
+    #[AsTwigFunction('cover_url')]
+    public function coverUrl(Account $account): ?string
+    {
+        $path = $account->getCoverPath();
+        if (null !== $path) {
+            return $this->urls->path($path);
+        }
+
+        return $account->isLocal() ? null : $account->getCoverUrl();
+    }
+
     #[AsTwigFunction('handle')]
     public function handle(Account $account, string $localDomain): string
     {

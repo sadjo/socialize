@@ -906,3 +906,30 @@ label.act{cursor:pointer}
 /* Bouton Retour : seulement dans l'application ouverte depuis l'écran d'accueil (display-mode: standalone). */
 .mtop .back-btn{display:none;margin-right:-6px}
 @media (display-mode: standalone){.mtop .back-btn{display:grid}}
+
+/* ---------- Image de couverture du profil ---------- */
+.prof-cover{display:block;aspect-ratio:3/1;border-radius:18px;overflow:hidden;background:var(--surface-2)}
+.prof-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.prof-cover.empty{display:flex;align-items:center;justify-content:center;gap:8px;aspect-ratio:6/1;border:1.5px dashed var(--line);background:transparent;color:var(--muted);font-size:.85rem;font-weight:600}
+.prof-cover.empty:hover{color:var(--fg);border-color:var(--muted)}
+@media (max-width:767px){.prof-cover{border-radius:12px}}
+
+/* Images du profil changées d'un clic (réglages, administration). */
+.pick-images{display:flex;flex-direction:column;gap:14px}
+.pick-block{display:flex;flex-direction:column;gap:8px}
+.pick-avatar-block{flex-direction:row;align-items:center;gap:16px}
+.pick{position:relative;display:block;cursor:pointer}
+.pick-preview{display:block;width:100%;height:100%}
+.pick-cover{aspect-ratio:3/1;border-radius:14px;overflow:hidden;background:var(--surface-2)}
+.pick-cover.empty{border:1.5px dashed var(--line);background:transparent}
+.pick-cover-img{width:100%;height:100%;object-fit:cover;display:block}
+.pick-empty{display:flex;align-items:center;justify-content:center;gap:8px;height:100%;color:var(--muted);font-size:.85rem;font-weight:600}
+.pick-avatar{width:96px;height:96px;flex:none;border-radius:50%}
+.pick-avatar .avatar-img,.pick-avatar .av{width:96px!important;height:96px!important}
+.pick-badge{position:absolute;right:8px;bottom:8px;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--surface);color:var(--fg);border:1px solid var(--line);box-shadow:0 1px 4px oklch(0 0 0 / .2)}
+.pick-avatar .pick-badge{right:0;bottom:0}
+.pick::after{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--media-shade);opacity:0;transition:opacity .2s;pointer-events:none}
+.pick:hover::after{opacity:.5}
+.pick-block:has(input[type=file]:focus-visible) .pick{outline:2px solid var(--accent);outline-offset:3px}
+.pick-block.picked .pick{outline:2px solid var(--accent);outline-offset:3px}
+.pick-note{color:var(--accent)}

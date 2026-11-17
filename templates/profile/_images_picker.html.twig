@@ -1,0 +1,45 @@
+{# Photo de profil et image de couverture modifiables d'un clic : chaque image est le libellé de son champ fichier,
+   qui ouvre le choix du fichier ; l'image choisie s'affiche aussitôt et s'envoie avec le formulaire.
+   Paramètres : account, avatar et cover (champs fichier), remove_avatar et remove_cover (cases, facultatives),
+   avatar_hint et cover_hint (textes d'aide, facultatifs). #}
+{% import '_macros.html.twig' as ui %}
+{% set current_cover = cover_url(account) %}
+<div class="pick-images">
+    <div class="pick-block" data-controller="image-pick" data-image-pick-class-value="pick-cover-img">
+        <label for="{{ cover.vars.id }}" class="pick pick-cover{{ current_cover ? '' : ' empty' }}">
+            <span class="pick-preview" data-image-pick-target="preview">
+                {%- if current_cover %}<img class="pick-cover-img" src="{{ current_cover }}" alt="">{% else %}<span class="pick-empty">{{ ui.icon('image') }}Ajouter une image de couverture</span>{% endif -%}
+            </span>
+            <span class="pick-badge" aria-hidden="true">{{ ui.icon('image', 'xs') }}</span>
+            <span class="sr-only">{{ current_cover ? 'Changer l’image de couverture' : 'Ajouter une image de couverture' }}</span>
+        </label>
+        {{ form_widget(cover, {attr: {class: 'sr-only', 'data-image-pick-target': 'input', 'data-action': 'image-pick#preview'}}) }}
+        <p class="small pick-note" data-image-pick-target="note" hidden>Image prête : enregistrez pour la publier.</p>
+        {{ form_errors(cover) }}
+        {% if cover_hint is defined and cover_hint %}<p class="small">{{ cover_hint }}</p>{% endif %}
+        {% if remove_cover is defined and remove_cover and current_cover and account.coverPath %}
+            <label class="chk small">{{ form_widget(remove_cover) }}<span>{{ remove_cover.vars.label }}</span></label>
+        {% elseif remove_cover is defined and remove_cover %}
+            {% do remove_cover.setRendered %}
+        {% endif %}
+    </div>
+
+    <div class="pick-block pick-avatar-block" data-controller="image-pick" data-image-pick-class-value="avatar-img">
+        <label for="{{ avatar.vars.id }}" class="pick pick-avatar">
+            <span class="pick-preview" data-image-pick-target="preview">{{ ui.avatar(account, 96) }}</span>
+            <span class="pick-badge" aria-hidden="true">{{ ui.icon('image', 'xs') }}</span>
+            <span class="sr-only">Changer la photo de profil</span>
+        </label>
+        {{ form_widget(avatar, {attr: {class: 'sr-only', 'data-image-pick-target': 'input', 'data-action': 'image-pick#preview'}}) }}
+        <div class="grow">
+            <p class="small">{{ avatar_hint is defined and avatar_hint ? avatar_hint : 'Touchez la photo ou la couverture pour la changer.' }}</p>
+            <p class="small pick-note" data-image-pick-target="note" hidden>Photo prête : enregistrez pour la publier.</p>
+            {{ form_errors(avatar) }}
+            {% if remove_avatar is defined and remove_avatar and account.avatarPath %}
+                <label class="chk small">{{ form_widget(remove_avatar) }}<span>{{ remove_avatar.vars.label }}</span></label>
+            {% elseif remove_avatar is defined and remove_avatar %}
+                {% do remove_avatar.setRendered %}
+            {% endif %}
+        </div>
+    </div>
+</div>

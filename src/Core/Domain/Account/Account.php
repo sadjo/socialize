@@ -31,6 +31,10 @@ class Account
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $avatarPath = null;
 
+    /** Image de couverture déposée ici (compte local, ou surcharge d'un compte distant). */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $coverPath = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -54,6 +58,10 @@ class Account
     /** Photo de profil d'un compte distant (adresse sur son instance). */
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $avatarUrl = null;
+
+    /** Image de couverture d'un compte distant (adresse sur son instance). */
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $coverUrl = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $publicKeyPem = null;
@@ -144,6 +152,16 @@ class Account
         $this->avatarPath = $avatarPath;
     }
 
+    public function getCoverPath(): ?string
+    {
+        return $this->coverPath;
+    }
+
+    public function changeCover(?string $coverPath): void
+    {
+        $this->coverPath = $coverPath;
+    }
+
     /**
      * Initiales affichées quand le compte n'a pas de photo de profil.
      */
@@ -168,6 +186,7 @@ class Account
         ?string $avatarUrl,
         ?string $publicKeyPem,
         \DateTimeImmutable $now,
+        ?string $coverUrl = null,
     ): void {
         if ($this->isLocal()) {
             throw new \DomainException('Un compte local ne se met pas à jour depuis le fédivers.');
@@ -180,6 +199,7 @@ class Account
         $this->outboxUrl = $outboxUrl;
         $this->profileUrl = $profileUrl;
         $this->avatarUrl = $avatarUrl;
+        $this->coverUrl = $coverUrl;
         $this->publicKeyPem = $publicKeyPem;
         $this->fetchedAt = $now;
     }
@@ -215,6 +235,11 @@ class Account
     public function getAvatarUrl(): ?string
     {
         return $this->avatarUrl;
+    }
+
+    public function getCoverUrl(): ?string
+    {
+        return $this->coverUrl;
     }
 
     public function getPublicKeyPem(): ?string
