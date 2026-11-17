@@ -26,7 +26,18 @@ final class RichTextTest extends TestCase
         $html = new SocializeExtension(new MediaUrls())->richText('Rando avec @hugo.martin et @alice@mastodon.social', instagram: true);
 
         self::assertStringContainsString('<a class="tag" href="https://www.instagram.com/hugo.martin/" target="_blank" rel="noopener nofollow">@hugo.martin</a>', $html);
-        self::assertStringContainsString('<a class="tag" href="/@alice">@alice@mastodon.social</a>', $html, 'Une adresse du fédivers reste un compte du fédivers.');
+        self::assertStringContainsString('<a class="tag" href="/@alice@mastodon.social">@alice@mastodon.social</a>', $html, 'Une adresse du fédivers reste un compte du fédivers.');
+    }
+
+    public function testInstagramMentions(): void
+    {
+        $html = new SocializeExtension(new MediaUrls())->richText('Vu chez ig:@natgeo et @hugo, mais pas tig:@x ni a@b');
+
+        self::assertStringContainsString('<a class="tag ig" href="https://www.instagram.com/natgeo/" target="_blank" rel="noopener nofollow" title="Compte Instagram">@natgeo</a>', $html);
+        self::assertStringContainsString('<a class="tag" href="/@hugo">@hugo</a>', $html);
+        self::assertStringNotContainsString('ig:@natgeo', $html);
+        self::assertStringContainsString('tig:@x', $html, '« ig: » collé à un mot n’est pas une mention Instagram.');
+        self::assertStringContainsString('a@b', $html);
     }
 
     public function testRelativeDates(): void

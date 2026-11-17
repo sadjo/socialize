@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Twig;
 
+use App\Core\Application\Post\Mentions;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Media\Application\MediaUrls;
@@ -95,11 +96,16 @@ final readonly class SocializeExtension
         $html = htmlspecialchars($text, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
         $html = (string) preg_replace('/(?<![\w&])#([\p{L}\p{N}_]{1,100})/u', '<span class="tag">#$1</span>', $html);
         $html = (string) preg_replace_callback(
-            '/(?<![\w\/])@([a-z0-9_.]{1,30})(@[a-z0-9.-]+\.[a-z]{2,})?/iu',
-            static fn (array $m): string => $instagram && '' === ($m[2] ?? '')
-                ? \sprintf('<a class="tag" href="%s" target="_blank" rel="noopener nofollow">@%s</a>', self::instagramProfile($m[1]), $m[1])
-                : \sprintf('<a class="tag" href="/@%s">@%s%s</a>', $m[1], $m[1], $m[2] ?? ''),
+            Mentions::PATTERN,
+            static fn (array $m): string => match (true) {
+                // « ig:@nom » : compte Instagram.
+                null !== $m[1] => \sprintf('<a class="tag ig" href="%s" target="_blank" rel="noopener nofollow" title="Compte Instagram">@%s</a>', htmlspecialchars(Mentions::instagramUrl($m[2])), $m[2]).(null !== $m[3] ? '@'.$m[3] : ''),
+                // Texte importé d'Instagram : « @nom » y désigne un compte Instagram.
+                $instagram && null === $m[3] => \sprintf('<a class="tag" href="%s" target="_blank" rel="noopener nofollow">@%s</a>', self::instagramProfile($m[2]), $m[2]),
+                default => \sprintf('<a class="tag" href="/@%s%s">@%s%s</a>', $m[2], null !== $m[3] ? '@'.$m[3] : '', $m[2], null !== $m[3] ? '@'.$m[3] : ''),
+            },
             $html,
+            flags: \PREG_UNMATCHED_AS_NULL,
         );
 
         return nl2br($html, false);

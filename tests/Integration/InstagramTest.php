@@ -337,7 +337,7 @@ final class InstagramTest extends AppWebTestCase
         $form = $crawler->selectButton('Publier')->form();
         $values = $form->getPhpValues();
         self::assertIsArray($values['compose_post'] ?? null);
-        $values['compose_post']['caption'] = 'Coucher de soleil avec @alice@remote.test #mer';
+        $values['compose_post']['caption'] = 'Coucher de soleil avec @alice@remote.test, @camille et ig:@natgeo #mer';
         $values['compose_post']['altTexts'] = ['Soleil sur la mer'];
         $values['compose_post']['crosspostInstagram'] = '1';
         // Photo très verticale (2:5) : complétée de bandes jusqu'à 4:5, sans recadrage.
@@ -350,7 +350,7 @@ final class InstagramTest extends AppWebTestCase
         $params = $published[0]['params'];
         self::assertStringEndsWith('.jpg', $params['image_url'] ?? '');
         self::assertStringStartsWith('http://localhost/m/crosspost/', $params['image_url'] ?? '');
-        self::assertSame('Coucher de soleil avec alice@remote.test #mer', $params['caption'] ?? null, 'Adresse du fédivers en texte simple.');
+        self::assertSame('Coucher de soleil avec alice@remote.test, camille@localhost et @natgeo #mer', $params['caption'] ?? null, 'Adresses du fédivers et d’ici en texte simple ; le compte Instagram devient une vraie mention.');
         self::assertSame('Soleil sur la mer', $params['alt_text'] ?? null);
         $image = $published[0]['image'];
         self::assertNotNull($image);

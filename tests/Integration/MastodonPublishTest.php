@@ -41,7 +41,7 @@ final class MastodonPublishTest extends AppWebTestCase
         $this->submit($crawler, [$this->jpeg(400, 500, 'phare.jpg'), $this->jpeg(500, 400, 'plage.jpg')], [
             'order' => 'n-1,n-0',
             'altTexts' => ['n-0' => 'Le phare au couchant'],
-            'caption' => 'Bretagne #photo',
+            'caption' => 'Bretagne #photo avec ig:@natgeo',
             'visibility' => 'unlisted',
             'contentWarning' => 'Lumière vive',
         ]);
@@ -51,7 +51,7 @@ final class MastodonPublishTest extends AppWebTestCase
         self::assertSame([['type' => 'image/jpeg', 'description' => null], ['type' => 'image/jpeg', 'description' => 'Le phare au couchant']], FakeMastodon::$media);
         $status = FakeMastodon::requestsTo('POST', '/api/v1/statuses')[0]['body'] ?? [];
         self::assertSame(['media-1', 'media-2'], $status['media_ids'] ?? null);
-        self::assertSame('Bretagne #photo', $status['status'] ?? null);
+        self::assertSame('Bretagne #photo avec https://www.instagram.com/natgeo/', $status['status'] ?? null, 'Compte Instagram : lien vers son profil, pas une mention sur Mastodon.');
         self::assertSame('unlisted', $status['visibility'] ?? null);
         self::assertSame('Lumière vive', $status['spoiler_text'] ?? null);
         self::assertTrue($status['sensitive'] ?? null);

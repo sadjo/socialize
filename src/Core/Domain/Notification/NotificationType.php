@@ -11,6 +11,8 @@ enum NotificationType: string
 {
     case Like = 'like';
     case Comment = 'comment';
+    /** Mention dans la légende d'une publication. */
+    case Mention = 'mention';
     /** Nouveau compte (inscription, ou première connexion avec Mastodon), pour les administrateurs. */
     case Signup = 'signup';
 }

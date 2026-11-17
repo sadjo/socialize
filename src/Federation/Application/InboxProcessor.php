@@ -242,6 +242,29 @@ final readonly class InboxProcessor
         }
         $this->em->persist($post);
         $this->em->flush();
+        $this->notifications->mentioned($post, $this->mentionedLocals($note));
+    }
+
+    /**
+     * Comptes de cette instance mentionnés par une note du fédivers (balises Mention).
+     *
+     * @param array<string, mixed> $note
+     *
+     * @return list<Account>
+     */
+    private function mentionedLocals(array $note): array
+    {
+        $accounts = [];
+        foreach (Json::list($note, 'tag') as $tag) {
+            if (\is_array($tag) && 'Mention' === ($tag['type'] ?? null)) {
+                $account = $this->localAccount(\is_string($tag['href'] ?? null) ? $tag['href'] : null);
+                if ($account instanceof Account) {
+                    $accounts[] = $account;
+                }
+            }
+        }
+
+        return $accounts;
     }
 
     /**

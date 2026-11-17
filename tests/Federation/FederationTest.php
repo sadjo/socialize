@@ -100,6 +100,61 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas dans le fédivers.');
     }
 
+    public function testMentionsAreTaggedAndDeliveredEvenToUnknownAccounts(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->register('hugo');
+
+        // Alice n'est pas encore connue de l'instance ni abonnée : trouvée par WebFinger, puis livrée.
+        $post = $this->publish($camille, 'Avec @alice@remote.test, @hugo et ig:@natgeo', Visibility::Public);
+        $create = $this->fediverse()->delivered('Create');
+        self::assertCount(1, $create, 'Livrée au compte mentionné.');
+        self::assertSame('https://remote.test/inbox', $this->dig($this->fediverse()->deliveries, \count($this->fediverse()->deliveries) - 1, 'url'));
+
+        $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => self::AP]);
+        $note = $this->json();
+        self::assertIsArray($note['cc']);
+        self::assertContains(FakeFediverse::ALICE, $note['cc']);
+        self::assertContains('http://localhost/users/hugo', $note['cc']);
+        $mentions = array_values(array_filter((array) $note['tag'], static fn (mixed $t): bool => \is_array($t) && 'Mention' === ($t['type'] ?? null)));
+        self::assertSame([
+            ['type' => 'Mention', 'href' => FakeFediverse::ALICE, 'name' => '@alice@remote.test'],
+            ['type' => 'Mention', 'href' => 'http://localhost/users/hugo', 'name' => '@hugo@localhost'],
+        ], $mentions);
+        $content = $this->str($note, 'content');
+        self::assertStringContainsString('<a href="https://www.instagram.com/natgeo/" rel="nofollow noopener" target="_blank">@natgeo (Instagram)</a>', $content);
+        self::assertStringNotContainsString('ig:', $content);
+
+        $this->publish($this->reloadAccount($camille), 'Pour @alice@remote.test seulement', Visibility::Private);
+        self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas, même mentionnée.');
+    }
+
+    public function testARemotePostMentioningALocalAccountNotifiesIt(): void
+    {
+        $camille = $this->register('camille');
+        $this->inbox('/inbox', [
+            'id' => FakeFediverse::ALICE.'/statuses/9/activity',
+            'type' => 'Create',
+            'actor' => FakeFediverse::ALICE,
+            'to' => ['https://www.w3.org/ns/activitystreams#Public'],
+            'object' => [
+                'id' => FakeFediverse::ALICE.'/statuses/9',
+                'type' => 'Note',
+                'attributedTo' => FakeFediverse::ALICE,
+                'to' => ['https://www.w3.org/ns/activitystreams#Public'],
+                'content' => '<p>Bravo @camille</p>',
+                'published' => '2026-11-17T10:00:00Z',
+                'tag' => [['type' => 'Mention', 'href' => 'http://localhost/users/camille', 'name' => '@camille@localhost']],
+                'attachment' => [['type' => 'Image', 'mediaType' => 'image/jpeg', 'url' => 'https://remote.test/media/9.jpg']],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(202);
+
+        $this->login($camille);
+        $this->client->request('GET', '/notifications');
+        self::assertSelectorTextContains('.notif', 'vous a mentionné dans sa publication : « Bravo @camille »');
+    }
+
     /**
      * Seules les publications publiques et réservées aux abonnés partent dans le fédivers : non répertoriées ou
      * réservées à des groupes, elles restent sur l'instance, même pour un membre distant du groupe.

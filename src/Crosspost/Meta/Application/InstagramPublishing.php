@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Crosspost\Meta\Application;
 
+use App\Core\Application\Post\Mentions;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\StoryPublished;
@@ -18,6 +19,7 @@ use App\Crosspost\Meta\Infrastructure\InstagramClient;
 use App\Crosspost\Meta\Infrastructure\InstagramMediaFiles;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -49,6 +51,8 @@ final readonly class InstagramPublishing
         private EntityManagerInterface $em,
         private MessageBusInterface $bus,
         private ClockInterface $clock,
+        #[Autowire(param: 'app.local_domain')]
+        private string $localDomain,
     ) {
     }
 
@@ -283,7 +287,7 @@ final readonly class InstagramPublishing
             if ([] === $media) {
                 throw new InstagramException('Cette publication n’a pas de média prêt à envoyer.');
             }
-            $caption = $this->caption($post->getCaption(), $post->getContentWarning());
+            $caption = $this->caption($post->getCaption(), $post->getContentWarning(), $post->isImported());
 
             if (1 === \count($media)) {
                 $only = $media[0];
@@ -360,7 +364,7 @@ final readonly class InstagramPublishing
             $carousel = $this->client->createContainer($userId, $token, array_filter([
                 'media_type' => 'CAROUSEL',
                 'children' => implode(',', $crosspost->getMediaContainers()),
-                'caption' => $this->caption($post->getCaption(), $post->getContentWarning()),
+                'caption' => $this->caption($post->getCaption(), $post->getContentWarning(), $post->isImported()),
             ], static fn (string $v): bool => '' !== $v), $unified);
             $crosspost->carouselCreated($carousel, $this->clock->now());
             $this->em->flush();
@@ -412,12 +416,18 @@ final readonly class InstagramPublishing
     }
 
     /**
-     * Légende pour Instagram : avertissement de contenu en tête, adresses du fédivers (@nom@instance) en texte simple
-     * (sinon Instagram mentionnerait le compte Instagram « @nom », qui n'est pas le même).
+     * Légende pour Instagram : avertissement de contenu en tête ; « ig:@nom » devient une vraie mention Instagram ;
+     * les comptes d'ici et du fédivers deviennent leur adresse en texte simple (« nom@instance »), sinon Instagram
+     * mentionnerait le compte Instagram « @nom », qui n'est pas le même. Un texte importé d'Instagram reste tel quel.
      */
-    private function caption(string $caption, ?string $contentWarning): string
+    private function caption(string $caption, ?string $contentWarning, bool $imported = false): string
     {
-        $text = (string) preg_replace('/(?<![\w@])@([\w.]+)@([\w-]+(?:\.[\w-]+)+)/u', '$1@$2', trim($caption));
+        $text = trim($caption);
+        if (!$imported) {
+            $text = (string) preg_replace_callback(Mentions::PATTERN, fn (array $m): string => null !== $m[1]
+                ? '@'.$m[2].(null !== $m[3] ? '@'.$m[3] : '')
+                : $m[2].'@'.($m[3] ?? $this->localDomain), $text, flags: \PREG_UNMATCHED_AS_NULL);
+        }
         if (null !== $contentWarning && '' !== trim($contentWarning)) {
             $text = '⚠️ '.trim($contentWarning)."\n\n".$text;
         }

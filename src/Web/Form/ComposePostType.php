@@ -15,6 +15,7 @@ use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -22,6 +23,11 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 final class ComposePostType extends AbstractType
 {
+    public function __construct(
+        private readonly UrlGeneratorInterface $urls,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -58,7 +64,7 @@ final class ComposePostType extends AbstractType
             ->add('caption', TextareaType::class, [
                 'label' => 'Légende',
                 'required' => false,
-                'attr' => ['rows' => 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'placeholder' => 'Écrivez une légende… #hashtags et @mentions acceptés', 'data-compose-target' => 'caption'],
+                'attr' => ['rows' => 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'placeholder' => 'Écrivez une légende… #hashtags, @mentions et ig:@comptes Instagram acceptés', 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', [])],
                 'constraints' => [new Assert\Length(max: Post::MAX_CAPTION_LENGTH)],
             ])
             ->add('location', TextType::class, [

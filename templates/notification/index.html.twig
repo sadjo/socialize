@@ -8,7 +8,7 @@
 {% set unread = notifications|filter(n => not n.read)|length %}
 <div class="page-narrow">
     <div class="page-h">
-        <div class="grow"><h1>Notifications</h1><p>Les « J’aime » et commentaires reçus sur vos publications{{ is_granted('ROLE_ADMIN') ? ', et les nouveaux comptes de l’instance' }}. {{ unread ? unread ~ ' non lue' ~ (unread > 1 ? 's') ~ '.' : 'Tout est lu.' }}</p></div>
+        <div class="grow"><h1>Notifications</h1><p>Les « J’aime », commentaires et mentions reçus{{ is_granted('ROLE_ADMIN') ? ', et les nouveaux comptes de l’instance' }}. {{ unread ? unread ~ ' non lue' ~ (unread > 1 ? 's') ~ '.' : 'Tout est lu.' }}</p></div>
         {% if notifications is not empty %}
             <div class="row wrap">
                 {% if unread %}
@@ -57,10 +57,11 @@
                     <form method="post" action="{{ path('app_notification_open', {id: n.id}) }}" class="notif-open">
                         <input type="hidden" name="_token" value="{{ token }}">
                         <button>
-                            <span class="notif-av">{{ ui.avatar(who, 44) }}<span class="notif-kind {{ n.type.value }}">{{ ui.icon({like: 'heart', comment: 'comment', signup: 'user'}[n.type.value], 'xs') }}</span></span>
+                            <span class="notif-av">{{ ui.avatar(who, 44) }}<span class="notif-kind {{ n.type.value }}">{{ ui.icon({like: 'heart', comment: 'comment', mention: 'at', signup: 'user'}[n.type.value], 'xs') }}</span></span>
                             <span class="notif-text">
                                 <span><b>{{ who.displayName }}</b>{% if not who.local %} <small>@{{ who.domain }}</small>{% endif %}
                                 {%- if n.type.value == 'signup' %} {{ who.local ? 'a créé son compte' : 's’est connecté avec son compte Mastodon' }} (@{{ who.acct }}). Accordez-lui ses droits dans l’administration.
+                                {%- elseif n.type.value == 'mention' %} vous a mentionné dans sa publication{% if n.post.caption %} : « {{ n.post.caption|length > 120 ? n.post.caption|slice(0, 120) ~ '…' : n.post.caption }} »{% else %}.{% endif %}
                                 {%- elseif n.type.value == 'like' %} a aimé votre publication.{% else %} a commenté votre publication{% if n.comment %} : « {{ n.comment.content|length > 120 ? n.comment.content|slice(0, 120) ~ '…' : n.comment.content }} »{% else %}.{% endif %}{% endif %}</span>
                                 <small><time datetime="{{ n.createdAt|date('c') }}">{{ n.createdAt|ago }}</time>{% if not n.read %} · <span class="notif-new">nouvelle</span>{% endif %}</small>
                             </span>

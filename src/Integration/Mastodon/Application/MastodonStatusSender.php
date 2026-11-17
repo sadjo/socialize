@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Integration\Mastodon\Application;
 
+use App\Core\Application\Post\Mentions;
 use App\Integration\Mastodon\Infrastructure\MastodonClient;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -42,7 +43,7 @@ final readonly class MastodonStatusSender
             }
         }
 
-        return $this->client->postStatus($domain, $token, $text, $inReplyTo, $visibility, $idempotencyKey, $ids, $spoiler);
+        return $this->client->postStatus($domain, $token, self::forMastodon($text), $inReplyTo, $visibility, $idempotencyKey, $ids, $spoiler);
     }
 
     private function waitFor(string $domain, string $token, string $mediaId): void
@@ -54,5 +55,16 @@ final readonly class MastodonStatusSender
             }
         }
         throw new MastodonException(\sprintf('%s n’a pas fini de traiter un média : publiez de nouveau un peu plus tard.', $domain));
+    }
+
+    /**
+     * « ig:@nom » (compte Instagram) devient l'adresse de son profil : laissé tel quel, Mastodon y verrait une mention
+     * de « @nom » sur son propre serveur.
+     */
+    public static function forMastodon(string $text): string
+    {
+        return (string) preg_replace_callback(Mentions::PATTERN, static fn (array $m): string => null !== $m[1]
+            ? Mentions::instagramUrl($m[2])
+            : $m[0], $text, flags: \PREG_UNMATCHED_AS_NULL);
     }
 }
