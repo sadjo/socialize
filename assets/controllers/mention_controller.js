@@ -60,7 +60,8 @@ export default class extends Controller {
         const before = this.element.value.slice(0, this.element.selectionStart);
         const match = before.match(/(^|[\s(])((ig:)?@([a-z0-9_.]{0,30})(@[a-z0-9.-]*)?)$/i);
         if (!match) return null;
-        return { start: before.length - match[2].length, end: this.element.selectionStart, instagram: Boolean(match[3]), name: match[4], domain: (match[5] || '').slice(1) };
+        // fediverse : second « @ » tapé, saisie d'un compte du fédivers (même sans domaine encore).
+        return { start: before.length - match[2].length, end: this.element.selectionStart, instagram: Boolean(match[3]), name: match[4], fediverse: match[5] !== undefined, domain: (match[5] || '').slice(1) };
     }
 
     /* force : Ctrl+Espace, qui rouvre une liste fermée. */
@@ -78,17 +79,16 @@ export default class extends Controller {
         }
         this.current = token;
         if (token.instagram) {
-            this.show([{ mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }]);
+            this.show([{ mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', network: 'ig' }]);
             return;
         }
         this.timer = setTimeout(async () => {
-            const query = token.domain ? `${token.name}@${token.domain}` : token.name;
+            const query = token.fediverse ? `${token.name}@${token.domain}` : token.name;
             try {
                 const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(query)}`, { headers: { Accept: 'application/json' } });
                 const accounts = response.ok ? await response.json() : [];
-                // Avec un nom tapé, toujours la possibilité d'un compte Instagram de ce nom.
-                const suggestions = token.name === '' ? accounts : [...accounts, { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }];
                 if (this.current !== token) return;
+                const suggestions = [...accounts, ...this.typed(token, accounts)];
                 if (!suggestions.length) {
                     this.close();
                     return;
@@ -97,7 +97,28 @@ export default class extends Controller {
             } catch {
                 this.close();
             }
-        }, token.name === '' ? 0 : 150);
+            // Domaine en cours de saisie : attente plus longue (une adresse complète est cherchée sur son serveur).
+        }, token.name === '' ? 0 : (token.fediverse ? 400 : 150));
+    }
+
+    /* Comme pour Instagram, la saisie elle-même parmi les propositions :
+       - « @hu » : « @hu@… », compte Mastodon (le choisir passe à la saisie de l'instance), et « ig:@hu » ;
+       - « @hu@mastodon.social » : cette adresse, même si le compte n'est pas encore connu ici ;
+       - « @hu@ » ou instance incomplète : la saisie en aide, qui ne s'insère pas. */
+    typed(token, accounts) {
+        if (token.name === '') return [];
+        if (!token.fediverse) {
+            return [
+                { insert: `@${token.name}@`, name: `@${token.name}@…`, handle: 'Compte Mastodon : tapez ensuite l’instance', network: 'fedi' },
+                { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', network: 'ig' },
+            ];
+        }
+        const address = `@${token.name}@${token.domain}`.toLowerCase();
+        if (!/^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(token.domain)) {
+            return [{ hint: true, name: `${address}…`, handle: 'Compte Mastodon : tapez l’instance (ex. mastodon.social)', network: 'fedi' }];
+        }
+        if (accounts.some((account) => account.handle?.toLowerCase() === address)) return [];
+        return [{ mention: address, name: address, handle: 'Compte Mastodon', network: 'fedi' }];
     }
 
     show(items) {
@@ -114,10 +135,17 @@ export default class extends Controller {
         li.id = `${this.list.id}-${index}`;
         li.setAttribute('role', 'option');
         let picture;
-        if (item.instagram) {
+        if (item.hint) {
+            li.setAttribute('aria-disabled', 'true');
+            li.classList.add('hint');
+        }
+        if (item.network) {
+            // Saisie elle-même (compte Mastodon ou Instagram) : pictogramme du réseau.
             picture = document.createElement('span');
-            picture.className = 'ig-badge';
-            picture.textContent = 'IG';
+            picture.className = 'net-badge';
+            const icon = document.createElement('span');
+            icon.className = `mi mi-${item.network}`;
+            picture.append(icon);
         } else if (item.avatar) {
             picture = document.createElement('img');
             picture.className = 'avatar-img';
@@ -154,6 +182,11 @@ export default class extends Controller {
             this.active = (this.active + step + this.items.length) % this.items.length;
             this.highlight();
         } else if (event.key === 'Enter' || event.key === 'Tab') {
+            // Simple aide de saisie : la touche garde son effet habituel.
+            if (this.items[this.active]?.hint) {
+                this.close();
+                return;
+            }
             event.preventDefault();
             this.pick(this.active);
         } else if (event.key === 'Escape') {
@@ -172,13 +205,22 @@ export default class extends Controller {
         }
     }
 
-    /* Remplace la saisie par la mention choisie, suivie d'une espace. */
+    /* Remplace la saisie par la mention choisie, suivie d'une espace ; « @hu@… » insère « @hu@ » et passe à la saisie
+       de l'instance. */
     pick(index) {
         const item = this.items[index];
         const token = this.token() || this.current;
-        if (!item || !token) return;
-        const text = `${item.mention} `;
-        this.element.setRangeText(text, token.start, token.end, 'end');
+        if (!item || item.hint || !token) {
+            if (item?.hint) this.close();
+            return;
+        }
+        if (item.insert) {
+            this.element.setRangeText(item.insert, token.start, token.end, 'end');
+            this.element.focus();
+            this.element.dispatchEvent(new Event('input', { bubbles: true })); // Nouvelle recherche : comptes du fédivers.
+            return;
+        }
+        this.element.setRangeText(`${item.mention} `, token.start, token.end, 'end');
         this.element.dispatchEvent(new Event('input', { bubbles: true }));
         this.element.focus();
         this.close();

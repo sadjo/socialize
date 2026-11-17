@@ -97,6 +97,26 @@ final class MentionsTest extends AppWebTestCase
         self::assertSame([], $this->mentions('/mentions/suggestions?q=%3Cscript'));
     }
 
+    public function testTheSecondAtSignSwitchesToFediverseAccounts(): void
+    {
+        $camille = $this->register('camille');
+        $this->register('hugo', 'hugo@exemple.test');
+        $em = self::getContainer()->get('doctrine')->getManager();
+        $em->persist(Account::remote('hugo', 'pixelfed.test', 'https://pixelfed.test/users/hugo'));
+        $em->persist(Account::remote('huguette', 'mastodon.test', 'https://mastodon.test/users/huguette'));
+        $em->flush();
+        $this->login($camille);
+
+        self::assertSame(['@hugo', '@hugo@pixelfed.test', '@huguette@mastodon.test'], $this->mentions('/mentions/suggestions?q=hu'));
+        self::assertSame(['@hugo@pixelfed.test', '@huguette@mastodon.test'], $this->mentions('/mentions/suggestions?q=hu@'), 'Second « @ » : comptes du fédivers seulement.');
+        self::assertSame(['@huguette@mastodon.test'], $this->mentions('/mentions/suggestions?q=hu@mast'));
+        self::assertSame(['@hugo@localhost'], $this->mentions('/mentions/suggestions?q=hugo@localhost&full=1'), 'Le domaine de l’instance mène au compte d’ici.');
+
+        // Adresse complète encore inconnue : cherchée sur son serveur (WebFinger), puis proposée.
+        self::assertSame(['@alice@remote.test'], $this->mentions('/mentions/suggestions?q=alice@remote.test'));
+        self::assertSame([], $this->mentions('/mentions/suggestions?q=personne@inconnu.test'));
+    }
+
     public function testSuggestionsAsSoonAsTheAtSign(): void
     {
         $camille = $this->register('camille');

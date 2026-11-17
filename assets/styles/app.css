@@ -981,7 +981,8 @@ label.act{cursor:pointer}
 .mention-list .t{display:flex;flex-direction:column;min-width:0}
 .mention-list .t b{font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mention-list .t small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mention-list .ig-badge{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;flex:none;color:#fff;font-weight:700;font-size:.7rem;background:linear-gradient(45deg,#f9a825,#e1306c,#833ab4)}
+.mention-list .net-badge{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;flex:none;color:var(--accent);background:var(--surface-2);font-size:18px}
+.mention-list .net-badge .mi{margin:0}
 
 /* Pictogrammes devant les mentions, de la couleur du texte : éléphant de Mastodon pour les comptes d'ici
    (Socialize) et du fédivers, appareil photo pour Instagram. Mêmes formes dans les publications et sous la zone de saisie d'une légende. */
@@ -998,3 +999,4 @@ label.act{cursor:pointer}
 textarea.mention-input{position:relative;z-index:1;background:transparent!important;color:transparent;caret-color:var(--fg)}
 textarea.mention-input::placeholder{color:var(--faint)}
 textarea.mention-input::selection{color:transparent;background:var(--accent-soft)}
+.mention-list li.hint{cursor:default;color:var(--muted)}
