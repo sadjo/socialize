@@ -869,7 +869,8 @@ label.act{cursor:pointer}
 .choices label.off{opacity:.5;cursor:not-allowed}
 /* Aperçu des thèmes (Réglages › Apparence). */
 .themes label{gap:6px}
-.theme-swatch{display:block;height:44px;border-radius:9px;border:1px solid var(--line);margin-bottom:4px}
+/* Contour tracé à l'extérieur (box-shadow) : une bordure semi-transparente laisserait voir l'aperçu en dessous. */
+.theme-swatch{display:block;height:44px;border-radius:9px;box-shadow:0 0 0 1px var(--line);margin-bottom:4px}
 .theme-swatch[data-swatch="auto"]{background:linear-gradient(135deg,#fafafa 50%,oklch(0.155 0.018 285) 50%)}
 .theme-swatch[data-swatch="light"]{background:#fafafa}
 .theme-swatch[data-swatch="dark"]{background:linear-gradient(#000 60%,#262626 60%)}
