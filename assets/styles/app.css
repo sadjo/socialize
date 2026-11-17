@@ -197,8 +197,11 @@ tr:last-child td{border-bottom:0}
 /* Même cadre 4:5 pour toutes les publications. */
 /* Hauteur limitée par la petite hauteur de fenêtre (svh, barres du navigateur affichées) : contrairement à dvh, elle
    ne change pas quand ces barres apparaissent ou disparaissent au défilement (iPad, iPhone), sinon tous les cadres
-   changeraient de taille en plein défilement et le contenu sauterait. */
-.media .frame{position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--surface-2);max-height:max(320px,calc(100svh - 140px))}
+   changeraient de taille en plein défilement et le contenu sauterait.
+   Largeur fixée à 100 % : sans elle, WebKit (Safari, navigateurs sur iPad et iPhone) déduit de la hauteur maximale une
+   largeur réduite, pour garder le 4:5, et le cadre se colle à gauche avec une bande vide (paysage). Le média, recadré,
+   remplit alors le cadre comme ailleurs. */
+.media .frame{position:relative;width:100%;aspect-ratio:4/5;overflow:hidden;background:var(--surface-2);max-height:max(320px,calc(100svh - 140px))}
 .track{display:flex;height:100%;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
 .slide{flex:0 0 100%;height:100%;position:relative}
 /* Le média couvre tout le cadre (rogné sur les bords au besoin) ; la visionneuse le montre en entier. */
