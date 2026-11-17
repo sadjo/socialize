@@ -153,6 +153,9 @@ d'émettre une activité signée :
   ordre, textes alternatifs) : médias de l'appareil seulement (pas d'Immich ni de Synology Photos, dont les
   réglages se font sur un compte d'ici), texte, visibilité (public, non listé, abonnés) et avertissement. Pas de
   story, de groupes d'abonnés, de musique ni de lieu.
+- Mentions dans le texte, avec les mêmes suggestions que sur un compte d'ici : un compte d'ici est inséré avec son
+  adresse complète (`@nom@instance`), sinon son serveur y verrait un compte de chez lui ; `ig:@nom` (Instagram)
+  part sous la forme du lien de son profil (`https://www.instagram.com/nom/`), pour la même raison.
 - Limites lues dans `/api/v2/instance` de son serveur (gardées un jour) et vérifiées avant l'envoi : nombre de
   médias, longueur du texte, formats et tailles des images et vidéos.
 - Envoi en tâche de fond (`PublishToMastodon`, file Messenger `async`) : les originaux sont envoyés tels quels à
