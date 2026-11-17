@@ -122,7 +122,8 @@ main{min-width:0;padding-block:28px 110px}
 /* ---------- Boutons & contrôles ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:var(--r-ctl);font-weight:600;font-size:.9rem;background:var(--surface-2);border:1px solid var(--line);white-space:nowrap}
 .btn:hover{filter:brightness(1.08)}
-.btn.pri{background:var(--pri);color:var(--on-grad);border-color:transparent;box-shadow:var(--pri-shadow)}
+/* Dégradé posé sous la bordure transparente aussi (border-box), sinon il s'y répète et laisse un liseré de l'autre couleur. */
+.btn.pri{background:var(--pri) border-box;color:var(--on-grad);border-color:transparent;box-shadow:var(--pri-shadow)}
 .btn.ghost{background:transparent}
 .btn.sm{height:30px;padding:0 12px;font-size:.82rem;border-radius:10px}
 .btn.done{background:var(--surface-2);color:var(--muted)}
