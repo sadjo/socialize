@@ -79,7 +79,7 @@ export default class extends Controller {
         }
         this.current = token;
         if (token.instagram) {
-            this.show([{ mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }]);
+            this.show([{ mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', network: 'ig' }]);
             return;
         }
         this.timer = setTimeout(async () => {
@@ -87,12 +87,8 @@ export default class extends Controller {
             try {
                 const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(query)}`, { headers: { Accept: 'application/json' } });
                 const accounts = response.ok ? await response.json() : [];
-                // Avec un nom tapé, la possibilité d'un compte Instagram de ce nom ; pas pour une adresse du fédivers.
-                let suggestions = token.name === '' || token.fediverse ? accounts : [...accounts, { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }];
                 if (this.current !== token) return;
-                if (!suggestions.length && token.fediverse) {
-                    suggestions = [{ hint: true, name: 'Compte du fédivers', handle: `Tapez l’adresse complète : @${token.name}@instance.social` }];
-                }
+                const suggestions = [...accounts, ...this.typed(token, accounts)];
                 if (!suggestions.length) {
                     this.close();
                     return;
@@ -103,6 +99,26 @@ export default class extends Controller {
             }
             // Domaine en cours de saisie : attente plus longue (une adresse complète est cherchée sur son serveur).
         }, token.name === '' ? 0 : (token.fediverse ? 400 : 150));
+    }
+
+    /* Comme pour Instagram, la saisie elle-même parmi les propositions :
+       - « @hu » : « @hu@… », compte Mastodon (le choisir passe à la saisie de l'instance), et « ig:@hu » ;
+       - « @hu@mastodon.social » : cette adresse, même si le compte n'est pas encore connu ici ;
+       - « @hu@ » ou instance incomplète : la saisie en aide, qui ne s'insère pas. */
+    typed(token, accounts) {
+        if (token.name === '') return [];
+        if (!token.fediverse) {
+            return [
+                { insert: `@${token.name}@`, name: `@${token.name}@…`, handle: 'Compte Mastodon : tapez ensuite l’instance', network: 'fedi' },
+                { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', network: 'ig' },
+            ];
+        }
+        const address = `@${token.name}@${token.domain}`.toLowerCase();
+        if (!/^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(token.domain)) {
+            return [{ hint: true, name: `${address}…`, handle: 'Compte Mastodon : tapez l’instance (ex. mastodon.social)', network: 'fedi' }];
+        }
+        if (accounts.some((account) => account.handle?.toLowerCase() === address)) return [];
+        return [{ mention: address, name: address, handle: 'Compte Mastodon', network: 'fedi' }];
     }
 
     show(items) {
@@ -122,12 +138,14 @@ export default class extends Controller {
         if (item.hint) {
             li.setAttribute('aria-disabled', 'true');
             li.classList.add('hint');
+        }
+        if (item.network) {
+            // Saisie elle-même (compte Mastodon ou Instagram) : pictogramme du réseau.
             picture = document.createElement('span');
-            picture.className = 'mi mi-fedi';
-        } else if (item.instagram) {
-            picture = document.createElement('span');
-            picture.className = 'ig-badge';
-            picture.textContent = 'IG';
+            picture.className = 'net-badge';
+            const icon = document.createElement('span');
+            icon.className = `mi mi-${item.network}`;
+            picture.append(icon);
         } else if (item.avatar) {
             picture = document.createElement('img');
             picture.className = 'avatar-img';
@@ -187,7 +205,8 @@ export default class extends Controller {
         }
     }
 
-    /* Remplace la saisie par la mention choisie, suivie d'une espace. */
+    /* Remplace la saisie par la mention choisie, suivie d'une espace ; « @hu@… » insère « @hu@ » et passe à la saisie
+       de l'instance. */
     pick(index) {
         const item = this.items[index];
         const token = this.token() || this.current;
@@ -195,8 +214,13 @@ export default class extends Controller {
             if (item?.hint) this.close();
             return;
         }
-        const text = `${item.mention} `;
-        this.element.setRangeText(text, token.start, token.end, 'end');
+        if (item.insert) {
+            this.element.setRangeText(item.insert, token.start, token.end, 'end');
+            this.element.focus();
+            this.element.dispatchEvent(new Event('input', { bubbles: true })); // Nouvelle recherche : comptes du fédivers.
+            return;
+        }
+        this.element.setRangeText(`${item.mention} `, token.start, token.end, 'end');
         this.element.dispatchEvent(new Event('input', { bubbles: true }));
         this.element.focus();
         this.close();
