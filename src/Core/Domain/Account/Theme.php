@@ -9,12 +9,12 @@ namespace App\Core\Domain\Account;
  */
 enum Theme: string
 {
-    /** Clair ou sombre selon le réglage de l'appareil. */
+    /** Clair ou Violet nuit selon le réglage de l'appareil. */
     case Auto = 'auto';
     case Light = 'light';
     /** Sombre, aux couleurs du thème sombre d'Instagram. */
     case Dark = 'dark';
-    /** Sombre violet, le thème d'origine de Socialize. */
+    /** Sombre violet, le thème d'origine de Socialize et le sombre du thème automatique. */
     case Violet = 'violet';
 
     public function label(): string
@@ -30,7 +30,7 @@ enum Theme: string
     public function description(): string
     {
         return match ($this) {
-            self::Auto => 'Clair ou sombre, comme votre appareil',
+            self::Auto => 'Clair ou Violet nuit, comme votre appareil',
             self::Light => 'Fond blanc',
             self::Dark => 'Noir, façon Instagram',
             self::Violet => 'Le sombre d’origine, teinté de violet',
