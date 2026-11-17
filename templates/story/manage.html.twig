@@ -13,6 +13,8 @@
             {% if media and media.video %}<span class="gi">{{ ui.icon('reel', 'sm') }}</span>{% endif %}
         </a>
         <small>{{ story.createdAt|ago }}{{ active ? ' · en cours' : '' }} · {{ story.viewsCount }} vue{{ story.viewsCount > 1 ? 's' }}</small>
+        {# Envoi vers Instagram : en ligne (lien), en cours, ou échec avec nouvel essai — comme pour une publication. #}
+        {{ include('post/_crosspost_status.html.twig', {crosspost: instagram_crosspost(story)}) }}
         {% if story.highlight %}
             <span class="chip on">{{ ui.icon('sparkle', 'xs') }}{{ story.highlight.title }}</span>
             <form method="post" action="{{ path('app_story_unpin', {id: story.publicId}) }}">

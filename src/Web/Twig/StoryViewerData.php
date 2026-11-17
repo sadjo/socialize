@@ -10,6 +10,8 @@ use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Music\MusicChoice;
 use App\Core\Domain\Music\MusicTrack;
 use App\Core\Domain\Story\Highlight;
+use App\Crosspost\Meta\Domain\InstagramCrosspost;
+use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramCrosspostRepository;
 use App\Media\Application\MediaUrls;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
@@ -27,6 +29,7 @@ final readonly class StoryViewerData
         private UrlGeneratorInterface $router,
         private CsrfTokenManagerInterface $csrf,
         private SocializeExtension $twig,
+        private InstagramCrosspostRepository $crossposts,
     ) {
     }
 
@@ -70,6 +73,8 @@ final readonly class StoryViewerData
                     'seen' => isset($group->seen[$story->getPublicId()]),
                     'seenUrl' => null !== $viewToken && !$own ? $this->router->generate('app_story_seen', ['id' => $story->getPublicId()]) : null,
                     'views' => $own ? $story->getViewsCount() : null,
+                    // Envoi vers Instagram, pour l'auteur seul : état (pending, processing, published, failed) et lien.
+                    'instagram' => $own ? $this->instagram($story) : null,
                     'audience' => $story->getAudience()->value,
                 ];
             }
@@ -99,5 +104,15 @@ final readonly class StoryViewerData
             'viewToken' => $viewToken,
             'highlight' => $highlight?->getTitle() ?? $label,
         ];
+    }
+
+    /**
+     * @return array{status: string, permalink: ?string}|null
+     */
+    private function instagram(\App\Core\Domain\Story\Story $story): ?array
+    {
+        $crosspost = $this->crossposts->forStory($story);
+
+        return $crosspost instanceof InstagramCrosspost ? ['status' => $crosspost->getStatus()->value, 'permalink' => $crosspost->getPermalink()] : null;
     }
 }

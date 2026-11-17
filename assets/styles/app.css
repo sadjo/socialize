@@ -1006,3 +1006,9 @@ textarea.mention-input{position:relative;z-index:1;background:transparent!import
 textarea.mention-input::placeholder{color:var(--faint)}
 textarea.mention-input::selection{color:transparent;background:var(--accent-soft)}
 .mention-list li.hint{cursor:default;color:var(--muted)}
+/* État Instagram d'une story, dans la visionneuse (auteur seul). */
+.sv-own .sv-info{min-width:0}
+.sv-ig{white-space:nowrap}
+.sv-ig .mi{margin-right:.3em}
+a.sv-ig{text-decoration:underline;text-underline-offset:2px}
+.sv-ig.failed{color:oklch(0.85 0.12 30)}
