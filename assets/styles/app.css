@@ -77,7 +77,8 @@ small,.small{font-size:.82rem;color:var(--muted)}
 main{min-width:0;padding-block:28px 110px}
 .mtop{display:none}
 .tabbar{display:none}
-@media (min-width:768px) and (max-width:1199px){
+/* Menu en icônes seules entre le mobile et 1024 px (tablette en portrait) ; menu large au-delà, dès l'iPad en paysage. */
+@media (min-width:768px) and (max-width:1023px){
   :root{--side-w:72px}
   .side .lbl,.logo span,.nav .badge{display:none}
   .nav{justify-content:center;padding:12px}
