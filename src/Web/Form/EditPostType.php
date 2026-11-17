@@ -58,7 +58,7 @@ final class EditPostType extends AbstractType
             ->add('caption', TextareaType::class, [
                 'label' => 'Légende',
                 'required' => false,
-                'attr' => ['rows' => 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', [])],
+                'attr' => ['rows' => 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', []), 'data-mention-instagram-url-value' => $this->urls->generate('app_mention_instagram')],
                 'constraints' => [new Assert\Length(max: Post::MAX_CAPTION_LENGTH)],
             ])
             ->add('location', TextType::class, [

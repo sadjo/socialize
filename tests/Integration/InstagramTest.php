@@ -10,6 +10,7 @@ use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Crosspost\Meta\Application\InstagramConnections;
+use App\Crosspost\Meta\Application\InstagramLookup;
 use App\Crosspost\Meta\Application\RefreshInstagramTokens;
 use App\Crosspost\Meta\Application\RefreshInstagramTokensHandler;
 use App\Crosspost\Meta\Domain\CrosspostStatus;
@@ -485,6 +486,68 @@ final class InstagramTest extends AppWebTestCase
         $this->login($this->register('hugo', publisher: false));
         $this->client->request('GET', '/reglages/instagram');
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testMentionedInstagramAccountsAreVerifiedWithTheUnifiedLogin(): void
+    {
+        $camille = $this->unifiedConnected('camille');
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/publier');
+        self::assertSame('/mentions/instagram', $crawler->filter('#compose_post_caption')->attr('data-mention-instagram-url-value'));
+
+        self::assertSame(['available' => true, 'account' => [
+            'username' => 'natgeo', 'name' => 'National Geographic', 'picture' => 'https://scontent.cdninstagram.com/natgeo.jpg', 'followers' => 280000000,
+        ]], $this->instagramMention('natgeo'));
+        self::assertSame(['available' => true, 'account' => null], $this->instagramMention('compte.perso'), 'Compte personnel ou inexistant : introuvable.');
+
+        // Cache (vidé entre deux requêtes pendant les tests) : vérifié sur le service, en un seul passage.
+        $lookup = self::getContainer()->get(InstagramLookup::class);
+        $lookup->find($this->reloadUser($camille)->getAccount(), 'natgeo');
+        $calls = \count(FakeInstagram::$requests);
+        self::assertSame('National Geographic', $lookup->find($this->reloadUser($camille)->getAccount(), 'NatGeo')['name'] ?? null);
+        self::assertCount($calls, FakeInstagram::$requests, 'Résultat gardé en cache.');
+    }
+
+    public function testOnlyPublicFieldsWhenMetaRefusesTheNameAndPicture(): void
+    {
+        $this->login($this->unifiedConnected('camille'));
+        FakeInstagram::$discoveryPublicOnly = true;
+
+        self::assertSame(['available' => true, 'account' => ['username' => 'natgeo', 'name' => null, 'picture' => null, 'followers' => 280000000]], $this->instagramMention('natgeo'));
+    }
+
+    public function testWithoutThePermissionVerificationStopsButInstagramStaysConnected(): void
+    {
+        $camille = $this->unifiedConnected('camille');
+        FakeInstagram::$discoveryAllowed = false;
+        $lookup = self::getContainer()->get(InstagramLookup::class);
+        $account = $this->reloadUser($camille)->getAccount();
+
+        self::assertTrue($lookup->isAvailable($account));
+        self::assertNull($lookup->find($account, 'natgeo'));
+        self::assertFalse($lookup->isAvailable($account), 'Vérification mise en pause pour ce compte.');
+        self::getContainer()->get('doctrine')->getManager()->clear();
+        self::assertFalse($this->connection()?->isExpired(new \DateTimeImmutable()), 'Instagram reste connecté pour publier.');
+    }
+
+    public function testNotAvailableWithTheDirectInstagramLogin(): void
+    {
+        $this->login($this->connected('camille'));
+
+        self::assertSame(['available' => false], $this->instagramMention('natgeo'));
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function instagramMention(string $username): array
+    {
+        $this->client->request('GET', '/mentions/instagram?u='.rawurlencode($username));
+        self::assertResponseIsSuccessful();
+        $data = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($data);
+
+        return $data;
     }
 
     private function unifiedConnected(string $username): User

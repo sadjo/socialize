@@ -2,13 +2,16 @@ import { Controller } from '@hotwired/stimulus';
 
 /* Suggestions de mentions dans une légende : dès « @ », les comptes suivis puis d'autres comptes d'ici ; en tapant
    « @ca… », les comptes d'ici et ceux du fédivers déjà connus ; en tapant « ig:@ca… », le compte Instagram. Flèches pour choisir, Entrée ou Tab pour insérer, Échap
-   pour fermer. Le contrôleur est posé sur la zone de texte elle-même. */
+   pour fermer. Le contrôleur est posé sur la zone de texte elle-même.
+   Le compte Instagram proposé est vérifié, quand la connexion Instagram du compte le permet : nom, photo, abonnés. */
 export default class extends Controller {
-    static values = { url: String };
+    static values = { url: String, instagramUrl: String };
 
     connect() {
         this.items = [];
         this.active = -1;
+        this.instagramCache = new Map();
+        this.instagramOff = !this.instagramUrlValue;
         this.list = document.createElement('ul');
         this.list.className = 'mention-list';
         this.list.id = `${this.element.id || 'caption'}-mentions`;
@@ -57,6 +60,7 @@ export default class extends Controller {
         this.current = token;
         if (token.instagram) {
             this.show([{ mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }]);
+            this.verify(token);
             return;
         }
         this.timer = setTimeout(async () => {
@@ -67,11 +71,54 @@ export default class extends Controller {
                 // Avec un nom tapé, toujours la possibilité d'un compte Instagram de ce nom.
                 const suggestions = token.name === '' ? accounts : [...accounts, { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }];
                 if (this.current !== token) return;
-                suggestions.length ? this.show(suggestions) : this.close();
+                if (!suggestions.length) {
+                    this.close();
+                    return;
+                }
+                this.show(suggestions);
+                this.verify(token);
             } catch {
                 this.close();
             }
         }, token.name === '' ? 0 : 150);
+    }
+
+    /* Vérifie le compte Instagram proposé, puis complète sa ligne (nom, photo, abonnés). */
+    verify(token) {
+        clearTimeout(this.instagramTimer);
+        const name = token.name.replace(/\.+$/, '').toLowerCase();
+        if (this.instagramOff || name === '') return;
+        this.instagramTimer = setTimeout(async () => {
+            const found = this.instagramCache.has(name) ? this.instagramCache.get(name) : await this.lookupInstagram(name);
+            const index = this.items.findIndex((item) => item.instagram);
+            if (this.current !== token || found === undefined || index === -1) return;
+            const item = this.items[index];
+            this.items[index] = found
+                ? { ...item, name: found.name || `@${found.username}`, avatar: found.picture, handle: `✓ @${found.username} · Instagram${found.followers !== null ? ` · ${this.compact(found.followers)} abonnés` : ''}` }
+                : { ...item, handle: 'Compte Instagram · non vérifié' };
+            this.list.children[index]?.replaceWith(this.option(this.items[index], index));
+            this.highlight();
+        }, 400);
+    }
+
+    /* null : aucun compte professionnel de ce nom ; undefined : vérification impossible. */
+    async lookupInstagram(name) {
+        try {
+            const response = await fetch(`${this.instagramUrlValue}?u=${encodeURIComponent(name)}`, { headers: { Accept: 'application/json' } });
+            const data = response.ok ? await response.json() : { available: false };
+            if (!data.available) {
+                this.instagramOff = true;
+                return undefined;
+            }
+            this.instagramCache.set(name, data.account);
+            return data.account;
+        } catch {
+            return undefined;
+        }
+    }
+
+    compact(count) {
+        return new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(count);
     }
 
     show(items) {
@@ -88,13 +135,14 @@ export default class extends Controller {
         li.id = `${this.list.id}-${index}`;
         li.setAttribute('role', 'option');
         let picture;
-        if (item.instagram) {
+        if (item.instagram && !item.avatar) {
             picture = document.createElement('span');
             picture.className = 'ig-badge';
             picture.textContent = 'IG';
         } else if (item.avatar) {
             picture = document.createElement('img');
             picture.className = 'avatar-img';
+            picture.referrerPolicy = 'no-referrer';
             picture.src = item.avatar;
             picture.alt = '';
         } else {
@@ -154,6 +202,7 @@ export default class extends Controller {
 
     close() {
         clearTimeout(this.timer);
+        clearTimeout(this.instagramTimer);
         this.list.hidden = true;
         this.items = [];
         this.current = null;
