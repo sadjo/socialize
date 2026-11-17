@@ -12,6 +12,7 @@
         "doctrine/orm": "^3.7.6",
         "jcupitt/vips": "^2.6",
         "kornrunner/blurhash": "^1.2",
+        "league/commonmark": "^2.10",
         "league/flysystem-bundle": "^3.7",
         "minishlink/web-push": "^11.0",
         "nyholm/psr7": "^1.8",

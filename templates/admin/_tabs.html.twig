@@ -1,6 +1,7 @@
-{# Onglets de l'espace Administration. Variable : current ('accounts' ou 'invitations') #}
+{# Onglets de l'espace Administration. Variable : current ('accounts', 'invitations' ou 'instance') #}
 {% import '_macros.html.twig' as ui %}
 <nav class="ptabs ptabs-scroll" aria-label="Administration" data-controller="tabs">
     <a href="{{ path('admin_accounts') }}" class="{{ current == 'accounts' ? 'on' }}"{{ current == 'accounts' ? ' aria-current="page"' }}>{{ ui.icon('user', 'xs') }}Comptes</a>
     <a href="{{ path('admin_invitations') }}" class="{{ current == 'invitations' ? 'on' }}"{{ current == 'invitations' ? ' aria-current="page"' }}>{{ ui.icon('send', 'xs') }}Invitations</a>
+    <a href="{{ path('admin_instance') }}" class="{{ current == 'instance' ? 'on' }}"{{ current == 'instance' ? ' aria-current="page"' }}>{{ ui.icon('server', 'xs') }}Instance</a>
 </nav>

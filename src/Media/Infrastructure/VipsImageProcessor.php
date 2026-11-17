@@ -87,6 +87,18 @@ final class VipsImageProcessor
     }
 
     /**
+     * Image insérée dans un texte (bloc Instance) : 1200 pixels de large au plus, redressée, sans métadonnées.
+     */
+    public function contentImage(string $bytes, int $maxWidth = 1200): string
+    {
+        try {
+            return $this->webp(Image::thumbnail_buffer($bytes, $maxWidth, ['height' => 10 * $maxWidth, 'size' => 'down']));
+        } catch (VipsException $e) {
+            throw new MediaProcessingException('Cette image n’a pas pu être lue.', $e->getCode(), previous: $e);
+        }
+    }
+
+    /**
      * Copie JPEG d'une image (les applications comme Instagram ne reçoivent pas toutes le WebP).
      */
     public function jpeg(string $bytes): string

@@ -1,0 +1,49 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Instance · Administration · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow admin">
+    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Le bloc « Instance » s’affiche à côté des fils Publications, Local et Fédéré.</p></div></div>
+    {{ include('admin/_tabs.html.twig', {current: 'instance'}) }}
+
+    <section class="card">
+        <h2>Bloc Instance</h2>
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.title) }}
+            <div class="field{{ not form.body.vars.valid ? ' invalid' }}">
+                {{ form_label(form.body) }}
+                {# Barre d'édition (avec JavaScript) ; sans elle, la zone de texte accepte le Markdown tel quel. #}
+                <div class="md-editor" data-controller="markdown-editor"
+                     data-markdown-editor-image-url-value="{{ path('admin_instance_image') }}"
+                     data-markdown-editor-preview-url-value="{{ path('admin_instance_preview') }}"
+                     data-markdown-editor-token-value="{{ csrf_token(constant('App\\Admin\\Infrastructure\\Http\\InstanceController::CSRF')) }}">
+                    <div class="md-bar" data-markdown-editor-target="bar" hidden>
+                        <div class="seg md-modes" role="tablist" aria-label="Mode">
+                            <button type="button" role="tab" class="on" aria-selected="true" data-markdown-editor-target="writeTab" data-action="markdown-editor#write">Écrire</button>
+                            <button type="button" role="tab" aria-selected="false" data-markdown-editor-target="previewTab" data-action="markdown-editor#preview">{{ ui.icon('eye', 'xs') }}Aperçu</button>
+                        </div>
+                        <div class="md-tools" role="toolbar" aria-label="Mise en forme" data-markdown-editor-target="tools">
+                            <button type="button" class="btn sm ghost md-b" title="Gras (Ctrl+B)" aria-label="Gras" data-action="markdown-editor#bold">B</button>
+                            <button type="button" class="btn sm ghost md-i" title="Italique (Ctrl+I)" aria-label="Italique" data-action="markdown-editor#italic">I</button>
+                            <button type="button" class="btn sm ghost" title="Lien (Ctrl+K)" aria-label="Lien" data-action="markdown-editor#link">{{ ui.icon('link', 'xs') }}</button>
+                            <button type="button" class="btn sm ghost" title="Liste à puces" aria-label="Liste à puces" data-action="markdown-editor#bullets">{{ ui.icon('list', 'xs') }}</button>
+                            <button type="button" class="btn sm ghost" title="Liste numérotée" aria-label="Liste numérotée" data-action="markdown-editor#numbers">{{ ui.icon('list-ol', 'xs') }}</button>
+                            <button type="button" class="btn sm ghost" title="Image" aria-label="Insérer une image" data-action="markdown-editor#image">{{ ui.icon('image', 'xs') }}</button>
+                        </div>
+                    </div>
+                    {{ form_widget(form.body, {attr: {class: 'md-input', 'data-markdown-editor-target': 'input', 'data-action': 'keydown->markdown-editor#shortcut', 'aria-describedby': form.body.vars.id ~ '_help'}}) }}
+                    <div class="md md-preview" data-markdown-editor-target="output" aria-live="polite" hidden></div>
+                    <input type="file" accept="image/*" hidden data-markdown-editor-target="file" data-action="markdown-editor#upload">
+                    <p class="small md-status" role="status" data-markdown-editor-target="status" hidden></p>
+                </div>
+                {{ form_help(form.body) }}
+                {{ form_errors(form.body) }}
+            </div>
+            <div><button class="btn pri">Enregistrer</button></div>
+        {{ form_end(form) }}
+    </section>
+</div>
+{% endblock %}
