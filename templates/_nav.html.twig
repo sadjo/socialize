@@ -1,7 +1,7 @@
 {# Entrées de navigation, partagées par le menu de gauche (bureau) et la fenêtre « Menu » (mobile).
    Variables du layout : me, current_route, visitor_closed, home_login_only, login_url. #}
 {% import '_macros.html.twig' as ui %}
-    <a class="nav{{ current_route == 'app_home' ? ' on' }}" href="{{ path('app_home') }}"{% if current_route == 'app_home' %} aria-current="page"{% endif %}>{{ ui.icon('home') }}<span class="lbl">Accueil</span></a>
+    <a class="nav{{ current_route == 'app_home' ? ' on' }}" href="{{ path('app_home') }}"{% if current_route == 'app_home' %} aria-current="page"{% endif %}>{{ ui.icon('image') }}<span class="lbl">Publications</span></a>
     {% if me or not home_login_only %}<a class="nav{{ current_route == 'app_feed_local' ? ' on' }}" href="{{ path('app_feed_local') }}"{% if current_route == 'app_feed_local' %} aria-current="page"{% endif %}>{{ ui.icon('compass') }}<span class="lbl">Local</span></a>{% endif %}
     {% if not visitor_closed %}<a class="nav{{ current_route == 'app_search' ? ' on' }}" href="{{ path('app_search') }}">{{ ui.icon('search') }}<span class="lbl">Rechercher</span></a>{% endif %}
     {% if me %}

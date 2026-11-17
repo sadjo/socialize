@@ -1,7 +1,7 @@
 {% extends 'layout.html.twig' %}
 {% import '_macros.html.twig' as ui %}
 
-{% block title %}{{ tab == 'home' ? 'Accueil' : (tab == 'federated' ? 'Fil fédéré' : 'Fil local') }} · Socialize{% endblock %}
+{% block title %}{{ tab == 'home' ? 'Publications' : (tab == 'federated' ? 'Fil fédéré' : 'Fil local') }} · Socialize{% endblock %}
 
 {% block content %}
 <div class="home">
@@ -19,7 +19,8 @@
         {# Barre des stories : seulement s'il y en a à voir (les siennes ou celles des comptes suivis) ; pour en publier
            une, le bouton « Créer » propose « Story ». #}
         {% if tab == 'home' and story_groups is not empty %}{{ include('feed/_stories_bar.html.twig') }}{% endif %}
-        {{ include('feed/_tabs.html.twig') }}
+        {# Barre des fils : sur les fils Local et Fédéré seulement, pas sur l'écran d'accueil. #}
+        {% if tab in ['local', 'federated'] %}{{ include('feed/_tabs.html.twig') }}{% endif %}
         {% if tab in ['local', 'federated'] %}{{ include('search/_form.html.twig') }}{% endif %}
         <div class="feed">
             {% if page.empty %}
