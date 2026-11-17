@@ -13,6 +13,13 @@ use Twig\Attribute\AsTwigFunction;
 
 final readonly class SocializeExtension
 {
+    /** Pastille devant une mention : compte d'ici, du fédivers (Mastodon), d'Instagram. */
+    private const array MENTION_ICONS = [
+        'local' => '<span class="mi mi-local" aria-hidden="true"></span>',
+        'fedi' => '<span class="mi mi-fedi" aria-hidden="true"></span>',
+        'ig' => '<span class="mi mi-ig" aria-hidden="true"></span>',
+    ];
+
     public function __construct(
         private MediaUrls $urls,
     ) {
@@ -99,10 +106,11 @@ final readonly class SocializeExtension
             Mentions::PATTERN,
             static fn (array $m): string => match (true) {
                 // « ig:@nom » : compte Instagram.
-                null !== $m[1] => \sprintf('<a class="tag ig" href="%s" target="_blank" rel="noopener nofollow" title="Compte Instagram">@%s</a>', htmlspecialchars(Mentions::instagramUrl($m[2])), $m[2]).(null !== $m[3] ? '@'.$m[3] : ''),
+                null !== $m[1] => \sprintf('<a class="tag ig" href="%s" target="_blank" rel="noopener nofollow" title="Compte Instagram">%s@%s</a>', htmlspecialchars(Mentions::instagramUrl($m[2])), self::MENTION_ICONS['ig'], $m[2]).(null !== $m[3] ? '@'.$m[3] : ''),
                 // Texte importé d'Instagram : « @nom » y désigne un compte Instagram.
-                $instagram && null === $m[3] => \sprintf('<a class="tag" href="%s" target="_blank" rel="noopener nofollow">@%s</a>', self::instagramProfile($m[2]), $m[2]),
-                default => \sprintf('<a class="tag" href="/@%s%s">@%s%s</a>', $m[2], null !== $m[3] ? '@'.$m[3] : '', $m[2], null !== $m[3] ? '@'.$m[3] : ''),
+                $instagram && null === $m[3] => \sprintf('<a class="tag" href="%s" target="_blank" rel="noopener nofollow">%s@%s</a>', self::instagramProfile($m[2]), self::MENTION_ICONS['ig'], $m[2]),
+                // Compte du fédivers (icône Mastodon) ou d'ici (icône Socialize).
+                default => \sprintf('<a class="tag" href="/@%s%s">%s@%s%s</a>', $m[2], null !== $m[3] ? '@'.$m[3] : '', self::MENTION_ICONS[null !== $m[3] ? 'fedi' : 'local'], $m[2], null !== $m[3] ? '@'.$m[3] : ''),
             },
             $html,
             flags: \PREG_UNMATCHED_AS_NULL,

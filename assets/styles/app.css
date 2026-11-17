@@ -982,3 +982,25 @@ label.act{cursor:pointer}
 .mention-list .t b{font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mention-list .t small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mention-list .ig-badge{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;flex:none;color:#fff;font-weight:700;font-size:.7rem;background:linear-gradient(45deg,#f9a825,#e1306c,#833ab4)}
+
+/* Pastilles devant les mentions : compte d'ici (Socialize), du fédivers (Mastodon), d'Instagram. Mêmes formes
+   dans les publications et sous la zone de saisie d'une légende. */
+.mi{display:inline-block;position:relative;width:.95em;height:.95em;border-radius:.27em;vertical-align:-.13em;margin-right:.12em;flex:none}
+.mi::before,.mi::after{content:"";position:absolute;box-sizing:border-box}
+.mi-local{background:var(--grad)}
+.mi-local::before{left:.27em;top:.27em;width:.42em;height:.42em;border-radius:50%;border:.085em solid #fff}
+.mi-fedi{background:#6364ff}
+.mi-fedi::before{content:"m";inset:0;display:grid;place-items:center;color:#fff;font:700 .72em/1 system-ui,sans-serif;margin-top:-.06em}
+.mi-ig{background:linear-gradient(45deg,#f9a825,#e1306c 55%,#833ab4)}
+.mi-ig::before{inset:.17em;border:.08em solid #fff;border-radius:.2em}
+.mi-ig::after{left:.33em;top:.33em;width:.29em;height:.29em;border:.08em solid #fff;border-radius:50%}
+
+/* Zone de saisie : le texte réel est transparent, une copie mise en forme (mentions colorées, pastilles à la place
+   du « @ ») est placée exactement dessous. */
+.mention-mirror{position:absolute;box-sizing:border-box;margin:0;overflow:hidden;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;pointer-events:none;border-color:transparent!important;color:var(--fg)}
+.mention-mirror .mt{color:var(--accent)}
+.mention-mirror .ms{position:relative;color:transparent}
+.mention-mirror .ms .mi{position:absolute;left:50%;top:50%;margin:0;transform:translate(-50%,-50%)}
+textarea.mention-input{position:relative;z-index:1;background:transparent!important;color:transparent;caret-color:var(--fg)}
+textarea.mention-input::placeholder{color:var(--faint)}
+textarea.mention-input::selection{color:transparent;background:var(--accent-soft)}
