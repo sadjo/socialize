@@ -14,6 +14,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -24,6 +25,11 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 final class MastodonComposeType extends AbstractType
 {
+    public function __construct(
+        private readonly UrlGeneratorInterface $urls,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         /** @var MastodonLimits $limits */
@@ -52,7 +58,7 @@ final class MastodonComposeType extends AbstractType
             ->add('caption', TextareaType::class, [
                 'label' => 'Texte',
                 'required' => false,
-                'attr' => ['rows' => 5, 'maxlength' => $limits->maxCharacters, 'placeholder' => 'Écrivez un texte… #hashtags et @mentions acceptés', 'data-compose-target' => 'caption'],
+                'attr' => ['rows' => 5, 'maxlength' => $limits->maxCharacters, 'placeholder' => 'Écrivez un texte… #hashtags, @mentions et ig:@comptes Instagram acceptés', 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', ['full' => 1]), 'data-mention-instagram-url-value' => $this->urls->generate('app_mention_instagram')],
                 'constraints' => [new Assert\Length(max: $limits->maxCharacters)],
             ])
             ->add('visibility', ChoiceType::class, [

@@ -26,6 +26,10 @@ framework:
             mastodon.cache:
                 adapter: cache.app
                 default_lifetime: 86400
+            # Comptes Instagram vérifiés pour les mentions (un jour, une heure s'ils sont introuvables).
+            instagram.cache:
+                adapter: cache.app
+                default_lifetime: 86400
 
 when@test:
     framework:
@@ -34,4 +38,6 @@ when@test:
                 openverse.cache:
                     adapter: cache.adapter.array
                 mastodon.cache:
+                    adapter: cache.adapter.array
+                instagram.cache:
                     adapter: cache.adapter.array

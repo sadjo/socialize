@@ -258,6 +258,47 @@ final readonly class InstagramClient
         ];
     }
 
+    /**
+     * Compte Instagram professionnel ou créateur trouvé par son nom exact (« Business Discovery », connexion unifiée
+     * seulement). Null si aucun compte de ce nom n'est visible (compte personnel, inexistant, restreint par l'âge).
+     * Le nom affiché et la photo ne sont pas garantis par Meta : en cas de refus de ces champs, seuls le nom
+     * d'utilisateur et le nombre d'abonnés sont demandés.
+     *
+     * @return array{username: string, name: ?string, picture: ?string, followers: ?int}|null
+     *
+     * @throws InstagramException jeton ou droits refusés (tokenRejected), Instagram occupé ou injoignable (temporary)
+     */
+    public function businessDiscovery(string $instagramUserId, #[\SensitiveParameter] string $token, string $username): ?array
+    {
+        foreach (['username,name,profile_picture_url,followers_count', 'username,followers_count'] as $fields) {
+            try {
+                $data = $this->request('GET', $this->graph(rawurlencode($instagramUserId), true), ['query' => [
+                    'fields' => \sprintf('business_discovery.username(%s){%s}', $username, $fields),
+                    'access_token' => $token,
+                ], 'timeout' => 8]);
+            } catch (InstagramException $e) {
+                if ($e->tokenRejected || $e->temporary) {
+                    throw $e;
+                }
+
+                continue; // Champ refusé, ou compte introuvable : nouvel essai avec les seuls champs publics.
+            }
+            $found = \is_array($data['business_discovery'] ?? null) ? $data['business_discovery'] : null;
+            if (null === $found || !\is_string($found['username'] ?? null)) {
+                return null;
+            }
+
+            return [
+                'username' => $found['username'],
+                'name' => \is_string($found['name'] ?? null) && '' !== $found['name'] ? $found['name'] : null,
+                'picture' => \is_string($found['profile_picture_url'] ?? null) && str_starts_with($found['profile_picture_url'], 'https://') ? $found['profile_picture_url'] : null,
+                'followers' => is_numeric($found['followers_count'] ?? null) ? (int) $found['followers_count'] : null,
+            ];
+        }
+
+        return null;
+    }
+
     private function graph(string $path, bool $unified = false): string
     {
         return ($unified ? self::FACEBOOK_GRAPH : self::GRAPH).'/'.self::VERSION.'/'.$path;

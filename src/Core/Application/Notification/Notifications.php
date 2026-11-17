@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Application\Notification;
 
+use App\Core\Application\Post\Mentions;
+use App\Core\Application\Post\PostAccess;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountRegistered;
+use App\Core\Domain\Event\PostPublished;
+use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Notification\Notification;
 use App\Core\Domain\Notification\NotificationType;
 use App\Core\Domain\Post\Post;
@@ -18,7 +22,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
  * Notifications des comptes locaux : « J'aime » et commentaires reçus sur leurs publications, venus d'ici ou du
- * fédivers (jamais pour ses propres actions) ; nouveaux comptes, pour les administrateurs. Lues ou non lues, supprimées une à une ou toutes ensemble.
+ * fédivers (jamais pour ses propres actions) ; mentions dans une légende ; nouveaux comptes, pour les administrateurs. Lues ou non lues, supprimées une à une ou toutes ensemble.
  */
 final readonly class Notifications
 {
@@ -28,6 +32,8 @@ final readonly class Notifications
         private ClockInterface $clock,
         private PushNotifications $push,
         private UserRepository $users,
+        private Mentions $mentions,
+        private PostAccess $access,
     ) {
     }
 
@@ -61,6 +67,44 @@ final readonly class Notifications
             $this->em->persist(new Notification($recipient, $comment->getAccount(), NotificationType::Comment, $comment->getPost(), $comment, $this->clock->now()));
             $this->em->flush();
             $this->push->commented($recipient, $comment);
+        }
+    }
+
+    /**
+     * Publication (d'ici ou du fédivers) qui mentionne des comptes de cette instance : chacun est prévenu une fois,
+     * s'il peut la voir et n'en est pas l'auteur.
+     *
+     * @param list<Account> $mentioned
+     */
+    public function mentioned(Post $post, array $mentioned): void
+    {
+        $author = $post->getAccount();
+        $now = $this->clock->now();
+        $added = false;
+        foreach ($mentioned as $account) {
+            if (!$account->isLocal() || $account->getId()->equals($author->getId()) || !$this->access->canView($post, $account)
+                || $this->notifications->findOneBy(['recipient' => $account, 'post' => $post, 'type' => NotificationType::Mention]) instanceof Notification) {
+                continue;
+            }
+            $this->em->persist(new Notification($account, $author, NotificationType::Mention, $post, null, $now));
+            $added = true;
+        }
+        if ($added) {
+            $this->em->flush();
+        }
+    }
+
+    #[AsEventListener]
+    public function onPostPublished(PostPublished $event): void
+    {
+        $this->mentionedInCaption($event->post);
+    }
+
+    #[AsEventListener]
+    public function onPostUpdated(PostUpdated $event): void
+    {
+        if ($event->contentChanged) {
+            $this->mentionedInCaption($event->post);
         }
     }
 
@@ -132,6 +176,16 @@ final readonly class Notifications
             $this->em->remove($notification);
         }
         $this->em->flush();
+    }
+
+    /**
+     * Publication d'ici : comptes mentionnés dans sa légende (pas pour un texte importé d'Instagram).
+     */
+    private function mentionedInCaption(Post $post): void
+    {
+        if ($post->getAccount()->isLocal() && !$post->isImported() && !$post->isArchived()) {
+            $this->mentioned($post, $this->mentions->accounts($post->getCaption()));
+        }
     }
 
     /**

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Federation\Application;
 
+use App\Core\Application\Post\Mentions;
+
 /**
  * Conversions entre le HTML du fédivers et le texte brut stocké par Socialize.
  */
@@ -36,7 +38,10 @@ final class HtmlText
         foreach ($paragraphs as $paragraph) {
             $escaped = htmlspecialchars($paragraph, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
             $escaped = (string) preg_replace_callback('/(?<![\w&])#([\p{L}\p{N}_]{1,100})/u', static fn (array $m): string => \sprintf('<a href="%s" class="mention hashtag" rel="tag">#<span>%s</span></a>', htmlspecialchars($hashtagUrl($m[1])), $m[1]), $escaped);
-            $escaped = (string) preg_replace_callback('/(?<![\w\/])@([a-z0-9_.]{1,30}(?:@[a-z0-9.-]+\.[a-z]{2,})?)/iu', static fn (array $m): string => \sprintf('<span class="h-card"><a href="%s" class="u-url mention">@<span>%s</span></a></span>', htmlspecialchars($mentionUrl($m[1])), explode('@', $m[1])[0]), $escaped);
+            $escaped = (string) preg_replace_callback(Mentions::PATTERN, static fn (array $m): string => null !== $m[1]
+                // Compte Instagram : simple lien vers son profil (pas une mention du fédivers).
+                ? \sprintf('<a href="%s" rel="nofollow noopener" target="_blank">@%s (Instagram)</a>', htmlspecialchars(Mentions::instagramUrl($m[2])), $m[2]).(null !== $m[3] ? '@'.$m[3] : '')
+                : \sprintf('<span class="h-card"><a href="%s" class="u-url mention">@<span>%s</span></a></span>', htmlspecialchars($mentionUrl($m[2].(null !== $m[3] ? '@'.$m[3] : ''))), $m[2]), $escaped, flags: \PREG_UNMATCHED_AS_NULL);
             $html[] = '<p>'.nl2br($escaped, false).'</p>';
         }
 

@@ -39,6 +39,7 @@ final readonly class Outbox
         private MessageBusInterface $bus,
         private EntityManagerInterface $em,
         private PostAccess $access,
+        private MentionResolver $mentions,
     ) {
     }
 
@@ -49,6 +50,9 @@ final readonly class Outbox
         $post->getAccount();
         if (!$post->isFederable()) {
             return;
+        }
+        if (!$post->isImported()) {
+            $this->mentions->resolve($post->getCaption());
         }
         $this->sendCreate($post, $this->recipients($post, $post->getVisibility()));
     }
@@ -72,14 +76,22 @@ final readonly class Outbox
     }
 
     /**
-     * Boîtes de réception à qui livrer une publication : ses abonnés distants, si sa visibilité part dans le fédivers
-     * (publique ou réservée aux abonnés).
+     * Boîtes de réception à qui livrer une publication : ses abonnés distants et les comptes du fédivers qu'elle
+     * mentionne, si sa visibilité part dans le fédivers.
      *
      * @return list<string>
      */
     private function recipients(Post $post, Visibility $visibility): array
     {
-        return $visibility->isFederated() ? $this->followerInboxes($post->getAccount()) : [];
+        if (!$visibility->isFederated()) {
+            return [];
+        }
+        $mentioned = array_map(
+            static fn (Account $account): ?string => $account->getDeliveryInbox(),
+            array_filter($this->serializer->mentionedAccounts($post), static fn (Account $account): bool => !$account->isLocal()),
+        );
+
+        return array_values(array_unique(array_filter([...$this->followerInboxes($post->getAccount()), ...$mentioned])));
     }
 
     /**
@@ -108,6 +120,9 @@ final readonly class Outbox
         $isFederated = $current->isFederated();
         if (!$wasFederated && !$isFederated) {
             return;
+        }
+        if ($event->contentChanged && !$post->isImported()) {
+            $this->mentions->resolve($post->getCaption());
         }
         $previousAudience = array_values(array_filter($event->previousAudience, fn (Account $m): bool => $this->follows->isFollowing($m, $author)));
         $audience = $this->access->groupAudience($post);

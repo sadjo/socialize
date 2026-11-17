@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Federation\Application;
 
+use App\Core\Application\Post\Mentions;
 use App\Core\Application\Post\PostAccess;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
@@ -37,6 +38,7 @@ final readonly class Serializer
         private Signer $signer,
         private MediaUrls $media,
         private PostAccess $access,
+        private Mentions $mentions,
     ) {
     }
 
@@ -108,6 +110,9 @@ final readonly class Serializer
     {
         $author = $post->getAccount();
         [$to, $cc] = $this->addressing($post->getVisibility(), $author, $this->access->groupAudience($post));
+        $mentioned = $this->mentionedAccounts($post);
+        // Comptes mentionnés : en copie, pour que leur instance les prévienne.
+        $cc = array_values(array_unique([...$cc, ...array_map($this->actorUri(...), $mentioned)]));
 
         $attachments = [];
         foreach ($post->getMedia() as $media) {
@@ -130,7 +135,11 @@ final readonly class Serializer
             'sensitive' => $post->isSensitive(),
             'summary' => $post->getContentWarning(),
             'attachment' => $attachments,
-            'tag' => $this->tags($post->getCaption()),
+            'tag' => [...$this->tags($post->getCaption()), ...array_map(fn (Account $account): array => [
+                'type' => 'Mention',
+                'href' => $this->actorUri($account),
+                'name' => '@'.$account->getUsername().'@'.($account->getDomain() ?? $this->urls->domain()),
+            ], $mentioned)],
         ];
         if ($post->getUpdatedAt() instanceof \DateTimeImmutable) {
             $note['updated'] = $post->getUpdatedAt()->format(\DATE_ATOM);
@@ -192,6 +201,30 @@ final readonly class Serializer
             Visibility::Groups => [array_values(array_unique(array_map($this->urls->actor(...), $audience))), []],
             Visibility::Private => [[], []],
         };
+    }
+
+    /**
+     * Comptes connus mentionnés dans la légende, hors son auteur (pas pour un texte importé d'Instagram, dont les
+     * mentions désignent des comptes Instagram).
+     *
+     * @return list<Account>
+     */
+    public function mentionedAccounts(Post $post): array
+    {
+        if ($post->isImported()) {
+            return [];
+        }
+        $author = $post->getAccount();
+
+        return array_values(array_filter(
+            $this->mentions->accounts($post->getCaption()),
+            static fn (Account $account): bool => !$account->getId()->equals($author->getId()) && ($account->isLocal() || null !== $account->getApUri()),
+        ));
+    }
+
+    private function actorUri(Account $account): string
+    {
+        return $account->isLocal() ? $this->urls->actor($account) : (string) $account->getApUri();
     }
 
     /**
