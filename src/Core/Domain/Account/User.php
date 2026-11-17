@@ -31,6 +31,9 @@ class User implements AccountUser, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(length: 16, enumType: Theme::class, options: ['default' => 'auto'])]
+    private Theme $theme = Theme::Auto;
+
     /**
      * @param list<string> $roles
      */
@@ -137,6 +140,16 @@ class User implements AccountUser, PasswordAuthenticatedUserInterface
     public function changePassword(string $hashedPassword): void
     {
         $this->password = $hashedPassword;
+    }
+
+    public function getTheme(): Theme
+    {
+        return $this->theme;
+    }
+
+    public function chooseTheme(Theme $theme): void
+    {
+        $this->theme = $theme;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

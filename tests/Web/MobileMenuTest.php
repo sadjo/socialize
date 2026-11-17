@@ -25,7 +25,7 @@ final class MobileMenuTest extends AppWebTestCase
             self::assertSelectorExists(\sprintf('dialog.mobile-menu a[href="%s"]', $href), $href);
             self::assertSelectorExists(\sprintf('nav.side a[href="%s"]', $href), 'Menu de gauche inchangé : '.$href);
         }
-        self::assertSelectorExists('dialog.mobile-menu button[data-controller="theme"]');
+        self::assertSelectorNotExists('dialog.mobile-menu button[data-controller="theme"]', 'Le thème se choisit dans les réglages.');
         self::assertSelectorTextSame('dialog.mobile-menu .side-version', 'dev');
         self::assertSelectorNotExists('dialog.mobile-menu a[href="/admin/comptes"]');
 

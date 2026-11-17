@@ -1,0 +1,31 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Apparence · Réglages · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Réglages</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    {{ include('settings/_tabs.html.twig', {current: 'appearance'}) }}
+
+    <section class="card stack">
+        <h2>Apparence</h2>
+        <p class="small">Le thème choisi s’affiche tout de suite pour voir le rendu ; enregistrez-le pour le garder. Il suit votre compte sur tous vos appareils.</p>
+
+        {# Aperçu immédiat du thème coché (assets/controllers/theme_preview_controller.js). #}
+        {{ form_start(form, {attr: {class: 'form', 'data-controller': 'theme-preview', 'data-action': 'submit->theme-preview#submit'}}) }}
+            {{ form_errors(form) }}
+            <fieldset class="field">
+                <legend class="lab">{{ form.theme.vars.label }}</legend>
+                <div class="choices themes">
+                    {% for choice in form.theme %}
+                        {% set theme = (form.theme.vars.choices|filter(c => c.value == choice.vars.value)|first).data %}
+                        {# Bouton radio puis étiquette : la pastille cochée est surlignée (.choices input:checked + label). #}
+                        {{ form_widget(choice, {attr: {'data-action': 'change->theme-preview#preview'}}) }}<label for="{{ choice.vars.id }}"><span class="theme-swatch" data-swatch="{{ theme.value }}" aria-hidden="true"></span>{{ choice.vars.label }}<small>{{ theme.description }}</small></label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            <div class="navbtns"><span></span><button class="btn pri">Enregistrer</button></div>
+        {{ form_end(form) }}
+    </section>
+</div>
+{% endblock %}
