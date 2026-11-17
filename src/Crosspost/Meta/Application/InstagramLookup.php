@@ -73,14 +73,35 @@ final readonly class InstagramLookup
                     return true;
                 });
             }
-            $this->logger->info('Vérification Instagram impossible : {message}', ['message' => $e->getMessage()]);
+            $this->logger->warning('Vérification d’un compte Instagram mentionné impossible{pause} : {message}', [
+                'pause' => $e->tokenRejected ? ' (pause de six heures, ou jusqu’à la reconnexion d’Instagram)' : '',
+                'message' => $e->getMessage(),
+            ]);
 
             return null;
         }
     }
 
+    /**
+     * Pause liée au jeton du moment : une reconnexion (droits ajoutés) donne un nouveau jeton, et la lève.
+     */
     private function offKey(InstagramConnection $connection): string
     {
-        return 'ig-discovery-off-'.$connection->getId()->toRfc4122();
+        return 'ig-discovery-off-'.$connection->getId()->toRfc4122().'-'.substr(hash('sha256', $connection->getTokenEncrypted()), 0, 16);
+    }
+
+    public function isPaused(?Account $account): bool
+    {
+        $connection = $this->connections->usable($account);
+
+        return $connection instanceof InstagramConnection && true === $this->cache->get($this->offKey($connection), static fn (ItemInterface $item): bool => false);
+    }
+
+    public function resume(?Account $account): void
+    {
+        $connection = $this->connections->usable($account);
+        if ($connection instanceof InstagramConnection) {
+            $this->cache->delete($this->offKey($connection));
+        }
     }
 }

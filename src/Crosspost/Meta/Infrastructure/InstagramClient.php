@@ -272,10 +272,7 @@ final readonly class InstagramClient
     {
         foreach (['username,name,profile_picture_url,followers_count', 'username,followers_count'] as $fields) {
             try {
-                $data = $this->request('GET', $this->graph(rawurlencode($instagramUserId), true), ['query' => [
-                    'fields' => \sprintf('business_discovery.username(%s){%s}', $username, $fields),
-                    'access_token' => $token,
-                ], 'timeout' => 8]);
+                $found = $this->businessDiscoveryRaw($instagramUserId, $token, $username, $fields);
             } catch (InstagramException $e) {
                 if ($e->tokenRejected || $e->temporary) {
                     throw $e;
@@ -283,7 +280,6 @@ final readonly class InstagramClient
 
                 continue; // Champ refusé, ou compte introuvable : nouvel essai avec les seuls champs publics.
             }
-            $found = \is_array($data['business_discovery'] ?? null) ? $data['business_discovery'] : null;
             if (null === $found || !\is_string($found['username'] ?? null)) {
                 return null;
             }
@@ -297,6 +293,36 @@ final readonly class InstagramClient
         }
 
         return null;
+    }
+
+    /**
+     * Réponse brute de « Business Discovery » pour les champs demandés (diagnostic).
+     *
+     * @return array<mixed>|null
+     *
+     * @throws InstagramException refus de Meta, avec son message
+     */
+    public function businessDiscoveryRaw(string $instagramUserId, #[\SensitiveParameter] string $token, string $username, string $fields): ?array
+    {
+        $data = $this->request('GET', $this->graph(rawurlencode($instagramUserId), true), ['query' => [
+            'fields' => \sprintf('business_discovery.username(%s){%s}', $username, $fields),
+            'access_token' => $token,
+        ], 'timeout' => 8]);
+
+        return \is_array($data['business_discovery'] ?? null) ? $data['business_discovery'] : null;
+    }
+
+    /**
+     * Droits accordés à un jeton de la connexion unifiée, lus avec l'application Meta (debug_token).
+     *
+     * @return list<string>
+     */
+    public function grantedScopes(string $appId, #[\SensitiveParameter] string $appSecret, #[\SensitiveParameter] string $token): array
+    {
+        $info = $this->request('GET', $this->graph('debug_token', true), ['query' => ['input_token' => $token, 'access_token' => $appId.'|'.$appSecret]]);
+        $info = \is_array($info['data'] ?? null) ? $info['data'] : [];
+
+        return \is_array($info['scopes'] ?? null) ? array_values(array_filter($info['scopes'], \is_string(...))) : [];
     }
 
     private function graph(string $path, bool $unified = false): string
