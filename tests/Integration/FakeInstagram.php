@@ -45,12 +45,6 @@ final class FakeInstagram
     public static array $deleted = [];
     /** Lien de publication refusé ce nombre de fois avant d'être donné. */
     public static int $permalinkMisses = 0;
-    /** Recherche d'un compte par son nom (« Business Discovery ») : comptes professionnels trouvables. */
-    public const array BUSINESS_ACCOUNTS = ['natgeo' => ['username' => 'natgeo', 'name' => 'National Geographic', 'profile_picture_url' => 'https://scontent.cdninstagram.com/natgeo.jpg', 'followers_count' => 280000000]];
-    /** Droit pages_read_engagement accordé à la connexion unifiée. */
-    public static bool $discoveryAllowed = true;
-    /** Nom affiché et photo refusés (Meta ne les garantit pas) : seuls les champs publics reviennent. */
-    public static bool $discoveryPublicOnly = false;
 
     private static int $next = 0;
 
@@ -69,8 +63,6 @@ final class FakeInstagram
         self::$scopes = ['instagram_basic', 'instagram_content_publish', 'instagram_manage_contents'];
         self::$deleted = [];
         self::$permalinkMisses = 0;
-        self::$discoveryAllowed = true;
-        self::$discoveryPublicOnly = false;
     }
 
     /**
@@ -106,9 +98,6 @@ final class FakeInstagram
             }
             if (self::SYSTEM_TOKEN !== ($params['access_token'] ?? null)) {
                 return $this->error(400, 'Invalid OAuth access token', 190);
-            }
-            if ('/v27.0/'.self::USER_ID === $path && preg_match('/^business_discovery\.username\(([^)]*)\)\{([^}]*)\}$/', $params['fields'] ?? '', $bd)) {
-                return $this->discovery($bd[1], explode(',', $bd[2]));
             }
             if ('/v27.0/me/assigned_instagram_accounts' === $path) {
                 return $this->json(['data' => [['id' => self::USER_ID, 'username' => self::USERNAME]]]);
@@ -213,24 +202,6 @@ final class FakeInstagram
         ++self::$quotaUsed;
 
         return $this->json(['id' => 'media-'.\count(self::$published)]);
-    }
-
-    /**
-     * @param list<string> $fields
-     */
-    private function discovery(string $username, array $fields): MockResponse
-    {
-        if (!self::$discoveryAllowed) {
-            return $this->error(403, '(#10) Application does not have permission for this action', 10);
-        }
-        if (self::$discoveryPublicOnly && array_intersect($fields, ['name', 'profile_picture_url'])) {
-            return $this->error(400, '(#100) Tried accessing nonexisting field (profile_picture_url)', 100);
-        }
-        $account = self::BUSINESS_ACCOUNTS[$username] ?? null;
-
-        return null === $account
-            ? $this->error(400, 'Invalid user id', 110)
-            : $this->json(['business_discovery' => array_intersect_key($account + ['id' => '178'], array_flip([...$fields, 'id'])), 'id' => self::USER_ID]);
     }
 
     /**

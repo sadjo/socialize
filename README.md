@@ -180,10 +180,6 @@ facultatifs.
   L'API est alors jointe sur graph.facebook.com, et le jeton n'est pas renouvelé (il n'expire pas).
   Un envoi se relance depuis la page de la publication (« Réessayer », « Relancer l'envoi », « Republier » : la
   publication Instagram précédente est alors supprimée si le droit le permet).
-  Avec le droit `pages_read_engagement` en plus (à ajouter à la configuration, puis se reconnecter), une mention
-  `ig:@nom` tapée dans une légende est vérifiée : nom, photo et abonnés d'un compte professionnel ou créateur
-  (« Business Discovery » ; nom exact seulement, pas les comptes personnels). Sans ce droit, la suggestion reste
-  simple et Instagram reste connecté.
 - **Application plus ancienne (« connexion Instagram »)** : ID et clé secrète de l'app Instagram (Configuration de
   l'API avec connexion Instagram), adresse de retour déclarée au même endroit, identifiant de configuration vide.
   Sans validation de l'application par Meta, seuls les comptes Instagram ajoutés comme **testeurs** peuvent se
