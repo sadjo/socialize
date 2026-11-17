@@ -29,9 +29,9 @@ enum MediaFilter: string
     {
         return match ($this) {
             self::Off => 'Couleurs d’origine',
-            self::Light => 'À peine plus doux',
-            self::Medium => 'Couleurs adoucies',
-            self::Strong => 'Teintes douces et homogènes',
+            self::Light => 'À peine plus doux et plus sombre',
+            self::Medium => 'Couleurs adoucies, un peu plus sombres',
+            self::Strong => 'Teintes douces, sombres et homogènes',
         };
     }
 }

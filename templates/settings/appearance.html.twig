@@ -26,7 +26,7 @@
             </fieldset>
             <fieldset class="field">
                 <legend class="lab">{{ form.mediaFilter.vars.label }}</legend>
-                <p class="help">Adoucit et rapproche les couleurs des photos et vidéos dans les fils et les grilles. La page d’une publication et l’affichage en plein écran gardent les couleurs d’origine.</p>
+                <p class="help">Adoucit, rapproche et assombrit légèrement les couleurs des photos et vidéos dans les fils et les grilles. La page d’une publication et l’affichage en plein écran gardent les couleurs d’origine.</p>
                 <div class="choices">
                     {% for choice in form.mediaFilter %}
                         {% set filter = (form.mediaFilter.vars.choices|filter(c => c.value == choice.vars.value)|first).data %}
