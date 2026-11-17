@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Web;
 
+use App\Core\Application\Social\SocialActions;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
@@ -94,6 +95,26 @@ final class MentionsTest extends AppWebTestCase
         self::assertSame(['@huguette@pixelfed.test'], $this->mentions('/mentions/suggestions?q=hu@pix'));
         self::assertSame(['@hugo@localhost'], $this->mentions('/mentions/suggestions?q=hugo&full=1'), 'Adresse complète pour un envoi vers Mastodon.');
         self::assertSame([], $this->mentions('/mentions/suggestions?q=%3Cscript'));
+    }
+
+    public function testSuggestionsAsSoonAsTheAtSign(): void
+    {
+        $camille = $this->register('camille');
+        $this->register('hugo', 'hugo@exemple.test');
+        $lina = $this->register('lina', 'lina@exemple.test');
+        $em = self::getContainer()->get('doctrine')->getManager();
+        $alice = Account::remote('alice', 'remote.test', 'https://remote.test/users/alice');
+        $em->persist($alice);
+        $em->flush();
+        $social = self::getContainer()->get(SocialActions::class);
+        $social->follow($camille->getAccount(), $lina->getAccount());
+
+        $this->login($camille);
+        $suggestions = $this->mentions('/mentions/suggestions?q=');
+        self::assertSame('@lina', $suggestions[0] ?? null, 'Comptes suivis d’abord.');
+        self::assertContains('@hugo', $suggestions, 'Puis d’autres comptes d’ici.');
+        self::assertNotContains('@camille', $suggestions, 'Jamais soi-même.');
+        self::assertNotContains('@alice@remote.test', $suggestions, 'Pas de compte du fédivers non suivi.');
     }
 
     /**

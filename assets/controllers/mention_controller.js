@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
-/* Suggestions de mentions dans une légende : en tapant « @ca… », la liste propose les comptes d'ici et ceux du fédivers
-   déjà connus ; en tapant « ig:@ca… », le compte Instagram. Flèches pour choisir, Entrée ou Tab pour insérer, Échap
+/* Suggestions de mentions dans une légende : dès « @ », les comptes suivis puis d'autres comptes d'ici ; en tapant
+   « @ca… », les comptes d'ici et ceux du fédivers déjà connus ; en tapant « ig:@ca… », le compte Instagram. Flèches pour choisir, Entrée ou Tab pour insérer, Échap
    pour fermer. Le contrôleur est posé sur la zone de texte elle-même. */
 export default class extends Controller {
     static values = { url: String };
@@ -50,7 +50,7 @@ export default class extends Controller {
     lookup() {
         clearTimeout(this.timer);
         const token = this.token();
-        if (!token || token.name === '') {
+        if (!token || (token.instagram && token.name === '')) {
             this.close();
             return;
         }
@@ -64,13 +64,14 @@ export default class extends Controller {
             try {
                 const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(query)}`, { headers: { Accept: 'application/json' } });
                 const accounts = response.ok ? await response.json() : [];
-                // Toujours la possibilité d'un compte Instagram de ce nom.
-                const suggestions = [...accounts, { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }];
-                if (this.current === token) this.show(suggestions);
+                // Avec un nom tapé, toujours la possibilité d'un compte Instagram de ce nom.
+                const suggestions = token.name === '' ? accounts : [...accounts, { mention: `ig:@${token.name}`, name: `@${token.name}`, handle: 'Compte Instagram', instagram: true }];
+                if (this.current !== token) return;
+                suggestions.length ? this.show(suggestions) : this.close();
             } catch {
                 this.close();
             }
-        }, 150);
+        }, token.name === '' ? 0 : 150);
     }
 
     show(items) {

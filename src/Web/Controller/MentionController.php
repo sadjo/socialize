@@ -6,6 +6,8 @@ namespace App\Web\Controller;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
+use App\Core\Infrastructure\Doctrine\FollowRepository;
+use App\Web\Security\CurrentAccount;
 use App\Web\Twig\SocializeExtension;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -23,10 +25,20 @@ final class MentionController extends AbstractController
     private const int LIMIT = 8;
 
     #[Route('/mentions/suggestions', name: 'app_mention_suggestions', methods: ['GET'])]
-    public function suggestions(Request $request, AccountRepository $accounts, SocializeExtension $twig, #[Autowire(param: 'app.local_domain')] string $localDomain): JsonResponse
+    public function suggestions(Request $request, AccountRepository $accounts, FollowRepository $follows, CurrentAccount $current, SocializeExtension $twig, #[Autowire(param: 'app.local_domain')] string $localDomain): JsonResponse
     {
         // « cam » ou « cam@pixel » : le nom, et le début du domaine éventuel.
         $query = ltrim(mb_strtolower(trim($request->query->getString('q'))), '@');
+        // Juste « @ » : les comptes suivis, puis d'autres comptes d'ici.
+        if ('' === $query) {
+            $me = $current->require();
+            $found = [];
+            foreach ([...$follows->followingPage($me, null, self::LIMIT)->accounts, ...$accounts->suggestionsFor($me, self::LIMIT)] as $account) {
+                $found[$account->getId()->toRfc4122()] ??= $account;
+            }
+
+            return $this->json($this->describe(\array_slice(array_values($found), 0, self::LIMIT), $request->query->getBoolean('full'), $twig, $localDomain));
+        }
         $parts = explode('@', $query, 2);
         $username = $parts[0];
         $domain = $parts[1] ?? '';
@@ -42,16 +54,25 @@ final class MentionController extends AbstractController
         usort($found, static fn (Account $a, Account $b): int => [!$a->isLocal(), !str_starts_with($a->getUsername(), $username), $a->getUsername()]
             <=> [!$b->isLocal(), !str_starts_with($b->getUsername(), $username), $b->getUsername()]);
 
-        // Texte envoyé à un serveur Mastodon : adresse complète, sinon « @nom » y désignerait un compte de ce serveur.
-        $full = $request->query->getBoolean('full');
+        return $this->json($this->describe(\array_slice($found, 0, self::LIMIT), $request->query->getBoolean('full'), $twig, $localDomain));
+    }
 
-        return $this->json(array_map(static fn (Account $a): array => [
+    /**
+     * @param list<Account> $accounts
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function describe(array $accounts, bool $full, SocializeExtension $twig, string $localDomain): array
+    {
+        // Texte envoyé à un serveur Mastodon ($full) : adresse complète, sinon « @nom » y désignerait un compte de ce
+        // serveur.
+        return array_map(static fn (Account $a): array => [
             'mention' => $full ? '@'.$a->getUsername().'@'.($a->getDomain() ?? $localDomain) : '@'.$a->getAcct(),
             'name' => $a->getDisplayName(),
             'handle' => '@'.$a->getUsername().'@'.($a->getDomain() ?? $localDomain),
             'avatar' => $twig->avatarUrl($a),
             'initials' => $a->getInitials(),
             'hue' => $a->getHue(),
-        ], \array_slice($found, 0, self::LIMIT)));
+        ], $accounts);
     }
 }
