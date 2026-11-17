@@ -19,6 +19,11 @@
             </div>
         {% endif %}
     {% endif %}
-    <div class="fedstat"><span class="lab">Instance {{ local_domain }}</span><small>Réseau photo auto-hébergé. La fédération avec Mastodon et Pixelfed arrive dans une prochaine version.</small></div>
+    {# Bloc choisi par l'administrateur (Administration › Instance) : titre simple, texte en Markdown. #}
+    {% set about = instance_about() %}
+    <section class="fedstat">
+        <div class="fedstat-h"><h2 class="lab">{{ about.title }}</h2>{% if is_granted('ROLE_ADMIN') %}<a class="lnk small" href="{{ path('admin_instance') }}">Modifier</a>{% endif %}</div>
+        <div class="md small">{{ about.html|raw }}</div>
+    </section>
     <div class="foot">Socialize · logiciel auto-hébergé</div>
 </aside>

@@ -944,3 +944,27 @@ label.act{cursor:pointer}
 .crop-tools{display:flex;flex-direction:column;gap:8px}
 .crop-zoom{display:flex;align-items:center;gap:10px;color:var(--muted)}
 .crop-zoom input{flex:1;accent-color:var(--accent)}
+
+/* ---------- Bloc Instance (Markdown) ---------- */
+.fedstat-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.fedstat h2.lab{margin:0}
+.md{line-height:1.55;overflow-wrap:anywhere}
+.md>:first-child{margin-top:0}.md>:last-child{margin-bottom:0}
+.md p,.md ul,.md ol{margin:0 0 .6em}
+.md ul,.md ol{padding-left:1.3em}
+.md li+li{margin-top:.2em}
+.md a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.md img{display:block;max-width:100%;height:auto;border-radius:12px;margin:.4em 0}
+.md code{font-family:var(--font-mono);font-size:.9em;padding:1px 5px;border-radius:6px;background:var(--surface-2)}
+
+/* Éditeur Markdown de l'administration. */
+.md-editor{display:flex;flex-direction:column;gap:8px}
+.md-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.md-modes{flex:none}
+.md-modes button{display:inline-flex;align-items:center;gap:6px}
+.md-tools{display:flex;flex-wrap:wrap;gap:2px}
+.md-tools .btn{min-width:34px;justify-content:center}
+.md-b{font-weight:800}.md-i{font-style:italic;font-family:Georgia,serif}
+.md-input{min-height:220px;font-family:var(--font-mono);font-size:.88rem;line-height:1.5;resize:vertical}
+.md-preview{min-height:220px;padding:14px;border-radius:var(--r-ctl);background:var(--surface-2);border:1px solid var(--line)}
+.md-status{color:var(--muted)}
