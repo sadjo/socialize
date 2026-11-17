@@ -617,7 +617,7 @@ button[disabled]{opacity:.5;cursor:not-allowed}
 .sv-meta{opacity:.8}
 .sv-btn{color:var(--on-media);width:32px;height:32px}
 .sv-btn:hover{background:oklch(1 0 0 / .12)}
-.sv-own{position:absolute;left:12px;right:12px;bottom:14px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--on-media);font-size:.85rem;text-shadow:0 1px 4px oklch(0 0 0 / .5)}
+.sv-own{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:2;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 10px;color:var(--on-media);font-size:.85rem;text-shadow:0 1px 4px oklch(0 0 0 / .5)}
 .sv-own .btn{background:var(--media-shade);color:var(--on-media);border-color:oklch(1 0 0 / .25)}
 .st a,.st{color:var(--muted)}
 .st .ring{transition:transform .15s}
@@ -1007,9 +1007,9 @@ textarea.mention-input{position:relative;z-index:1;background:transparent!import
 textarea.mention-input::placeholder{color:var(--faint)}
 textarea.mention-input::selection{color:transparent;background:var(--accent-soft)}
 .mention-list li.hint{cursor:default;color:var(--muted)}
-/* État Instagram d'une story, dans la visionneuse (auteur seul). */
-.sv-own .sv-info{min-width:0}
-.sv-ig{white-space:nowrap}
-.sv-ig .mi{margin-right:.3em}
+/* État Instagram d'une story, dans la visionneuse (auteur seul) : pastille sur sa propre ligne, au-dessus des vues. */
+.sv-own .sv-info{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.sv-ig{display:inline-flex;align-items:center;gap:.35em;max-width:100%;padding:4px 10px;border-radius:12px;background:var(--media-shade);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);text-shadow:none;font-size:.8rem}
+.sv-ig .mi{margin:0;flex:none}
 a.sv-ig{text-decoration:underline;text-underline-offset:2px}
 .sv-ig.failed{color:oklch(0.85 0.12 30)}

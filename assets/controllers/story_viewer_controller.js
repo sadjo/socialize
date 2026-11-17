@@ -119,9 +119,10 @@ export default class extends Controller {
             const views = Object.assign(document.createElement('span'), { textContent: `Vue par ${story.views} personne${story.views > 1 ? 's' : ''}` });
             const info = document.createElement('span');
             info.className = 'sv-info';
-            info.append(views);
+            // État Instagram au-dessus des vues, sur sa propre ligne (lisible quelle que soit la largeur).
             const instagram = this.instagramStatus(story.instagram);
-            if (instagram) info.append(' · ', instagram);
+            if (instagram) info.append(instagram);
+            info.append(views);
             this.ownTarget.replaceChildren(info, link);
         }
 
