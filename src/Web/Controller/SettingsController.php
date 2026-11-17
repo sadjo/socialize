@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
+use App\Core\Domain\Account\MediaFilter;
 use App\Core\Domain\Account\Theme;
 use App\Core\Domain\Account\User;
 use App\Core\Domain\Event\ProfileUpdated;
+use App\Core\Domain\Post\Visibility;
+use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\ProfileImage;
 use App\Media\Application\ProfileImages;
@@ -64,30 +67,38 @@ final class SettingsController extends AbstractController
         return $this->render('settings/profile.html.twig', ['form' => $form, 'account' => $account]);
     }
 
+    /** Vignettes de ses propres publications, pour voir l'effet du filtre des médias. */
+    private const int FILTER_SAMPLES = 3;
+
     /**
-     * Thème de l'interface, propre à chaque personne (un compte Mastodon garde le thème automatique).
+     * Thème de l'interface et filtre des médias, propres à chaque personne (un compte Mastodon garde les valeurs par
+     * défaut : thème automatique, filtre léger).
      */
     #[Route('/reglages/apparence', name: 'app_settings_appearance', methods: ['GET', 'POST'])]
-    public function appearance(Request $request, EntityManagerInterface $em): Response
+    public function appearance(Request $request, EntityManagerInterface $em, PostRepository $posts): Response
     {
         $user = $this->getUser();
         if (!$user instanceof User) {
             throw $this->createAccessDeniedException('Réglage réservé aux comptes de cette instance.');
         }
-        $form = $this->createForm(AppearanceSettingsType::class, ['theme' => $user->getTheme()]);
+        $form = $this->createForm(AppearanceSettingsType::class, ['theme' => $user->getTheme(), 'mediaFilter' => $user->getMediaFilter()]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{theme: Theme} $data */
+            /** @var array{theme: Theme, mediaFilter: MediaFilter} $data */
             $data = $form->getData();
             $user->chooseTheme($data['theme']);
+            $user->chooseMediaFilter($data['mediaFilter']);
             $em->flush();
-            $this->addFlash('success', 'Thème enregistré.');
+            $this->addFlash('success', 'Apparence enregistrée.');
 
             return $this->redirectToRoute('app_settings_appearance', status: Response::HTTP_SEE_OTHER);
         }
 
-        return $this->render('settings/appearance.html.twig', ['form' => $form, 'account' => $user->getAccount()]);
+        $account = $user->getAccount();
+        $samples = $posts->profileTimeline($account, Visibility::cases(), null, self::FILTER_SAMPLES, $account)->posts;
+
+        return $this->render('settings/appearance.html.twig', ['form' => $form, 'account' => $account, 'samples' => $samples]);
     }
 
     private function uploaded(mixed $data): ?UploadedFile

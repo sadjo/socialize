@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-{# Thème choisi dans les réglages (Réglages › Apparence) ; automatique pour les visiteurs et les comptes Mastodon. #}
-<html lang="fr" data-theme="{{ app.user.theme.value ?? 'auto' }}">
+{# Thème et filtre des médias choisis dans Réglages › Apparence ; valeurs par défaut (automatique, léger) pour les
+   visiteurs et les comptes Mastodon. #}
+<html lang="fr" data-theme="{{ app.user.theme.value ?? 'auto' }}" data-media-filter="{{ app.user.mediaFilter.value ?? 'light' }}">
     <head>
         <meta charset="UTF-8">
         {# Zoom fixe sur mobile : pas de zoom au toucher d'un champ ni au pincement (Android). Voir aussi assets/app.js (iOS). #}

@@ -34,6 +34,9 @@ class User implements AccountUser, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 16, enumType: Theme::class, options: ['default' => 'auto'])]
     private Theme $theme = Theme::Auto;
 
+    #[ORM\Column(length: 16, enumType: MediaFilter::class, options: ['default' => 'light'])]
+    private MediaFilter $mediaFilter = MediaFilter::Light;
+
     /**
      * @param list<string> $roles
      */
@@ -150,6 +153,16 @@ class User implements AccountUser, PasswordAuthenticatedUserInterface
     public function chooseTheme(Theme $theme): void
     {
         $this->theme = $theme;
+    }
+
+    public function getMediaFilter(): MediaFilter
+    {
+        return $this->mediaFilter;
+    }
+
+    public function chooseMediaFilter(MediaFilter $filter): void
+    {
+        $this->mediaFilter = $filter;
     }
 
     public function getCreatedAt(): \DateTimeImmutable
