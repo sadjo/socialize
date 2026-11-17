@@ -9,9 +9,10 @@
 
     <section class="card stack">
         <h2>Apparence</h2>
-        <p class="small">Le thème suit votre compte : il s’applique sur tous vos appareils dès que vous êtes connecté.</p>
+        <p class="small">Le thème choisi s’affiche tout de suite pour voir le rendu ; enregistrez-le pour le garder. Il suit votre compte sur tous vos appareils.</p>
 
-        {{ form_start(form, {attr: {class: 'form'}}) }}
+        {# Aperçu immédiat du thème coché (assets/controllers/theme_preview_controller.js). #}
+        {{ form_start(form, {attr: {class: 'form', 'data-controller': 'theme-preview', 'data-action': 'submit->theme-preview#submit'}}) }}
             {{ form_errors(form) }}
             <fieldset class="field">
                 <legend class="lab">{{ form.theme.vars.label }}</legend>
@@ -19,7 +20,7 @@
                     {% for choice in form.theme %}
                         {% set theme = (form.theme.vars.choices|filter(c => c.value == choice.vars.value)|first).data %}
                         {# Bouton radio puis étiquette : la pastille cochée est surlignée (.choices input:checked + label). #}
-                        {{ form_widget(choice) }}<label for="{{ choice.vars.id }}"><span class="theme-swatch" data-swatch="{{ theme.value }}" aria-hidden="true"></span>{{ choice.vars.label }}<small>{{ theme.description }}</small></label>
+                        {{ form_widget(choice, {attr: {'data-action': 'change->theme-preview#preview'}}) }}<label for="{{ choice.vars.id }}"><span class="theme-swatch" data-swatch="{{ theme.value }}" aria-hidden="true"></span>{{ choice.vars.label }}<small>{{ theme.description }}</small></label>
                     {% endfor %}
                 </div>
             </fieldset>

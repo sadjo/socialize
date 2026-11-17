@@ -31,6 +31,7 @@ final class AppearanceTest extends AppWebTestCase
         self::assertSelectorExists('html[data-theme="auto"]');
         self::assertCheckboxChecked('appearance_settings[theme]', 'auto');
         self::assertSelectorTextContains('.themes', 'façon Instagram');
+        self::assertSelectorExists('form[data-controller="theme-preview"] input[value="dark"][data-action="change->theme-preview#preview"]', 'Aperçu du thème avant d’enregistrer.');
 
         $this->client->submitForm('Enregistrer', ['appearance_settings[theme]' => 'dark']);
         self::assertResponseRedirects('/reglages/apparence');
