@@ -81,7 +81,16 @@ final class AccountTest extends AppWebTestCase
 
         self::assertResponseRedirects('/');
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.seg a.on', 'Abonnements');
+        self::assertSelectorTextContains('nav.side a.nav.on', 'Publications', 'L’accueil s’appelle « Publications » dans le menu.');
+        self::assertSelectorExists('nav.side a.nav.on use[href="#i-image"]');
+        self::assertSelectorExists('.tabbar a.on[aria-label="Publications"]');
+        self::assertSelectorNotExists('.seg', 'Pas de barre Abonnements / Local / Fédéré sur l’accueil.');
+
+        $this->client->request('GET', '/local');
+        self::assertSelectorTextContains('.seg a.on', 'Local', 'La barre reste sur le fil local…');
+        self::assertSelectorExists('.seg a[href="/federe"]', '… et mène toujours au fil fédéré.');
+        self::assertSelectorTextContains('.seg a[href="/"]', 'Publications');
+        self::assertSelectorTextContains('nav.side a.nav.on', 'Local', '« Local » est inchangé dans le menu.');
     }
 
     public function testLoginWithTheUsername(): void
