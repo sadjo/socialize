@@ -983,24 +983,19 @@ label.act{cursor:pointer}
 .mention-list .t small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mention-list .ig-badge{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;flex:none;color:#fff;font-weight:700;font-size:.7rem;background:linear-gradient(45deg,#f9a825,#e1306c,#833ab4)}
 
-/* Pastilles devant les mentions : compte d'ici (Socialize), du fédivers (Mastodon), d'Instagram. Mêmes formes
-   dans les publications et sous la zone de saisie d'une légende. */
-.mi{display:inline-block;position:relative;width:.95em;height:.95em;border-radius:.27em;vertical-align:-.13em;margin-right:.12em;flex:none}
-.mi::before,.mi::after{content:"";position:absolute;box-sizing:border-box}
-.mi-local{background:var(--grad)}
-.mi-local::before{left:.27em;top:.27em;width:.42em;height:.42em;border-radius:50%;border:.085em solid #fff}
-.mi-fedi{background:#6364ff}
-.mi-fedi::before{content:"m";inset:0;display:grid;place-items:center;color:#fff;font:700 .72em/1 system-ui,sans-serif;margin-top:-.06em}
-.mi-ig{background:linear-gradient(45deg,#f9a825,#e1306c 55%,#833ab4)}
-.mi-ig::before{inset:.17em;border:.08em solid #fff;border-radius:.2em}
-.mi-ig::after{left:.33em;top:.33em;width:.29em;height:.29em;border:.08em solid #fff;border-radius:50%}
+/* Pictogrammes devant les mentions, de la couleur du texte : compte d'ici (Socialize), du fédivers (Mastodon),
+   d'Instagram. Mêmes formes dans les publications et sous la zone de saisie d'une légende. */
+.mi{display:inline-block;width:.95em;height:.95em;vertical-align:-.14em;margin-right:.12em;flex:none;background:currentColor;-webkit-mask:var(--mi) center/contain no-repeat;mask:var(--mi) center/contain no-repeat}
+.mi-local{--mi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='13' r='6.5'/%3E%3Ccircle cx='18.5' cy='5.5' r='1.6' fill='%23000' stroke='none'/%3E%3C/g%3E%3C/svg%3E")}
+.mi-fedi{--mi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 11.5c0 4.6-3.4 6.7-7.6 6.9-2.7.1-5.2-.4-6.3-1.3.3 1.9 2.4 2.9 5.4 2.6-1.9 1.1-6.9 1.2-8.4-3.5C3.6 14.3 3.5 11.7 3.5 9.5 3.5 5 6.5 3.5 6.5 3.5 8 2.8 10.2 2.5 12.3 2.5h.1c2.1 0 4.3.3 5.8 1 0 0 2.8 1.5 2.8 6z'/%3E%3Cpath d='M8 14V9.4c0-1.1.8-1.9 1.8-1.9s1.8.8 1.8 1.9V12m0-2.6c0-1.1.8-1.9 1.8-1.9s1.8.8 1.8 1.9V14'/%3E%3C/g%3E%3C/svg%3E")}
+.mi-ig{--mi:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23000' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='5'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/g%3E%3Ccircle cx='17.3' cy='6.7' r='1.3'/%3E%3C/svg%3E")}
 
 /* Zone de saisie : le texte réel est transparent, une copie mise en forme (mentions colorées, pastilles à la place
    du « @ ») est placée exactement dessous. */
 .mention-mirror{position:absolute;box-sizing:border-box;margin:0;overflow:hidden;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;pointer-events:none;border-color:transparent!important;color:var(--fg)}
 .mention-mirror .mt{color:var(--accent)}
 .mention-mirror .ms{position:relative;color:transparent}
-.mention-mirror .ms .mi{position:absolute;left:50%;top:50%;margin:0;transform:translate(-50%,-50%)}
+.mention-mirror .ms .mi{position:absolute;left:50%;top:50%;margin:0;transform:translate(-50%,-50%);color:var(--accent)}
 textarea.mention-input{position:relative;z-index:1;background:transparent!important;color:transparent;caret-color:var(--fg)}
 textarea.mention-input::placeholder{color:var(--faint)}
 textarea.mention-input::selection{color:transparent;background:var(--accent-soft)}
