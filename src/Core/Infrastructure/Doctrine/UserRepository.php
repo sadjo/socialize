@@ -60,6 +60,20 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
         return $this->findBy([], ['createdAt' => 'DESC'], $limit);
     }
 
+    /**
+     * Administrateurs de l'instance (une poignée de comptes : filtrés ici plutôt que dans le JSON des rôles, dont la
+     * recherche diffère entre SQLite et MySQL / MariaDB).
+     *
+     * @return list<User>
+     */
+    public function admins(): array
+    {
+        /** @var list<User> $users */
+        $users = $this->findAll();
+
+        return array_values(array_filter($users, static fn (User $user): bool => $user->isAdmin()));
+    }
+
     public function hasAny(): bool
     {
         return null !== $this->createQueryBuilder('u')->select('u.id')->setMaxResults(1)->getQuery()->getOneOrNullResult();

@@ -944,3 +944,4 @@ label.act{cursor:pointer}
 .crop-tools{display:flex;flex-direction:column;gap:8px}
 .crop-zoom{display:flex;align-items:center;gap:10px;color:var(--muted)}
 .crop-zoom input{flex:1;accent-color:var(--accent)}
+.notif-kind.signup{background:oklch(0.62 0.15 160)}

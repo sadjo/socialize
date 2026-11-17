@@ -14,8 +14,8 @@ use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * Notification d'un compte local : quelqu'un (d'ici ou du fédivers) a aimé ou commenté une de ses publications.
- * Lue ou non lue ; supprimée avec la publication, le commentaire ou le compte qui l'a causée.
+ * Notification d'un compte local : quelqu'un (d'ici ou du fédivers) a aimé ou commenté une de ses publications ;
+ * pour un administrateur, un nouveau compte a été créé (sans publication). Lue ou non lue ; supprimée avec la publication, le commentaire ou le compte qui l'a causée.
  */
 #[ORM\Entity(repositoryClass: NotificationRepository::class)]
 #[ORM\Table(name: 'notifications')]
@@ -39,8 +39,8 @@ class Notification
         #[ORM\Column(length: 20, enumType: NotificationType::class)]
         private NotificationType $type,
         #[ORM\ManyToOne]
-        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-        private Post $post,
+        #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+        private ?Post $post,
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
         private ?Comment $comment,
@@ -70,7 +70,7 @@ class Notification
         return $this->type;
     }
 
-    public function getPost(): Post
+    public function getPost(): ?Post
     {
         return $this->post;
     }

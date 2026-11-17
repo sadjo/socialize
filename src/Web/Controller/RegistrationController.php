@@ -9,7 +9,9 @@ use App\Core\Application\Account\RegisterAccount;
 use App\Core\Application\Account\RegistrationException;
 use App\Core\Application\Account\RegistrationPolicy;
 use App\Core\Domain\Account\Invitation;
+use App\Core\Domain\Event\AccountRegistered;
 use App\Web\Form\RegistrationType;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormError;
@@ -20,7 +22,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class RegistrationController extends AbstractController
 {
     #[Route('/inscription', name: 'app_register', methods: ['GET', 'POST'])]
-    public function register(Request $request, RegistrationPolicy $policy, RegisterAccount $registerAccount, Security $security): Response
+    public function register(Request $request, RegistrationPolicy $policy, RegisterAccount $registerAccount, Security $security, EventDispatcherInterface $events): Response
     {
         if ($this->getUser() instanceof \Symfony\Component\Security\Core\User\UserInterface) {
             return $this->redirectToRoute('app_home');
@@ -37,6 +39,7 @@ final class RegistrationController extends AbstractController
             $data = $form->getData();
             try {
                 $user = $registerAccount->register($data['email'], $data['username'], $data['password'], $data['displayName']);
+                $events->dispatch(new AccountRegistered($user->getAccount()));
                 $security->login($user, 'form_login', 'main');
                 $this->addFlash('success', $user->isAdmin()
                     ? 'Bienvenue ! Vous êtes le premier compte : vous administrez cette instance.'
@@ -58,7 +61,7 @@ final class RegistrationController extends AbstractController
      * Inscription par invitation (lien ou e-mail de l'administrateur) : possible même quand les inscriptions sont fermées.
      */
     #[Route('/invitation/{token}', name: 'app_invitation', requirements: ['token' => '[A-Za-z0-9_-]{20,100}'], methods: ['GET', 'POST'])]
-    public function invitation(string $token, Request $request, Invitations $invitations, RegisterAccount $registerAccount, Security $security): Response
+    public function invitation(string $token, Request $request, Invitations $invitations, RegisterAccount $registerAccount, Security $security, EventDispatcherInterface $events): Response
     {
         if ($this->getUser() instanceof \Symfony\Component\Security\Core\User\UserInterface) {
             return $this->redirectToRoute('app_home');
@@ -76,6 +79,7 @@ final class RegistrationController extends AbstractController
             $data = $form->getData();
             try {
                 $user = $registerAccount->register($invitation->getEmail() ?? (string) $data['email'], $data['username'], $data['password'], $data['displayName'], $invitation);
+                $events->dispatch(new AccountRegistered($user->getAccount()));
                 $security->login($user, 'form_login', 'main');
                 $this->addFlash('success', 'Bienvenue sur Socialize !');
 

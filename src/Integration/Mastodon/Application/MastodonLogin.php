@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Integration\Mastodon\Application;
 
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Event\AccountRegistered;
 use App\Federation\Application\ApUrls;
 use App\Federation\Application\BackfillAccount;
 use App\Federation\Application\RemoteAccounts;
@@ -17,6 +18,7 @@ use App\Integration\Mastodon\Infrastructure\MastodonClient;
 use App\Integration\Mastodon\Infrastructure\MastodonVault;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -37,6 +39,7 @@ final readonly class MastodonLogin
         private EntityManagerInterface $em,
         private MessageBusInterface $bus,
         private ClockInterface $clock,
+        private EventDispatcherInterface $events,
         #[Autowire(env: 'DEFAULT_URI')]
         private string $website,
     ) {
@@ -110,12 +113,16 @@ final readonly class MastodonLogin
 
         $now = $this->clock->now();
         $user = $this->users->forAccount($account);
-        if (!$user instanceof MastodonUser) {
+        $first = !$user instanceof MastodonUser;
+        if ($first) {
             $user = new MastodonUser($account, $now);
             $this->em->persist($user);
         }
         $user->loggedIn($this->vault->encrypt($token['token']), $token['scopes'], $now, $me['privacy']);
         $this->em->flush();
+        if ($first) {
+            $this->events->dispatch(new AccountRegistered($account, viaMastodon: true));
+        }
 
         // Historique de son compte, pour son profil : à chaque connexion, puis régulièrement (RefreshMastodonAccounts).
         $this->bus->dispatch(new BackfillAccount($account->getId()->toRfc4122()));
