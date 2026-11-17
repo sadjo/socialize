@@ -27,7 +27,8 @@ export default class extends Controller {
 
     indexValueChanged(index) {
         if (!this.hasTrackTarget) return;
-        this.trackTarget.style.transform = `translateX(-${index * 100}%)`;
+        // Premier média : pas de transformation (une couche graphique de moins, que WebKit repeint parfois mal).
+        this.trackTarget.style.transform = index > 0 ? `translateX(-${index * 100}%)` : '';
         this.dotTargets.forEach((dot, i) => {
             dot.classList.toggle('on', i === index);
             if (i === index) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current');
