@@ -15,9 +15,18 @@ ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règ
 > qui choisit quels comptes peuvent publier et lesquels peuvent importer leur archive Instagram.
 > Crosspost vers Instagram : publications et stories envoyées aussi sur un compte Instagram professionnel, selon
 > des règles par visibilité ; bouton « Partager vers Instagram » pour tout compte, personnel compris.
-> Notifications des « J'aime » et commentaires reçus (d'ici ou du fédivers), lues ou non lues, supprimables ;
-> notifications sur le téléphone (Web Push, application ajoutée à l'écran d'accueil) : nouvelles publications et
-> stories des comptes suivis, J'aime et commentaires, au choix de chacun.
+> Notifications des « J'aime », commentaires et mentions reçus (d'ici ou du fédivers), lues ou non lues,
+> supprimables ; les administrateurs sont aussi prévenus des inscriptions et des premières connexions avec
+> Mastodon. Notifications sur le téléphone (Web Push, application ajoutée à l'écran d'accueil) : nouvelles
+> publications et stories des comptes suivis, J'aime et commentaires, au choix de chacun.
+> Mentions dans les légendes : `@nom` (compte d'ici), `@nom@instance` (fédivers) et `ig:@nom` (Instagram), avec un
+> pictogramme (éléphant de Mastodon, appareil photo d'Instagram) et des suggestions pendant la saisie dès « @ »
+> (comptes suivis, d'ici puis du fédivers ; Échap les ferme, Ctrl+Espace les rouvre). Les comptes mentionnés sont
+> prévenus (balise Mention dans le fédivers, notification ici) ; vers Instagram, `ig:@nom` devient une vraie mention.
+> Profil : photo et image de couverture (bandeau 4:1) changées d'un clic et recadrées dans le navigateur
+> (glisser, zoomer), repositionnables plus tard ; l'administrateur peut changer celles d'un compte, et remplacer
+> celles d'un compte Mastodon connecté sur Socialize seulement. Bloc « Instance » à côté des fils (titre et
+> texte en Markdown, avec barre d'édition et images), modifiable dans l'administration.
 > Connexion avec un compte Mastodon (variable `MASTODON_LOGIN`) : la personne pilote son compte depuis Socialize,
 > sans compte ici. Son profil montre ses publications, elle voit les stories des comptes suivis, aime, commente et
 > suit par l'API de son serveur, y publie photos et vidéos, et peut y importer son archive Instagram si
@@ -180,10 +189,6 @@ facultatifs.
   L'API est alors jointe sur graph.facebook.com, et le jeton n'est pas renouvelé (il n'expire pas).
   Un envoi se relance depuis la page de la publication (« Réessayer », « Relancer l'envoi », « Republier » : la
   publication Instagram précédente est alors supprimée si le droit le permet).
-  Avec le droit `pages_read_engagement` en plus (à ajouter à la configuration, puis se reconnecter), une mention
-  `ig:@nom` tapée dans une légende est vérifiée : nom, photo et abonnés d'un compte professionnel ou créateur
-  (« Business Discovery » ; nom exact seulement, pas les comptes personnels). Sans ce droit, la suggestion reste
-  simple et Instagram reste connecté.
 - **Application plus ancienne (« connexion Instagram »)** : ID et clé secrète de l'app Instagram (Configuration de
   l'API avec connexion Instagram), adresse de retour déclarée au même endroit, identifiant de configuration vide.
   Sans validation de l'application par Meta, seuls les comptes Instagram ajoutés comme **testeurs** peuvent se

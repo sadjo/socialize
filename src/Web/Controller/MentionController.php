@@ -7,7 +7,6 @@ namespace App\Web\Controller;
 use App\Core\Domain\Account\Account;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
-use App\Crosspost\Meta\Application\InstagramLookup;
 use App\Web\Security\CurrentAccount;
 use App\Web\Twig\SocializeExtension;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -56,21 +55,6 @@ final class MentionController extends AbstractController
             <=> [!$b->isLocal(), !str_starts_with($b->getUsername(), $username), $b->getUsername()]);
 
         return $this->json($this->describe(\array_slice($found, 0, self::LIMIT), $request->query->getBoolean('full'), $twig, $localDomain));
-    }
-
-    /**
-     * Compte Instagram mentionné (« ig:@nom ») : vérifié avec la connexion Instagram du compte qui écrit, si elle le
-     * permet (connexion par Facebook). « available » faux : la vérification n'est pas possible pour ce compte.
-     */
-    #[Route('/mentions/instagram', name: 'app_mention_instagram', methods: ['GET'])]
-    public function instagram(Request $request, InstagramLookup $lookup, CurrentAccount $current): JsonResponse
-    {
-        $me = $current->require();
-        if (!$lookup->isAvailable($me)) {
-            return $this->json(['available' => false]);
-        }
-
-        return $this->json(['available' => true, 'account' => $lookup->find($me, $request->query->getString('u'))]);
     }
 
     /**
