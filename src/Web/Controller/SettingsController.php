@@ -6,6 +6,7 @@ namespace App\Web\Controller;
 
 use App\Core\Domain\Event\ProfileUpdated;
 use App\Media\Application\MediaProcessingException;
+use App\Media\Application\ProfileImage;
 use App\Media\Application\ProfileImages;
 use App\Web\Form\ProfileSettingsType;
 use App\Web\Security\CurrentAccount;
@@ -39,17 +40,9 @@ final class SettingsController extends AbstractController
 
             $field = 'avatar';
             try {
-                $avatar = $form->get('avatar')->getData();
-                if ($avatar instanceof UploadedFile) {
-                    $images->replaceAvatar($account, $avatar);
-                }
+                $images->apply($account, ProfileImage::Avatar, $this->uploaded($form->get('avatar')->getData()), $this->crop($form->get('avatarCrop')->getData()));
                 $field = 'cover';
-                $cover = $form->get('cover')->getData();
-                if ($cover instanceof UploadedFile) {
-                    $images->replaceCover($account, $cover);
-                } elseif (true === $form->get('removeCover')->getData()) {
-                    $images->removeCover($account);
-                }
+                $images->apply($account, ProfileImage::Cover, $this->uploaded($form->get('cover')->getData()), $this->crop($form->get('coverCrop')->getData()), true === $form->get('removeCover')->getData());
                 $em->flush();
                 $events->dispatch(new ProfileUpdated($account));
                 $this->addFlash('success', 'Profil enregistré.');
@@ -66,5 +59,15 @@ final class SettingsController extends AbstractController
         }
 
         return $this->render('settings/profile.html.twig', ['form' => $form, 'account' => $account]);
+    }
+
+    private function uploaded(mixed $data): ?UploadedFile
+    {
+        return $data instanceof UploadedFile ? $data : null;
+    }
+
+    private function crop(mixed $data): ?string
+    {
+        return \is_string($data) && '' !== $data ? $data : null;
     }
 }

@@ -34,10 +34,7 @@ final readonly class AccountFilesCleaner
         foreach ($media as $attachment) {
             $this->ingestor->delete($attachment);
         }
-        foreach ([$event->account->getAvatarPath(), $event->account->getCoverPath()] as $path) {
-            if (null === $path) {
-                continue;
-            }
+        foreach (ProfileImages::filesOf($event->account) as $path) {
             try {
                 $this->derivativesStorage->delete($path);
             } catch (FilesystemException) {

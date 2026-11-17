@@ -17,6 +17,7 @@ use App\Integration\Mastodon\Application\MastodonLogin;
 use App\Integration\Mastodon\Domain\MastodonUser;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonUserRepository;
 use App\Media\Application\MediaProcessingException;
+use App\Media\Application\ProfileImage;
 use App\Media\Application\ProfileImages;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -122,19 +123,11 @@ final class AccountController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $field = 'avatar';
             try {
-                $avatar = $form->get('avatar')->getData();
-                if ($avatar instanceof UploadedFile) {
-                    $images->replaceAvatar($account, $avatar);
-                } elseif (true === $form->get('removeAvatar')->getData()) {
-                    $images->removeAvatar($account);
-                }
+                /** @var array{avatar: ?UploadedFile, avatarCrop: ?string, removeAvatar: bool, cover: ?UploadedFile, coverCrop: ?string, removeCover: bool} $data */
+                $data = $form->getData();
+                $images->apply($account, ProfileImage::Avatar, $data['avatar'], $data['avatarCrop'], $data['removeAvatar']);
                 $field = 'cover';
-                $cover = $form->get('cover')->getData();
-                if ($cover instanceof UploadedFile) {
-                    $images->replaceCover($account, $cover);
-                } elseif (true === $form->get('removeCover')->getData()) {
-                    $images->removeCover($account);
-                }
+                $images->apply($account, ProfileImage::Cover, $data['cover'], $data['coverCrop'], $data['removeCover']);
                 $em->flush();
                 if (!$remote) {
                     $events->dispatch(new ProfileUpdated($account));

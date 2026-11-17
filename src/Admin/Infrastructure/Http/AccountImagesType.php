@@ -8,6 +8,7 @@ use App\Media\Application\MediaRules;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -16,7 +17,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Photo de profil et image de couverture d'un compte, changées par l'administrateur. Pour un compte Mastodon, elles
  * remplacent ici celles de son serveur ; les retirer fait revenir celles de Mastodon.
  *
- * @extends AbstractType<array{avatar: mixed, removeAvatar: bool, cover: mixed, removeCover: bool}>
+ * @extends AbstractType<array{avatar: mixed, avatarCrop: ?string, removeAvatar: bool, cover: mixed, coverCrop: ?string, removeCover: bool}>
  */
 final class AccountImagesType extends AbstractType
 {
@@ -25,11 +26,13 @@ final class AccountImagesType extends AbstractType
         $remote = true === $options['remote'];
         $builder
             ->add('avatar', FileType::class, $this->image($remote ? 'Remplacer la photo Mastodon' : 'Photo de profil'))
+            ->add('avatarCrop', HiddenType::class, ['required' => false, 'constraints' => [new Assert\Length(max: 100)]])
             ->add('removeAvatar', CheckboxType::class, [
                 'label' => $remote ? 'Rétablir la photo de Mastodon' : 'Retirer la photo de profil',
                 'required' => false,
             ])
             ->add('cover', FileType::class, $this->image($remote ? 'Remplacer la couverture Mastodon' : 'Image de couverture'))
+            ->add('coverCrop', HiddenType::class, ['required' => false, 'constraints' => [new Assert\Length(max: 100)]])
             ->add('removeCover', CheckboxType::class, [
                 'label' => $remote ? 'Rétablir la couverture de Mastodon' : 'Retirer l’image de couverture',
                 'required' => false,

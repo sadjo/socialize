@@ -35,6 +35,7 @@ final class AccountImagesTest extends AppWebTestCase
         $this->client->click($crawler->filter('a[aria-label="Changer la photo de @camille"]')->link());
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('label.pick-avatar[for="account_images_avatar"]', 'La photo se change d’un clic.');
+        self::assertSelectorExists('#account_images_avatarCrop[data-image-crop-target="crop"]', 'Et se recadre.');
         $this->client->submitForm('Enregistrer', ['account_images[avatar]' => $this->jpeg(600, 600, 'avatar.jpg')]);
         self::assertResponseRedirects('/admin/comptes');
 

@@ -908,19 +908,21 @@ label.act{cursor:pointer}
 @media (display-mode: standalone){.mtop .back-btn{display:grid}}
 
 /* ---------- Image de couverture du profil ---------- */
-.prof-cover{display:block;aspect-ratio:3/1;border-radius:18px;overflow:hidden;background:var(--surface-2)}
+.prof-cover{display:block;aspect-ratio:4/1;border-radius:18px;overflow:hidden;background:var(--surface-2)}
 .prof-cover img{width:100%;height:100%;object-fit:cover;display:block}
-.prof-cover.empty{display:flex;align-items:center;justify-content:center;gap:8px;aspect-ratio:6/1;border:1.5px dashed var(--line);background:transparent;color:var(--muted);font-size:.85rem;font-weight:600}
+.prof-cover.empty{display:flex;align-items:center;justify-content:center;gap:8px;aspect-ratio:8/1;border:1.5px dashed var(--line);background:transparent;color:var(--muted);font-size:.85rem;font-weight:600}
 .prof-cover.empty:hover{color:var(--fg);border-color:var(--muted)}
 @media (max-width:767px){.prof-cover{border-radius:12px}}
 
 /* Images du profil changées d'un clic (réglages, administration). */
 .pick-images{display:flex;flex-direction:column;gap:14px}
 .pick-block{display:flex;flex-direction:column;gap:8px}
-.pick-avatar-block{flex-direction:row;align-items:center;gap:16px}
+.pick-avatar-row{display:flex;align-items:center;gap:16px}
+.pick-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.pick-avatar-row .pick-actions p{flex-basis:100%}
 .pick{position:relative;display:block;cursor:pointer}
 .pick-preview{display:block;width:100%;height:100%}
-.pick-cover{aspect-ratio:3/1;border-radius:14px;overflow:hidden;background:var(--surface-2)}
+.pick-cover{aspect-ratio:4/1;border-radius:14px;overflow:hidden;background:var(--surface-2)}
 .pick-cover.empty{border:1.5px dashed var(--line);background:transparent}
 .pick-cover-img{width:100%;height:100%;object-fit:cover;display:block}
 .pick-empty{display:flex;align-items:center;justify-content:center;gap:8px;height:100%;color:var(--muted);font-size:.85rem;font-weight:600}
@@ -933,3 +935,12 @@ label.act{cursor:pointer}
 .pick-block:has(input[type=file]:focus-visible) .pick{outline:2px solid var(--accent);outline-offset:3px}
 .pick-block.picked .pick{outline:2px solid var(--accent);outline-offset:3px}
 .pick-note{color:var(--accent)}
+/* Cadre de recadrage : l'image glisse dessous, aux proportions publiées (bandeau 4:1, photo ronde). */
+.crop-panel{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line)}
+.crop-frame{position:relative;width:100%;aspect-ratio:4/1;overflow:hidden;border-radius:12px;background:var(--bg);cursor:grab;touch-action:none;user-select:none}
+.crop-frame:active{cursor:grabbing}
+.crop-frame.round{width:min(260px,100%);aspect-ratio:1;align-self:center;border-radius:50%}
+.crop-frame img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;pointer-events:none}
+.crop-tools{display:flex;flex-direction:column;gap:8px}
+.crop-zoom{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.crop-zoom input{flex:1;accent-color:var(--accent)}

@@ -20,7 +20,9 @@
             {{ include('profile/_images_picker.html.twig', {
                 account: account,
                 avatar: form.avatar,
+                avatar_crop: form.avatarCrop,
                 cover: form.cover,
+                cover_crop: form.coverCrop,
                 remove_avatar: form.removeAvatar,
                 remove_cover: form.removeCover,
                 avatar_hint: remote ? 'Touchez la photo ou la couverture pour remplacer celle de Mastodon.' : null,

@@ -48,6 +48,17 @@ final readonly class SocializeExtension
         return $account->isLocal() ? null : $account->getCoverUrl();
     }
 
+    /**
+     * Image source gardée pour recadrer la photo (« avatar ») ou la couverture (« cover ») ; null sans source.
+     */
+    #[AsTwigFunction('profile_image_source')]
+    public function profileImageSource(Account $account, string $kind): ?string
+    {
+        $path = 'avatar' === $kind ? $account->getAvatarSourcePath() : $account->getCoverSourcePath();
+
+        return null !== $path ? $this->urls->path($path) : null;
+    }
+
     #[AsTwigFunction('handle')]
     public function handle(Account $account, string $localDomain): string
     {

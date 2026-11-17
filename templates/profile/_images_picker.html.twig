@@ -1,45 +1,74 @@
 {# Photo de profil et image de couverture modifiables d'un clic : chaque image est le libellé de son champ fichier,
-   qui ouvre le choix du fichier ; l'image choisie s'affiche aussitôt et s'envoie avec le formulaire.
-   Paramètres : account, avatar et cover (champs fichier), remove_avatar et remove_cover (cases, facultatives),
-   avatar_hint et cover_hint (textes d'aide, facultatifs). #}
+   qui ouvre le choix du fichier. L'image choisie s'ouvre dans un cadre où on la fait glisser et on zoome ; le cadre
+   part avec le formulaire, et l'image se recadre aussi plus tard (sa source est gardée).
+   Paramètres : account ; avatar, avatar_crop, cover, cover_crop (champs) ; remove_avatar et remove_cover (cases,
+   facultatives) ; avatar_hint (texte d'aide, facultatif). #}
 {% import '_macros.html.twig' as ui %}
 {% set current_cover = cover_url(account) %}
+
+{% macro cropper(label, round) %}
+    {% import '_macros.html.twig' as ui %}
+    <div class="crop-panel" data-image-crop-target="panel" hidden>
+        <div class="crop-frame{{ round ? ' round' }}" data-image-crop-target="frame" data-action="pointerdown->image-crop#down wheel->image-crop#wheel">
+            <img data-image-crop-target="image" alt="" draggable="false">
+        </div>
+        <div class="crop-tools">
+            <label class="crop-zoom">{{ ui.icon('zoom', 'xs') }}<span class="sr-only">Zoom</span><input type="range" min="1" max="4" step="0.01" value="1" data-image-crop-target="zoom" data-action="input->image-crop#zoom"></label>
+            <p class="small">Faites glisser l’image pour {{ label }}.</p>
+            <div class="navbtns"><button type="button" class="btn sm ghost" data-action="image-crop#cancel">Annuler</button><button type="button" class="btn sm pri" data-action="image-crop#apply">Valider</button></div>
+        </div>
+    </div>
+{% endmacro %}
+
 <div class="pick-images">
-    <div class="pick-block" data-controller="image-pick" data-image-pick-class-value="pick-cover-img">
+    {% set cover_source = profile_image_source(account, 'cover') %}
+    <div class="pick-block" data-controller="image-crop" data-image-crop-aspect-value="4" data-image-crop-image-class-value="pick-cover-img"
+         data-image-crop-source-value="{{ cover_source }}" data-image-crop-crop-value="{{ account.coverCrop }}">
         <label for="{{ cover.vars.id }}" class="pick pick-cover{{ current_cover ? '' : ' empty' }}">
-            <span class="pick-preview" data-image-pick-target="preview">
+            <span class="pick-preview" data-image-crop-target="preview">
                 {%- if current_cover %}<img class="pick-cover-img" src="{{ current_cover }}" alt="">{% else %}<span class="pick-empty">{{ ui.icon('image') }}Ajouter une image de couverture</span>{% endif -%}
             </span>
             <span class="pick-badge" aria-hidden="true">{{ ui.icon('image', 'xs') }}</span>
             <span class="sr-only">{{ current_cover ? 'Changer l’image de couverture' : 'Ajouter une image de couverture' }}</span>
         </label>
-        {{ form_widget(cover, {attr: {class: 'sr-only', 'data-image-pick-target': 'input', 'data-action': 'image-pick#preview'}}) }}
-        <p class="small pick-note" data-image-pick-target="note" hidden>Image prête : enregistrez pour la publier.</p>
-        {{ form_errors(cover) }}
-        {% if cover_hint is defined and cover_hint %}<p class="small">{{ cover_hint }}</p>{% endif %}
-        {% if remove_cover is defined and remove_cover and current_cover and account.coverPath %}
-            <label class="chk small">{{ form_widget(remove_cover) }}<span>{{ remove_cover.vars.label }}</span></label>
-        {% elseif remove_cover is defined and remove_cover %}
-            {% do remove_cover.setRendered %}
-        {% endif %}
-    </div>
-
-    <div class="pick-block pick-avatar-block" data-controller="image-pick" data-image-pick-class-value="avatar-img">
-        <label for="{{ avatar.vars.id }}" class="pick pick-avatar">
-            <span class="pick-preview" data-image-pick-target="preview">{{ ui.avatar(account, 96) }}</span>
-            <span class="pick-badge" aria-hidden="true">{{ ui.icon('image', 'xs') }}</span>
-            <span class="sr-only">Changer la photo de profil</span>
-        </label>
-        {{ form_widget(avatar, {attr: {class: 'sr-only', 'data-image-pick-target': 'input', 'data-action': 'image-pick#preview'}}) }}
-        <div class="grow">
-            <p class="small">{{ avatar_hint is defined and avatar_hint ? avatar_hint : 'Touchez la photo ou la couverture pour la changer.' }}</p>
-            <p class="small pick-note" data-image-pick-target="note" hidden>Photo prête : enregistrez pour la publier.</p>
-            {{ form_errors(avatar) }}
-            {% if remove_avatar is defined and remove_avatar and account.avatarPath %}
-                <label class="chk small">{{ form_widget(remove_avatar) }}<span>{{ remove_avatar.vars.label }}</span></label>
-            {% elseif remove_avatar is defined and remove_avatar %}
-                {% do remove_avatar.setRendered %}
+        {{ form_widget(cover, {attr: {class: 'sr-only', 'data-image-crop-target': 'input', 'data-action': 'image-crop#pick'}}) }}
+        {{ form_widget(cover_crop, {attr: {'data-image-crop-target': 'crop'}}) }}
+        {{ _self.cropper('la repositionner', false) }}
+        <div class="pick-actions">
+            <button type="button" class="btn sm ghost" data-image-crop-target="adjust" data-action="image-crop#open"{% if not cover_source %} hidden{% endif %}>{{ ui.icon('image', 'xs') }}Repositionner</button>
+            {% if remove_cover is defined and remove_cover and current_cover and account.coverPath %}
+                <label class="chk small">{{ form_widget(remove_cover) }}<span>{{ remove_cover.vars.label }}</span></label>
+            {% elseif remove_cover is defined and remove_cover %}
+                {% do remove_cover.setRendered %}
             {% endif %}
         </div>
+        <p class="small pick-note" data-image-crop-target="note" hidden></p>
+        {{ form_errors(cover) }}
+    </div>
+
+    {% set avatar_source = profile_image_source(account, 'avatar') %}
+    <div class="pick-block" data-controller="image-crop" data-image-crop-aspect-value="1" data-image-crop-image-class-value="avatar-img"
+         data-image-crop-source-value="{{ avatar_source }}" data-image-crop-crop-value="{{ account.avatarCrop }}">
+        <div class="pick-avatar-row">
+            <label for="{{ avatar.vars.id }}" class="pick pick-avatar">
+                <span class="pick-preview" data-image-crop-target="preview">{{ ui.avatar(account, 96) }}</span>
+                <span class="pick-badge" aria-hidden="true">{{ ui.icon('image', 'xs') }}</span>
+                <span class="sr-only">Changer la photo de profil</span>
+            </label>
+            {{ form_widget(avatar, {attr: {class: 'sr-only', 'data-image-crop-target': 'input', 'data-action': 'image-crop#pick'}}) }}
+            {{ form_widget(avatar_crop, {attr: {'data-image-crop-target': 'crop'}}) }}
+            <div class="grow pick-actions">
+                <p class="small">{{ avatar_hint is defined and avatar_hint ? avatar_hint : 'Touchez la photo ou la couverture pour la changer.' }}</p>
+                <button type="button" class="btn sm ghost" data-image-crop-target="adjust" data-action="image-crop#open"{% if not avatar_source %} hidden{% endif %}>{{ ui.icon('image', 'xs') }}Recadrer</button>
+                {% if remove_avatar is defined and remove_avatar and account.avatarPath %}
+                    <label class="chk small">{{ form_widget(remove_avatar) }}<span>{{ remove_avatar.vars.label }}</span></label>
+                {% elseif remove_avatar is defined and remove_avatar %}
+                    {% do remove_avatar.setRendered %}
+                {% endif %}
+            </div>
+        </div>
+        {{ _self.cropper('la recadrer', true) }}
+        <p class="small pick-note" data-image-crop-target="note" hidden></p>
+        {{ form_errors(avatar) }}
     </div>
 </div>
