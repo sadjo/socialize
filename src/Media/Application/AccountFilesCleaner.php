@@ -13,7 +13,7 @@ use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
- * Compte supprimé : les fichiers de ses publications et de ses stories (originaux et copies), et son avatar.
+ * Compte supprimé : les fichiers de ses publications et de ses stories (originaux et copies), sa photo de profil et son image de couverture.
  */
 #[AsEventListener]
 final readonly class AccountFilesCleaner
@@ -34,12 +34,11 @@ final readonly class AccountFilesCleaner
         foreach ($media as $attachment) {
             $this->ingestor->delete($attachment);
         }
-        $avatar = $event->account->getAvatarPath();
-        if (null !== $avatar) {
+        foreach (ProfileImages::filesOf($event->account) as $path) {
             try {
-                $this->derivativesStorage->delete($avatar);
+                $this->derivativesStorage->delete($path);
             } catch (FilesystemException) {
-                // Avatar déjà absent.
+                // Fichier déjà absent.
             }
         }
     }

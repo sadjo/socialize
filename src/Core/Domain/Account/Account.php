@@ -31,6 +31,24 @@ class Account
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $avatarPath = null;
 
+    /** Photo déposée avant recadrage, gardée pour la recadrer plus tard. */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $avatarSourcePath = null;
+
+    /** Cadre choisi dans la photo source : « x,y,largeur,hauteur » en fractions de l'image. */
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $avatarCrop = null;
+
+    /** Image de couverture déposée ici (compte local, ou surcharge d'un compte distant). */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $coverPath = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $coverSourcePath = null;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $coverCrop = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -54,6 +72,10 @@ class Account
     /** Photo de profil d'un compte distant (adresse sur son instance). */
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $avatarUrl = null;
+
+    /** Image de couverture d'un compte distant (adresse sur son instance). */
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $coverUrl = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $publicKeyPem = null;
@@ -139,9 +161,46 @@ class Account
         $this->networkHidden = $hidden;
     }
 
-    public function changeAvatar(?string $avatarPath): void
+    /**
+     * Photo affichée, avec la photo source dont elle est le recadrage et ce cadre (null : cadrage automatique).
+     */
+    public function changeAvatar(?string $avatarPath, ?string $sourcePath = null, ?string $crop = null): void
     {
         $this->avatarPath = $avatarPath;
+        $this->avatarSourcePath = $sourcePath;
+        $this->avatarCrop = $crop;
+    }
+
+    public function getAvatarSourcePath(): ?string
+    {
+        return $this->avatarSourcePath;
+    }
+
+    public function getAvatarCrop(): ?string
+    {
+        return $this->avatarCrop;
+    }
+
+    public function getCoverPath(): ?string
+    {
+        return $this->coverPath;
+    }
+
+    public function changeCover(?string $coverPath, ?string $sourcePath = null, ?string $crop = null): void
+    {
+        $this->coverPath = $coverPath;
+        $this->coverSourcePath = $sourcePath;
+        $this->coverCrop = $crop;
+    }
+
+    public function getCoverSourcePath(): ?string
+    {
+        return $this->coverSourcePath;
+    }
+
+    public function getCoverCrop(): ?string
+    {
+        return $this->coverCrop;
     }
 
     /**
@@ -168,6 +227,7 @@ class Account
         ?string $avatarUrl,
         ?string $publicKeyPem,
         \DateTimeImmutable $now,
+        ?string $coverUrl = null,
     ): void {
         if ($this->isLocal()) {
             throw new \DomainException('Un compte local ne se met pas à jour depuis le fédivers.');
@@ -180,6 +240,7 @@ class Account
         $this->outboxUrl = $outboxUrl;
         $this->profileUrl = $profileUrl;
         $this->avatarUrl = $avatarUrl;
+        $this->coverUrl = $coverUrl;
         $this->publicKeyPem = $publicKeyPem;
         $this->fetchedAt = $now;
     }
@@ -215,6 +276,11 @@ class Account
     public function getAvatarUrl(): ?string
     {
         return $this->avatarUrl;
+    }
+
+    public function getCoverUrl(): ?string
+    {
+        return $this->coverUrl;
     }
 
     public function getPublicKeyPem(): ?string

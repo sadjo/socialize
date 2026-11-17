@@ -34,4 +34,4 @@ deptrac:
     Api: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
     Mcp: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse]
     Web: [Core, Media, Federation, ImportInstagram, CrosspostMeta, IntegrationImmich, IntegrationSynologyPhotos, IntegrationOpenverse, IntegrationMastodon]
-    Admin: [Core, Federation, IntegrationMastodon]
+    Admin: [Core, Media, Federation, IntegrationMastodon]

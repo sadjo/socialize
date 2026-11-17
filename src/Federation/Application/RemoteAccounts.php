@@ -113,6 +113,7 @@ final readonly class RemoteAccounts
         $endpoints = Json::object($actor, 'endpoints') ?? [];
         $publicKey = Json::object($actor, 'publicKey') ?? [];
         $icon = Json::object($actor, 'icon') ?? [];
+        $image = Json::object($actor, 'image') ?? [];
 
         $account->refreshRemote(
             displayName: HtmlText::toText(Json::string($actor, 'name')) ?: $username,
@@ -124,6 +125,7 @@ final readonly class RemoteAccounts
             avatarUrl: Json::id($icon, 'url'),
             publicKeyPem: Json::string($publicKey, 'publicKeyPem'),
             now: $this->clock->now(),
+            coverUrl: Json::id($image, 'url'),
         );
         $this->em->flush();
 

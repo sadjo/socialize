@@ -1,0 +1,34 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Images de @{{ account.acct }} · Administration · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow admin">
+    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Changez la photo de profil et l’image de couverture de ce compte.</p></div></div>
+    {{ include('admin/_tabs.html.twig', {current: 'accounts'}) }}
+
+    <section class="card">
+        <h2>Images de @{{ account.acct }}</h2>
+        {% if remote %}
+            <p class="small">Compte Mastodon connecté. Une image déposée ici remplace celle de son serveur sur Socialize seulement : son compte Mastodon n’est pas modifié, et ses mises à jour sur Mastodon ne l’écrasent pas.{% if account.avatarPath %} <b>Photo de profil remplacée ici.</b>{% endif %}{% if account.coverPath %} <b>Couverture remplacée ici.</b>{% endif %}</p>
+        {% else %}
+            <p class="small">Les changements sont envoyés aux abonnés du fédivers, comme si la personne les faisait elle-même.</p>
+        {% endif %}
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ include('profile/_images_picker.html.twig', {
+                account: account,
+                avatar: form.avatar,
+                avatar_crop: form.avatarCrop,
+                cover: form.cover,
+                cover_crop: form.coverCrop,
+                remove_avatar: form.removeAvatar,
+                remove_cover: form.removeCover,
+                avatar_hint: remote ? 'Touchez la photo ou la couverture pour remplacer celle de Mastodon.' : null,
+            }) }}
+            <div class="navbtns"><a class="btn ghost" href="{{ path('admin_accounts') }}">Annuler</a><button class="btn pri">{{ ui.icon('image', 'xs') }}Enregistrer</button></div>
+        {{ form_end(form) }}
+    </section>
+</div>
+{% endblock %}

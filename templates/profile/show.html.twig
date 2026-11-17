@@ -5,6 +5,12 @@
 
 {% block content %}
 <div class="prof">
+    {% set cover = cover_url(account) %}
+    {% if cover %}
+        <div class="prof-cover"><img src="{{ cover }}" alt="Image de couverture de {{ account.displayName }}"></div>
+    {% elseif is_owner and account.local %}
+        <a class="prof-cover empty" href="{{ path('app_settings') }}">{{ ui.icon('image') }}Ajouter une image de couverture</a>
+    {% endif %}
     <section class="prof-h">
         {% if story_group %}
             <a class="ring has-story{{ story_group.fullySeen ? ' seen' }}" href="{{ path('app_account_stories', {username: account.username}) }}" aria-label="Voir les stories de {{ account.displayName }}">{{ ui.avatar(account, 150) }}</a>

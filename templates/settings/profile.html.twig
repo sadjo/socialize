@@ -11,7 +11,7 @@
         <h2>Profil public</h2>
         {{ form_start(form, {attr: {class: 'form'}}) }}
             {{ form_errors(form) }}
-            <div class="row">{{ ui.avatar(account, 72) }}<div class="grow">{{ form_row(form.avatar) }}</div></div>
+            {{ include('profile/_images_picker.html.twig', {account: account, avatar: form.avatar, avatar_crop: form.avatarCrop, cover: form.cover, cover_crop: form.coverCrop, remove_cover: form.removeCover}) }}
             {{ form_row(form.displayName) }}
             {{ form_row(form.bio) }}
             <label class="chk">{{ form_widget(form.hideNetwork) }}<span>{{ form.hideNetwork.vars.label }}<br><small>Les autres visiteurs verront seulement le nombre d’abonnés et d’abonnements.</small></span></label>

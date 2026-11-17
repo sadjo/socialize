@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Media\Infrastructure;
 
 use App\Core\Domain\Media\MediaAttachment;
+use App\Media\Application\ImageCrop;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\ProcessedImage;
 use Jcupitt\Vips\Exception as VipsException;
@@ -49,12 +50,37 @@ final class VipsImageProcessor
     }
 
     /**
-     * Photo de profil carrée.
+     * Copie source d'une image du profil, redressée et limitée en taille, gardée pour la recadrer plus tard.
      */
-    public function avatar(string $bytes, int $size = 400): string
+    public function profileSource(string $bytes, int $max = 2048): string
     {
         try {
-            return $this->webp(Image::thumbnail_buffer($bytes, $size, ['height' => $size, 'crop' => 'attention']));
+            return $this->webp(Image::thumbnail_buffer($bytes, $max, ['height' => $max, 'size' => 'down']));
+        } catch (VipsException $e) {
+            throw new MediaProcessingException('Cette image n’a pas pu être lue.', $e->getCode(), previous: $e);
+        }
+    }
+
+    /**
+     * Image du profil aux dimensions voulues : le cadre choisi, ou à défaut la partie la plus intéressante.
+     */
+    public function framed(string $bytes, int $width, int $height, ?ImageCrop $crop = null): string
+    {
+        try {
+            if (!$crop instanceof ImageCrop) {
+                return $this->webp(Image::thumbnail_buffer($bytes, $width, ['height' => $height, 'crop' => 'attention']));
+            }
+            $image = Image::newFromBuffer($bytes)->autorot();
+            $left = min($image->width - 1, (int) round($crop->x * $image->width));
+            $top = min($image->height - 1, (int) round($crop->y * $image->height));
+            $area = $image->extract_area(
+                $left,
+                $top,
+                max(1, min($image->width - $left, (int) round($crop->width * $image->width))),
+                max(1, min($image->height - $top, (int) round($crop->height * $image->height))),
+            );
+
+            return $this->webp($area->thumbnail_image($width, ['height' => $height, 'crop' => 'centre', 'size' => 'both']));
         } catch (VipsException $e) {
             throw new MediaProcessingException('Cette image n’a pas pu être lue.', $e->getCode(), previous: $e);
         }

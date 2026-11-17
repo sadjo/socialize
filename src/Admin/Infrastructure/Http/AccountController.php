@@ -7,16 +7,24 @@ namespace App\Admin\Infrastructure\Http;
 use App\Core\Application\Account\AccountDeletion;
 use App\Core\Application\Account\RegisterAccount;
 use App\Core\Application\Account\RegistrationException;
+use App\Core\Domain\Account\Account;
 use App\Core\Domain\Account\AccountRight;
 use App\Core\Domain\Account\User;
+use App\Core\Domain\Event\ProfileUpdated;
+use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\UserRepository;
 use App\Integration\Mastodon\Application\MastodonLogin;
 use App\Integration\Mastodon\Domain\MastodonUser;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonUserRepository;
+use App\Media\Application\MediaProcessingException;
+use App\Media\Application\ProfileImage;
+use App\Media\Application\ProfileImages;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormError;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -92,6 +100,51 @@ final class AccountController extends AbstractController
         }
 
         return $this->render('admin/account_password.html.twig', ['form' => $form, 'user' => $user]);
+    }
+
+    /**
+     * Photo de profil et image de couverture d'un compte de l'instance, ou d'un compte Mastodon connecté : pour ce
+     * dernier, l'image déposée ici remplace sur Socialize celle de son serveur (sans toucher à son compte Mastodon).
+     */
+    #[Route('/admin/comptes/{id}/images', name: 'admin_account_images', requirements: ['id' => Requirement::UUID], methods: ['GET', 'POST'])]
+    public function images(string $id, Request $request, AccountRepository $accounts, UserRepository $users, MastodonUserRepository $mastodonUsers, ProfileImages $images, EntityManagerInterface $em, EventDispatcherInterface $events): Response
+    {
+        $account = $accounts->find($id);
+        $managed = $account instanceof Account && ($account->isLocal()
+            ? $users->findOneBy(['account' => $account]) instanceof User
+            : $mastodonUsers->forAccount($account) instanceof MastodonUser);
+        if (!$account instanceof Account || !$managed) {
+            throw $this->createNotFoundException();
+        }
+        $remote = !$account->isLocal();
+        $form = $this->createForm(AccountImagesType::class, options: ['remote' => $remote]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $field = 'avatar';
+            try {
+                /** @var array{avatar: ?UploadedFile, avatarCrop: ?string, removeAvatar: bool, cover: ?UploadedFile, coverCrop: ?string, removeCover: bool} $data */
+                $data = $form->getData();
+                $images->apply($account, ProfileImage::Avatar, $data['avatar'], $data['avatarCrop'], $data['removeAvatar']);
+                $field = 'cover';
+                $images->apply($account, ProfileImage::Cover, $data['cover'], $data['coverCrop'], $data['removeCover']);
+                $em->flush();
+                if (!$remote) {
+                    $events->dispatch(new ProfileUpdated($account));
+                }
+                $this->addFlash('success', \sprintf('Images du profil de @%s enregistrées.', $account->getAcct()));
+
+                return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
+            } catch (MediaProcessingException $e) {
+                // La photo a pu être remplacée avant l'échec de la couverture : la base doit pointer vers le nouveau fichier.
+                if ('cover' === $field) {
+                    $em->flush();
+                }
+                $form->get($field)->addError(new FormError($e->getMessage()));
+            }
+        }
+
+        return $this->render('admin/account_images.html.twig', ['form' => $form, 'account' => $account, 'remote' => $remote]);
     }
 
     /**
