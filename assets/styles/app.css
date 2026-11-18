@@ -56,6 +56,7 @@
 :root[data-media-filter="strong"]{--media-filter:saturate(.74) contrast(.88) brightness(.9)}
 article.post .media .slide img,article.post .media .slide video,.gt img,.gt video{filter:var(--media-filter)}
 
+*{box-sizing:border-box}
 html,body{min-height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-text);-webkit-font-smoothing:antialiased;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
