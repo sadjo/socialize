@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.23] - 2026-11-18
+
+Test fix.
+
+### Fixed
+
+- The test of web addresses without `http(s)://` uses a neutral domain: it failed in the CI of the exported
+  repository (tests)
+
 ## [0.9.22] - 2026-11-18
 
 Scrolling tabs on desktop.
@@ -660,7 +669,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.22...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.23...HEAD
+[0.9.23]: https://github.com/sadjo/socialize/compare/v0.9.22...v0.9.23
 [0.9.22]: https://github.com/sadjo/socialize/compare/v0.9.21...v0.9.22
 [0.9.21]: https://github.com/sadjo/socialize/compare/v0.9.20...v0.9.21
 [0.9.20]: https://github.com/sadjo/socialize/compare/v0.9.19...v0.9.20
