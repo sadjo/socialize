@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.20] - 2026-11-18
+
+Follow requests.
+
+### Added
+
+- Profile setting to approve follow requests oneself: new followers, local or from the fediverse, wait for approval
+  (`manuallyApprovesFollowers`); a *Demandes* page to accept or refuse them, notifications in the app and on devices;
+  unticking the setting accepts the pending requests (social)
+
 ## [0.9.19] - 2026-11-18
 
 Links in captions.
@@ -632,7 +642,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.19...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.20...HEAD
+[0.9.20]: https://github.com/sadjo/socialize/compare/v0.9.19...v0.9.20
 [0.9.19]: https://github.com/sadjo/socialize/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/sadjo/socialize/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/sadjo/socialize/compare/v0.9.16...v0.9.17
