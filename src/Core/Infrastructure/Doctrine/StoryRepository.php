@@ -88,8 +88,8 @@ final class StoryRepository extends ServiceEntityRepository
             ->andWhere('s.expiresAt <= :now')
             ->setParameter('account', $account->getId(), UuidType::NAME)
             ->setParameter('now', $now)
-            ->orderBy('s.createdAt', 'DESC')
-            ->addOrderBy('s.id', 'DESC')
+            ->orderBy('s.createdAt', \SortDirection::Descending)
+            ->addOrderBy('s.id', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -114,7 +114,7 @@ final class StoryRepository extends ServiceEntityRepository
             ->leftJoin('s.media', 'm')
             ->where('s.expiresAt > :now')
             ->setParameter('now', $now)
-            ->orderBy('s.createdAt', 'ASC')
-            ->addOrderBy('s.id', 'ASC');
+            ->orderBy('s.createdAt', \SortDirection::Ascending)
+            ->addOrderBy('s.id', \SortDirection::Ascending);
     }
 }

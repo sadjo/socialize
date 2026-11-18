@@ -139,7 +139,7 @@ final class ImportItemRepository extends ServiceEntityRepository
             ->setParameter('video', MediaType::Video)
             ->setParameter('processing', MediaStatus::Processing)
             ->setParameter('import', $import->getId(), UuidType::NAME)
-            ->orderBy('m.createdAt', 'ASC')
+            ->orderBy('m.createdAt', \SortDirection::Ascending)
             ->getQuery()
             ->getResult();
 

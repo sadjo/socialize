@@ -43,8 +43,8 @@ final class PostRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('p')
             ->where('p.account = :account')
             ->setParameter('account', $account->getId(), UuidType::NAME)
-            ->orderBy('p.publishedAt', 'ASC')
-            ->addOrderBy('p.id', 'ASC');
+            ->orderBy('p.publishedAt', \SortDirection::Ascending)
+            ->addOrderBy('p.id', \SortDirection::Ascending);
         if ($since instanceof \DateTimeImmutable) {
             $qb->andWhere('p.publishedAt >= :since')->setParameter('since', $since);
         }
@@ -146,8 +146,8 @@ final class PostRepository extends ServiceEntityRepository
         $posts = $qb
             ->setParameter('cursorDate', $from->publishedAt)
             ->setParameter('cursorId', $from->id, UuidType::NAME)
-            ->orderBy('p.publishedAt', 'ASC')
-            ->addOrderBy('p.id', 'ASC')
+            ->orderBy('p.publishedAt', \SortDirection::Ascending)
+            ->addOrderBy('p.id', \SortDirection::Ascending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -184,7 +184,7 @@ final class PostRepository extends ServiceEntityRepository
             ->where('p.account = :account')
             ->andWhere('p.pending = true')
             ->setParameter('account', $account->getId(), UuidType::NAME)
-            ->orderBy('p.publishedAt', 'DESC')
+            ->orderBy('p.publishedAt', \SortDirection::Descending)
             ->getQuery()
             ->getResult();
     }
@@ -232,8 +232,8 @@ final class PostRepository extends ServiceEntityRepository
             ->setParameter('account', $account->getId(), UuidType::NAME)
             ->setParameter('source', PostSource::InstagramImport)
             ->setParameter('private', Visibility::Private)
-            ->orderBy('p.publishedAt', 'ASC')
-            ->addOrderBy('p.id', 'ASC')
+            ->orderBy('p.publishedAt', \SortDirection::Ascending)
+            ->addOrderBy('p.id', \SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -268,8 +268,8 @@ final class PostRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('p')
             ->addSelect('a')
             ->join('p.account', 'a')
-            ->orderBy('p.publishedAt', 'DESC')
-            ->addOrderBy('p.id', 'DESC');
+            ->orderBy('p.publishedAt', \SortDirection::Descending)
+            ->addOrderBy('p.id', \SortDirection::Descending);
     }
 
     /**

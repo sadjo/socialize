@@ -40,8 +40,8 @@ final class CommentRepository extends ServiceEntityRepository
             ->join('c.account', 'a')
             ->where('c.post = :post')
             ->setParameter('post', $post->getId(), UuidType::NAME)
-            ->orderBy('c.createdAt', 'DESC')
-            ->addOrderBy('c.id', 'DESC')
+            ->orderBy('c.createdAt', \SortDirection::Descending)
+            ->addOrderBy('c.id', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -59,7 +59,7 @@ final class CommentRepository extends ServiceEntityRepository
             ->join('c.account', 'a')
             ->where('c.post = :post')
             ->setParameter('post', $post->getId(), UuidType::NAME)
-            ->orderBy('c.createdAt', 'ASC')
+            ->orderBy('c.createdAt', \SortDirection::Ascending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();

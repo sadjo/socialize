@@ -37,7 +37,7 @@ final readonly class CompleteMediaSizesCommand
             ->select('m')->from(MediaAttachment::class, 'm')
             ->where('m.status = :ready')->andWhere('m.remoteUrl IS NULL')
             ->setParameter('ready', MediaStatus::Ready)
-            ->orderBy('m.createdAt', 'ASC')
+            ->orderBy('m.createdAt', \SortDirection::Ascending)
             ->getQuery();
 
         $seen = $completed = $copies = $failed = 0;

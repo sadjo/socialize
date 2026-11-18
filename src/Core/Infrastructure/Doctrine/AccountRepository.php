@@ -49,8 +49,8 @@ final class AccountRepository extends ServiceEntityRepository
             ->where('LOWER(a.username) LIKE :prefix OR LOWER(a.displayName) LIKE :contains')
             ->setParameter('prefix', addcslashes($text, '%_').'%')
             ->setParameter('contains', '%'.addcslashes($text, '%_').'%')
-            ->orderBy('a.domain', 'ASC')
-            ->addOrderBy('a.username', 'ASC')
+            ->orderBy('a.domain', \SortDirection::Ascending)
+            ->addOrderBy('a.username', \SortDirection::Ascending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -75,7 +75,7 @@ final class AccountRepository extends ServiceEntityRepository
             ->andWhere('a != :me')
             ->andWhere('a NOT IN (SELECT IDENTITY(f.following) FROM App\Core\Domain\Social\Follow f WHERE f.follower = :me)')
             ->setParameter('me', $account->getId(), UuidType::NAME)
-            ->orderBy('a.createdAt', 'DESC')
+            ->orderBy('a.createdAt', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
