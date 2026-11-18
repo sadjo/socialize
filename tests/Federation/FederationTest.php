@@ -324,6 +324,36 @@ final class FederationTest extends AppWebTestCase
         self::assertSame([], $this->ofType($sent, 'Create'));
     }
 
+    public function testTheRefreshCommandUpdatesPostsWithLinksUnderTheirId(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/9', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $linked = $this->publish($this->reloadAccount($camille), 'Programme sur www.exemple.fr', Visibility::Public);
+        $plain = $this->publish($this->reloadAccount($camille), 'Sans lien', Visibility::Public);
+        $this->publish($this->reloadAccount($camille), 'Privée : exemple.fr', Visibility::Private);
+        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:refresh'));
+
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--essai' => true]));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([], $sent);
+        self::assertStringContainsString('1 publication à mettre à jour', $command->getDisplay());
+
+        // Par défaut : seulement les publications avec une adresse web, sous leur identifiant, sans retrait.
+        $linkedId = 'http://localhost/p/'.$linked->getPublicId();
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--pause' => '0']));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([$linkedId], $this->objectIds($sent, 'Update'));
+        self::assertSame([], $this->ofType($sent, 'Delete'));
+        self::assertSame([], $this->ofType($sent, 'Create'));
+        self::assertStringContainsString('<a href="https://www.exemple.fr"', $this->text($this->ofType($sent, 'Update')[0], 'object', 'content'));
+
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--toutes' => true, '--pause' => '0']));
+        self::assertSame([$linkedId, 'http://localhost/p/'.$plain->getPublicId()], $this->objectIds($sent, 'Update'));
+
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--publications' => $plain->getPublicId(), '--pause' => '0']));
+        self::assertSame(['http://localhost/p/'.$plain->getPublicId()], $this->objectIds($sent, 'Update'));
+    }
+
     public function testTheResyncCommandRemovesLeftoverCopies(): void
     {
         $camille = $this->register('camille')->getAccount();

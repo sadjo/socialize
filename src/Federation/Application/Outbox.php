@@ -136,15 +136,7 @@ final readonly class Outbox
             if (!$event->contentChanged) {
                 return;
             }
-            $note = $this->serializer->note($post);
-            $this->deliver($author, $this->recipients($post, $current), [
-                'id' => $this->urls->activity($author, 'update'),
-                'type' => 'Update',
-                'actor' => $this->urls->actor($author),
-                'to' => $note['to'],
-                'cc' => $note['cc'],
-                'object' => $note,
-            ]);
+            $this->sendUpdate($post);
 
             return;
         }
@@ -200,6 +192,36 @@ final readonly class Outbox
     public function onPostUnarchived(PostUnarchived $event): void
     {
         $this->onPostPublished(new PostPublished($event->post));
+    }
+
+    /**
+     * Renvoie le contenu actuel d'une publication déjà dans le fédivers, sous le même identifiant (commande
+     * app:federation:refresh) : ses J'aime, partages et réponses y restent ; Mastodon la marque « modifiée ».
+     *
+     * @return bool false si elle n'est pas dans le fédivers (privée, archivée, importée sans annonce…)
+     */
+    public function refresh(Post $post): bool
+    {
+        if (!$post->isFederable() || !$post->shouldAnnounce()) {
+            return false;
+        }
+        $this->sendUpdate($post);
+
+        return true;
+    }
+
+    private function sendUpdate(Post $post): void
+    {
+        $author = $post->getAccount();
+        $note = $this->serializer->note($post);
+        $this->deliver($author, $this->recipients($post, $post->getVisibility()), [
+            'id' => $this->urls->activity($author, 'update'),
+            'type' => 'Update',
+            'actor' => $this->urls->actor($author),
+            'to' => $note['to'],
+            'cc' => $note['cc'],
+            'object' => $note,
+        ]);
     }
 
     /**
