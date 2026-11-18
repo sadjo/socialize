@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PHP_EXTENSIONS: intl, pdo_sqlite, pdo_mysql, zip, apcu, exif, ffi, bcmath
+  PHP_INI: ffi.enable=true
+  APP_ENV: test
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          ini-values: ${{ env.PHP_INI }}
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --no-interaction
+
+      - name: Validate composer.json and audit dependencies
+        run: |
+          composer validate --strict
+          composer audit
+
+      - name: Warm up the Symfony container for static analysis
+        run: php bin/console cache:warmup --env=dev
+
+      - name: Coding style (PHP-CS-Fixer)
+        run: vendor/bin/php-cs-fixer check --diff
+
+      - name: Static analysis (PHPStan, max level)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Rector (no pending upgrade)
+        run: vendor/bin/rector process --dry-run --no-progress-bar
+
+      - name: Module boundaries (Deptrac)
+        run: vendor/bin/deptrac analyse --no-progress
+
+      - name: Symfony linters
+        run: |
+          php bin/console lint:container --env=dev
+          php bin/console lint:twig templates --env=dev
+          php bin/console lint:yaml config --parse-tags --env=dev
+
+  tests:
+    name: Tests (${{ matrix.database }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, mariadb]
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: socialize_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          ini-values: ${{ env.PHP_INI }}
+          tools: composer:v2
+
+      - name: Media libraries (libvips, ffmpeg)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg libvips42t64 || sudo apt-get install -y -qq --no-install-recommends ffmpeg libvips42
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --no-interaction
+
+      - name: MariaDB database
+        if: matrix.database == 'mariadb'
+        run: |
+          echo "DATABASE_URL=mysql://root:root@127.0.0.1:3306/socialize?serverVersion=11.4.0-MariaDB&charset=utf8mb4" >> "$GITHUB_ENV"
+
+      - name: Create the MariaDB test database
+        if: matrix.database == 'mariadb'
+        run: php bin/console doctrine:database:create --if-not-exists --no-interaction
+
+      - name: Test schema
+        run: php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: frankenphp_prod
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

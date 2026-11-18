@@ -1,251 +1,156 @@
-# Socialize
+<p align="center">
+  <img src="public/icons/icon.svg" width="96" height="96" alt="Socialize logo">
+</p>
 
-Réseau photo et vidéo auto-hébergé, compatible avec le fédivers (Mastodon, Pixelfed…) via ActivityPub.
-Socialize permet d'importer une archive Instagram sans perte, de choisir ses médias dans [Immich](https://immich.app)
-ou Synology Photos, et de publier aussi sur Instagram et Facebook selon des règles réglables.
+<h1 align="center">Socialize</h1>
 
-> **État : jalon 9.** Comptes, publications photo et vidéo, fils, profils, abonnements, likes, commentaires,
-> stories, archives, fédération ActivityPub (Mastodon, Pixelfed), import d'une archive Instagram et publication
-> depuis Immich ou Synology Photos : photos et vidéos choisies dans la photothèque, originaux et métadonnées copiés.
-> Musique libre sur les publications et les stories, choisie dans [Openverse](https://openverse.org)
-> (licences Creative Commons, crédit affiché), copiée sur l'instance et jouée quand la publication est à l'écran.
-> Groupes d'abonnés (famille, amis…) : publications et stories réservées à un ou plusieurs groupes, y compris pour
-> les comptes Mastodon connectés ici, et groupe par défaut à l'import Instagram. Seules les publications publiques et
-> réservées aux abonnés partent dans le fédivers ; les non répertoriées et celles des groupes restent sur l'instance. Invitations et création de comptes par l'administrateur,
-> qui choisit quels comptes peuvent publier et lesquels peuvent importer leur archive Instagram.
-> Crosspost vers Instagram : publications et stories envoyées aussi sur un compte Instagram professionnel, selon
-> des règles par visibilité ; bouton « Partager vers Instagram » pour tout compte, personnel compris.
-> Notifications des « J'aime », commentaires et mentions reçus (d'ici ou du fédivers), lues ou non lues,
-> supprimables ; les administrateurs sont aussi prévenus des inscriptions et des premières connexions avec
-> Mastodon. Notifications sur le téléphone (Web Push, application ajoutée à l'écran d'accueil) : nouvelles
-> publications et stories des comptes suivis, J'aime et commentaires, au choix de chacun.
-> Mentions dans les légendes : `@nom` (compte d'ici), `@nom@instance` (fédivers) et `ig:@nom` (Instagram), avec un
-> pictogramme (éléphant de Mastodon, appareil photo d'Instagram) et des suggestions pendant la saisie dès « @ »
-> (comptes suivis, d'ici puis du fédivers, et la saisie elle-même en compte Mastodon ou Instagram ; au second « @ »,
-> comptes du fédivers seulement, une adresse complète encore inconnue étant cherchée sur son serveur ; Échap les
-> ferme, Ctrl+Espace les rouvre). Les comptes mentionnés sont
-> prévenus (balise Mention dans le fédivers, notification ici) ; vers Instagram, `ig:@nom` devient une vraie mention.
-> Profil : photo et image de couverture (bandeau 4:1) changées d'un clic et recadrées dans le navigateur
-> (glisser, zoomer), repositionnables plus tard ; l'administrateur peut changer celles d'un compte, et remplacer
-> celles d'un compte Mastodon connecté sur Socialize seulement. Bloc « Instance » à côté des fils (titre et
-> texte en Markdown, avec barre d'édition et images), modifiable dans l'administration.
-> Connexion avec un compte Mastodon (variable `MASTODON_LOGIN`) : la personne pilote son compte depuis Socialize,
-> sans compte ici. Son profil montre ses publications, elle voit les stories des comptes suivis, aime, commente et
-> suit par l'API de son serveur, y publie photos et vidéos, et peut y importer son archive Instagram si
-> l'administrateur le permet (voir [`docs/connexion-mastodon.md`](docs/connexion-mastodon.md)).
-> Jalons suivants : crosspost Facebook (jalon 10), API REST et serveur MCP (jalon 11) ; à prévoir : notifications
-> réglables par compte.
+<p align="center">
+  <strong>A self-hosted photo and video social network that speaks the fediverse.</strong><br>
+  Share photos, videos and stories with the people you choose — and with Mastodon, Pixelfed and the rest of the fediverse through ActivityPub.
+</p>
 
-- Maquette de l'interface : [`maquette/socialize.html`](maquette/socialize.html)
-- Stack : PHP 8.5, Symfony 8.1, FrankenPHP (mode worker), Doctrine ORM, Symfony Messenger, Twig + Symfony UX.
+<p align="center">
+  <a href="https://github.com/sadjo/socialize/actions/workflows/ci.yml"><img src="https://github.com/sadjo/socialize/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/sadjo/socialize/releases"><img src="https://img.shields.io/github/v/release/sadjo/socialize?sort=semver" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License: AGPL-3.0"></a>
+  <img src="https://img.shields.io/badge/PHP-8.5-777bb4" alt="PHP 8.5">
+  <img src="https://img.shields.io/badge/Symfony-8.1-black" alt="Symfony 8.1">
+  <img src="https://img.shields.io/badge/ActivityPub-federated-f1007e" alt="ActivityPub">
+</p>
 
-## Lancer une instance
+<p align="center">
+  <a href="https://sadjo.github.io/socialize/">Website</a> ·
+  <a href="https://github.com/sadjo/socialize/wiki">Documentation</a> ·
+  <a href="https://github.com/sadjo/socialize/wiki/Installation">Installation</a> ·
+  <a href="README.fr.md">Français</a>
+</p>
 
-Une seule image, un seul conteneur. Les données vivent dans deux volumes : `/data` (base SQLite, clés, certificats)
-et `/media` (photos et vidéos).
+<p align="center">
+  <img src="docs/assets/demo.gif" width="860" alt="Socialize demo: feed, stories, post viewer and profile">
+  <br><sub>▶ <a href="https://sadjo.github.io/socialize/#demo">Watch the full demo video</a></sub>
+</p>
 
-### Avec `docker run` (SQLite)
+---
+
+## Why Socialize?
+
+Socialize gives you the familiar experience of a photo-sharing app — feed, carousels, stories, likes, comments —
+on a server you own. Your originals stay with you, your audience is yours to choose, and your posts can still reach
+friends who live on Mastodon or Pixelfed.
+
+- **Own your memories.** Originals and their metadata are kept privately; public copies are stripped of EXIF and GPS.
+- **Choose your audience.** Public, unlisted, followers-only, private, or custom *audience groups* (family, friends…).
+- **Stay connected.** Full ActivityPub federation, sign-in with a Mastodon account, and optional crossposting to Instagram.
+- **Bring your library.** Import your whole Instagram archive and publish straight from Immich or Synology Photos.
+- **Easy to run.** One Docker image, SQLite or MariaDB, automatic HTTPS. Installed with a single command.
+
+## Features
+
+| | |
+| --- | --- |
+| 📸 **Posts** | Carousels of up to 20 photos and videos, alt text, captions with hashtags and mentions, location, content warnings, 4:5 frame, full-screen viewer |
+| ⏱️ **Stories** | 24-hour stories with text overlay, highlights on the profile, archives, viewers list |
+| 🌐 **Fediverse** | ActivityPub (WebFinger, NodeInfo, HTTP Signatures): follow and be followed from Mastodon, Pixelfed and others |
+| 🐘 **Mastodon sign-in** | People can use Socialize with their existing Mastodon account — no local account needed |
+| 👥 **Audience groups** | Share a post or story with selected groups of followers only |
+| 📦 **Instagram import** | Resumable upload of a complete archive (up to 20 GB) with original dates, carousels, EXIF and archived stories |
+| 🖼️ **Photo libraries** | Publish from [Immich](https://immich.app) or Synology Photos, Live Photos included |
+| 🎵 **Free music** | Add Creative Commons music from [Openverse](https://openverse.org) to posts and stories, with credits |
+| 📤 **Crossposting** | Publish to an Instagram professional account automatically, or share to Instagram from any device |
+| 🔔 **Notifications** | Likes, comments, mentions and new posts, in the app and as Web Push notifications on phones and desktops |
+| 🛡️ **Administration** | Invitations, account creation, publishing permissions, editable instance block in Markdown |
+| 🎨 **Themes** | Light, dark and automatic themes chosen by each user; installable as a home screen app |
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/assets/screenshots/feed.png" alt="Home feed"><br><sub>Home feed</sub></td>
+    <td><img src="docs/assets/screenshots/profile.png" alt="Profile"><br><sub>Profile</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshots/post.png" alt="Post with comments"><br><sub>Post and comments</sub></td>
+    <td><img src="docs/assets/screenshots/compose.png" alt="Compose screen"><br><sub>Compose a post</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshots/dark.png" alt="Dark theme"><br><sub>Dark theme</sub></td>
+    <td><img src="docs/assets/screenshots/admin.png" alt="Administration"><br><sub>Administration</sub></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/assets/screenshots/mobile-feed.png" width="240" alt="Mobile feed">
+  <img src="docs/assets/screenshots/mobile-story.png" width="240" alt="Story viewer on mobile">
+  <img src="docs/assets/screenshots/mobile-profile.png" width="240" alt="Profile on mobile">
+</p>
+
+## Quick start
+
+On a Linux server with [Docker](https://docs.docker.com/engine/install/) and a domain name pointing to it:
 
 ```bash
-docker build -t socialize --target frankenphp_prod .
+curl -fsSL https://raw.githubusercontent.com/sadjo/socialize/main/install.sh | sh
+```
 
-docker run -d --name socialize \
-  -p 80:80 -p 443:443 -p 443:443/udp \
-  -e SERVER_NAME=photos.example.org \
+The installer asks for your domain name and administrator account, generates the secrets, starts Socialize with
+automatic HTTPS and prints the address of your instance. Everything is stored in `~/socialize`.
+
+Options (`--help` for the full list):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sadjo/socialize/main/install.sh | sh -s -- \
+  --domain photos.example.org --db mariadb --email you@example.org --username you
+```
+
+Prefer to do it by hand? Socialize is a single image:
+
+```bash
+docker run -d --name socialize -p 80:80 -p 443:443 -p 443:443/udp \
+  -e SERVER_NAME=photos.example.org -e DEFAULT_URI=https://photos.example.org \
   -e APP_SECRET="$(openssl rand -hex 32)" \
   -v socialize_data:/data -v socialize_media:/media \
-  socialize
+  ghcr.io/sadjo/socialize:latest
 ```
 
-Caddy obtient automatiquement un certificat HTTPS pour `SERVER_NAME`.
+See the [Installation guide](https://github.com/sadjo/socialize/wiki/Installation) for Docker Compose,
+MariaDB, reverse proxies and upgrades, and [Configuration](https://github.com/sadjo/socialize/wiki/Configuration)
+for every setting.
 
-### Avec Docker Compose
+## Documentation
+
+The [wiki](https://github.com/sadjo/socialize/wiki) covers:
+
+- [Installation](https://github.com/sadjo/socialize/wiki/Installation) · [Configuration](https://github.com/sadjo/socialize/wiki/Configuration) · [Upgrade and backup](https://github.com/sadjo/socialize/wiki/Upgrade-and-Backup)
+- [User guide](https://github.com/sadjo/socialize/wiki/User-Guide) · [Administration](https://github.com/sadjo/socialize/wiki/Administration)
+- [Federation](https://github.com/sadjo/socialize/wiki/Federation) · [Mastodon sign-in](https://github.com/sadjo/socialize/wiki/Mastodon-Sign-In) · [Integrations](https://github.com/sadjo/socialize/wiki/Integrations)
+- [Console commands](https://github.com/sadjo/socialize/wiki/Console-Commands) · [Development](https://github.com/sadjo/socialize/wiki/Development) · [FAQ](https://github.com/sadjo/socialize/wiki/FAQ)
+
+The documentation is also available [in French](https://github.com/sadjo/socialize/wiki/Accueil).
+
+## Tech stack
+
+PHP 8.5 · Symfony 8.1 · FrankenPHP (worker mode) · Doctrine ORM (SQLite or MariaDB/MySQL) · Symfony Messenger and
+Scheduler · Twig, Turbo, Stimulus and Live Components · libvips and ffmpeg for media.
+
+The code is split into modules (`Core`, `Media`, `Federation`, `Import`, `Crosspost`, `Integration`, `Web`, `Admin`),
+each following a `Domain` / `Application` / `Infrastructure` layout whose boundaries are enforced by Deptrac.
+Quality gates: PHPStan at the maximum level, PHP-CS-Fixer, Rector and a test suite that fails on any deprecation.
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and our
+[Code of Conduct](CODE_OF_CONDUCT.md). For a local development environment you only need Docker and `make`:
 
 ```bash
-cp docker.env.example docker.env   # renseigner APP_SECRET et SERVER_NAME
-docker compose up -d               # SQLite
+git clone https://github.com/sadjo/socialize.git && cd socialize
+make up        # http://localhost:8080
+make test      # PHPUnit
+make quality   # PHP-CS-Fixer, Rector, PHPStan, Deptrac
 ```
 
-Avec MariaDB lancée à côté :
+Security issues: see [SECURITY.md](SECURITY.md).
 
-```bash
-export MARIADB_PASSWORD="$(openssl rand -hex 16)"   # à conserver
-docker compose -f compose.yaml -f compose.mariadb.yaml up -d
-```
+## License
 
-Ou avec un serveur MySQL / MariaDB existant : définissez `DATABASE_URL` dans `docker.env`.
-
-### Derrière un reverse proxy
-
-Si un reverse proxy (Traefik, Nginx, Caddy…) gère déjà le HTTPS, utilisez `SERVER_NAME=:80`, publiez seulement le port 80
-et renseignez `TRUSTED_PROXIES`.
-
-### Fédération (ActivityPub)
-
-`DEFAULT_URI` sert de base à toutes les adresses ActivityPub (acteurs, publications) : choisissez-la avant
-d'ouvrir l'instance au fédivers et ne la changez plus. Les comptes se trouvent par WebFinger
-(`@nom@domaine`), chaque compte local a sa paire de clés RSA (clé privée chiffrée avec `APP_SECRET`), et les
-activités reçues sont vérifiées par signature HTTP. Les requêtes vers les autres instances n'atteignent
-jamais le réseau privé.
-
-Mastodon ne change jamais la visibilité ni les destinataires d'une publication déjà reçue. Quand l'auteur les
-change, la publication est donc retirée du fédivers (Delete) puis renvoyée sous un nouvel identifiant (`/p/…/v2`,
-`/v3`…). Sur Mastodon, la nouvelle version repart sans les « J'aime » ni les partages de l'ancienne ; ceux déjà
-reçus restent sur Socialize.
-Si des copies d'une publication restent sur d'autres instances (après un changement ou une suppression faits
-avant la v0.7.10) :
-
-```bash
-bin/console app:federation:resync https://socialize.example/p/1Ch1rCiDZ7zSfRdPMRVyPC            # publication existante
-bin/console app:federation:resync https://socialize.example/p/1Ch1rCiDZ7zSfRdPMRVyPC/v4 --compte=alice   # supprimée
-```
-
-Mastodon range un message reçu en direct au moment où il le reçoit : une publication renvoyée remonte en tête du
-profil (avec sa vraie date). Pour remettre tout le profil dans l'ordre, renvoyer les publications d'un compte de la
-plus ancienne à la plus récente (chacune arrive chez les abonnés comme un nouveau message, et perd sur Mastodon ses
-« J'aime », partages et réponses) :
-
-```bash
-bin/console app:federation:reorder alice --essai                 # liste, sans rien envoyer
-bin/console app:federation:reorder alice --depuis=2025-09-05     # depuis une date (pause de 5 s entre deux)
-```
-
-Les photos sont servies en plusieurs tailles (640, 960 et 1440 pixels ; vignettes de grille en 240, 360, 480 et
-720) : le navigateur prend celle qui correspond à l'écran, au lieu de réduire fortement la grande copie (qui
-scintille alors et paraît moins nette). Pour les médias publiés avant la v0.9.16, fabriquer une fois les tailles
-manquantes (relancée, la commande ne refait que ce qui manque) :
-
-```bash
-bin/console app:media:complete-sizes
-```
-
-### Variables d'environnement
-
-| Variable | Par défaut | Rôle |
-| --- | --- | --- |
-| `SERVER_NAME` | `localhost` | Domaine public ; `:80` pour du HTTP seul derrière un proxy |
-| `APP_SECRET` | aucune (**obligatoire**) | Secret de l'application : `openssl rand -hex 32` |
-| `DEFAULT_URI` | `http://localhost` | URL publique utilisée hors requête HTTP |
-| `DATABASE_URL` | `sqlite:////data/socialize.db` | Ou `mysql://user:pass@hote:3306/socialize?serverVersion=11.4.0-MariaDB&charset=utf8mb4` |
-| `WORKERS` | `1` | Consommateurs Messenger lancés dans le conteneur, `0` pour aucun |
-| `TRUSTED_PROXIES` | vide | Adresses des reverse proxies de confiance |
-| `REGISTRATION` | `invite` | Inscriptions : `open`, `invite` (seul le premier compte, administrateur, peut s'inscrire) ou `closed` (aucune ; administrateur créé avec `app:user:create`) |
-| `MASTODON_LOGIN` | `closed` | Connexion avec un compte Mastodon : `closed`, `open` (tout serveur) ou la liste des serveurs permis (`mastodon.social,piaille.fr`). mastodon.social, s'il est permis, se connecte d'un clic ; les autres serveurs s'indiquent dans un champ |
-| `MASTODON_SIGNUP` | vide | Création d'un compte Mastodon depuis l'écran de connexion, sur ce serveur (`mastodon.social`) ; il doit aussi être permis par `MASTODON_LOGIN` |
-
-Au démarrage, le conteneur applique les migrations (avec une copie de sécurité préalable de la base SQLite),
-prépare la file Messenger, puis lance FrankenPHP et le consommateur Messenger. La sonde `/healthz` renvoie l'état
-de l'instance au format JSON.
-
-Ouvrez ensuite l'instance et créez le premier compte depuis « Créer un compte » : il devient administrateur.
-
-Seuls les comptes autorisés peuvent publier (publications, stories, Immich, Synology Photos) et, avec un second droit, importer leur
-archive Instagram. Un administrateur a toujours ces droits ; pour les autres, ils s'accordent ou se retirent dans
-Administration › Comptes (ou à la création : `app:user:create --publisher --instagram-import`). Un nouveau compte n'a
-aucun des deux tant qu'il n'y est pas autorisé.
-
-Les photos sont converties en WebP (grande taille et miniature) par libvips, les vidéos en MP4 H.264 par ffmpeg,
-en tâche de fond. Les copies publiques sont servies sous `/m/` et ne contiennent plus de métadonnées (dont la
-position GPS) ; les originaux, avec leur EXIF, restent dans `/media/originals` et ne sont jamais exposés.
-
-### Mise à jour
-
-```bash
-docker compose pull   # ou docker compose build
-docker compose up -d
-```
-
-## Développer
-
-Seuls Docker et `make` sont nécessaires sur le poste : PHP et Composer tournent dans le conteneur.
-
-```bash
-make up          # http://localhost:8080 (HTTP_PORT=8099 make up pour un autre port)
-make test        # PHPUnit
-make quality     # PHP-CS-Fixer, Rector, PHPStan (niveau max), Deptrac
-make fix         # applique Rector et le style
-make console c="debug:router"
-make console c="app:demo:seed"   # comptes et publications d'exemple (mot de passe : demo-socialize)
-make console c="app:import:instagram camille /media/instagram.zip"   # importe une archive déjà sur le serveur
-make help        # toutes les commandes
-```
-
-Le code est monté dans le conteneur et FrankenPHP recharge les fichiers modifiés. Xdebug est installé mais désactivé :
-`XDEBUG_MODE=debug make up` pour l'activer.
-
-### Crosspost Instagram
-
-Réglages › Instagram : un compte autorisé à publier y connecte son compte Instagram **professionnel** (Créateur ou
-Entreprise, exigé par l'API d'Instagram). Les règles choisissent les visibilités pour lesquelles « Publier aussi sur
-Instagram » est coché d'avance à la création (et si elles valent pour les stories) ; la case reste modifiable à chaque
-publication. L'envoi se fait en tâche de fond quand les médias sont prêts : photos converties en JPEG et mises aux
-proportions acceptées par des bandes (sans recadrage), vidéo seule en Reel (3 s à 15 min), carrousel jusqu'à 20
-médias, story. L'état apparaît sur la page de la publication, avec « Réessayer » en cas d'échec. Instagram ne permet
-**ni de modifier ni de supprimer** une publication par son API : ces copies se gèrent dans l'application Instagram.
-Le jeton (60 jours) est renouvelé automatiquement.
-
-Application Meta : créer une application sur [developers.facebook.com](https://developers.facebook.com) (type
-Business). Chaque compte qui peut publier renseigne la sienne dans Réglages › Instagram › Application Meta
-(identifiant, clé secrète chiffrée en base et jamais réaffichée, identifiant de configuration le cas échéant).
-L'instance peut aussi en fournir une par défaut : `INSTAGRAM_APP_ID` (variable) et `INSTAGRAM_APP_SECRET` (secret),
-facultatifs.
-
-- **Application récente (« connexion unifiée »)**, imposée par Meta aux applications créées depuis l'automne 2026 :
-  cas d'usage « Gérer les messages et le contenu sur Instagram », portefeuille d'entreprise relié, configuration
-  Facebook Login for Business avec un jeton d'utilisateur système (expiration « Jamais »), la ressource « Compte
-  Instagram » et les droits `instagram_basic` et `instagram_content_publish` (plus `instagram_manage_contents` pour
-  que la suppression d'une publication ici la supprime aussi sur Instagram). Saisir l'ID de l'app, sa clé secrète
-  (Paramètres › Général) et l'identifiant de la configuration ; déclarer `https://<instance>/reglages/instagram/retour`
-  dans la configuration et dans Facebook Login for Business › Paramètres › URI de redirection OAuth valides.
-  L'API est alors jointe sur graph.facebook.com, et le jeton n'est pas renouvelé (il n'expire pas).
-  Un envoi se relance depuis la page de la publication (« Réessayer », « Relancer l'envoi », « Republier » : la
-  publication Instagram précédente est alors supprimée si le droit le permet).
-- **Application plus ancienne (« connexion Instagram »)** : ID et clé secrète de l'app Instagram (Configuration de
-  l'API avec connexion Instagram), adresse de retour déclarée au même endroit, identifiant de configuration vide.
-  Sans validation de l'application par Meta, seuls les comptes Instagram ajoutés comme **testeurs** peuvent se
-  connecter.
-
-Sans application Meta, ou pour un compte Instagram personnel : « Partager vers Instagram » (menu « … » d'une
-publication, page Mes stories) ouvre le menu de partage du téléphone avec les photos en JPEG et les vidéos, et copie
-la légende ; sur un ordinateur, les fichiers se téléchargent.
-
-### Synology Photos
-
-Réglages › Synology Photos : le compte saisit l'adresse de son NAS (DSM 7), son identifiant et son mot de passe DSM,
-et au besoin son code à usage unique. Ils ouvrent une session sur le NAS ; seule cette session est gardée, chiffrée
-(jamais le mot de passe). À la création d'une publication ou d'une story, l'onglet « Synology Photos » montre l'espace
-personnel, l'espace partagé et les albums. La session reste valable tant qu'elle sert (DSM › Panneau de configuration ›
-Sécurité › Minuteur de déconnexion, jusqu'à 45 jours d'inactivité) ; si le NAS ne la reconnaît plus, l'instance
-propose de se reconnecter. Le NAS doit être joignable depuis le serveur (pas d'adresse QuickConnect).
-
-L'API de Synology Photos n'est pas documentée par Synology : `SynologyPhotosClient` s'appuie sur des appels vérifiés
-sur un NAS réel (DSM 7), qu'une mise à jour de DSM peut changer.
-
-### Immich de test
-
-Pour développer l'intégration Immich, une instance de test tourne à côté de l'application (projet Compose séparé,
-sans reconnaissance des personnes) :
-
-```bash
-make immich-up     # Immich v3.4.1 sur http://localhost:2283
-make immich-seed   # compte admin@socialize.test / socialize-immich, ~20 photos et 2 vidéos générées, 2 albums
-make immich-down   # arrêt (les données sont gardées dans les volumes du projet socialize-immich)
-```
-
-`make immich-seed` affiche l'adresse du serveur vue depuis l'application (`http://host.docker.internal:2283`)
-et une nouvelle clé API, à saisir dans Réglages › Immich. La clé a seulement les droits dont Socialize a besoin :
-`user.read`, `asset.read`, `asset.view`, `asset.download`, `asset.statistics`, `album.read`, `album.create`,
-`albumAsset.create`. Le script est relançable sans créer de doublon.
-
-### Organisation du code
-
-Le code est découpé en modules sous `src/` (`Core`, `Media`, `Federation`, `Import/Instagram`, `Crosspost/Meta`,
-`Integration/Immich`, `Integration/Openverse`, `Api`, `Mcp`, `Web`, `Admin`). Chaque module suit la structure `Domain` / `Application` /
-`Infrastructure`. Deptrac vérifie que les modules métier ne dépendent que du socle (`Core` et `Media`) : voir `deptrac.yaml`.
-
-### Qualité et montées de version
-
-- PHPStan au niveau maximal, PHP-CS-Fixer (`@Symfony`, `@Symfony:risky`), Deptrac.
-- Les tests échouent à la moindre dépréciation (`failOnDeprecation`).
-- Rector applique les migrations de PHP et de Symfony : `make fix` après une montée de version dans `composer.json`.
-- La CI (`.github/workflows/ci.yml`) exécute la qualité et les tests sur SQLite et MariaDB à chaque push et pull request.
+Socialize is free software released under the [GNU Affero General Public License v3.0](LICENSE).
+If you run a modified version of Socialize on a server, you must make its source code available to its users.

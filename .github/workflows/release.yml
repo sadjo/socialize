@@ -1,0 +1,92 @@
+name: Release
+
+# A version tag (vX.Y.Z) publishes the container image to GitHub Container Registry
+# (ghcr.io/<owner>/socialize:vX.Y.Z and :latest) and creates the GitHub release.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to (re)publish, e.g. v0.9.15
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  image:
+    name: Container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Version
+        id: version
+        run: echo "tag=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.version.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Image name
+        id: image
+        run: echo "name=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Is this the most recent version?
+        id: latest
+        run: |
+          newest=$(git tag --list 'v*.*.*' --sort=-v:refname | head -n 1)
+          echo "latest=$([ "$newest" = "${{ steps.version.outputs.tag }}" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ steps.image.outputs.name }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=${{ steps.version.outputs.tag }}
+            type=raw,value=latest,enable=${{ steps.latest.outputs.latest }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: frankenphp_prod
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: APP_VERSION=${{ steps.version.outputs.tag }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    name: GitHub release
+    needs: image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          git for-each-ref "refs/tags/$TAG" --format='%(contents)' > notes.md
+          printf '\n\n```bash\ndocker pull ghcr.io/%s:%s\n```\n' "$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" "$TAG" >> notes.md
+          title=$(head -n 1 notes.md)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$title" --notes-file notes.md
+          else
+            gh release create "$TAG" --title "$title" --notes-file notes.md --verify-tag
+          fi
