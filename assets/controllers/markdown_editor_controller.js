@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 
 /* Barre d'édition Markdown : gras, italique, lien, listes, image envoyée au serveur, et aperçu rendu par le serveur

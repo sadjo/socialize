@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 import { MediaViewer, tileEntry } from '../lib/media_viewer.js';
 

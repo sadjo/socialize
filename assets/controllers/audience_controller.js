@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 
 /* Choix de visibilité : les groupes d'abonnés ne s'affichent que lorsque « Groupes » est choisi. */
