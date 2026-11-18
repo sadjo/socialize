@@ -7,7 +7,7 @@
 <div class="page-narrow">
     <div class="page-h">
         <a href="{{ path('app_profile', {username: account.acct}) }}" aria-label="Retour à votre profil">{{ ui.avatar(account, 48) }}</a>
-        <div class="grow"><h1>Demandes d’abonnement</h1><p>{{ handle(account, local_domain) }}</p></div>
+        <div class="grow"><h1>Demandes d’abonnement{{ ui.help('suivre', 'demandes-dabonnement', 'les demandes d’abonnement') }}</h1><p>{{ handle(account, local_domain) }}</p></div>
     </div>
     <nav class="ptabs" aria-label="Listes du compte">
         <a href="{{ path('app_profile_followers', {username: account.acct}) }}"><span class="num">{{ stats.followers|format_number(locale: 'fr') }}</span> abonné{{ stats.followers > 1 ? 's' }}</a>

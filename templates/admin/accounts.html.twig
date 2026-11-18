@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-narrow admin">
-    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Créez un compte directement, même lorsque les inscriptions sont fermées, puis transmettez ses identifiants à la personne. Seuls les comptes autorisés peuvent publier ou importer leur archive Instagram.</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Administration{{ ui.help('administration', 'comptes', 'les comptes') }}</h1><p>Créez un compte directement, même lorsque les inscriptions sont fermées, puis transmettez ses identifiants à la personne. Seuls les comptes autorisés peuvent publier ou importer leur archive Instagram.</p></div></div>
     {{ include('admin/_tabs.html.twig', {current: 'accounts'}) }}
 
     <section class="card">

@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-narrow">
-    <div class="page-h"><div class="grow"><h1>Import Instagram</h1><p>Récupérez votre historique : publications, carrousels, vidéos, publications archivées et stories, avec leurs dates et leurs métadonnées.</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Import Instagram{{ ui.help('import-instagram', null, 'l’import Instagram') }}</h1><p>Récupérez votre historique : publications, carrousels, vidéos, publications archivées et stories, avec leurs dates et leurs métadonnées.</p></div></div>
     {{ include('import/_steps.html.twig', {step: 1}) }}
 
     <section class="card stack">

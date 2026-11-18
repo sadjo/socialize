@@ -1,0 +1,47 @@
+# Guide d'utilisation : chapitres dans l'ordre de lecture, un fichier par langue (fr/<slug>.md, en/<slug>.md).
+# audience : « all » (tout le monde, sans compte) ou « admin » (administrateurs seulement dans l'application).
+# Source unique : affichée dans l'application (/aide, en français), assemblée pour le wiki et le site par
+# tools/guide/build.py.
+chapters:
+  - slug: premiers-pas
+    audience: all
+    title: {fr: "Premiers pas", en: "Getting started"}
+  - slug: compte-et-reglages
+    audience: all
+    title: {fr: "Compte et réglages", en: "Account and settings"}
+  - slug: publier
+    audience: all
+    title: {fr: "Publier", en: "Posting"}
+  - slug: stories
+    audience: all
+    title: {fr: "Stories", en: "Stories"}
+  - slug: groupes
+    audience: all
+    title: {fr: "Groupes d'abonnés", en: "Audience groups"}
+  - slug: fil-et-interactions
+    audience: all
+    title: {fr: "Fil et interactions", en: "Feed and interactions"}
+  - slug: mentions-et-liens
+    audience: all
+    title: {fr: "Mentions, hashtags et liens", en: "Mentions, hashtags and links"}
+  - slug: suivre
+    audience: all
+    title: {fr: "Suivre et être suivi", en: "Following and followers"}
+  - slug: notifications
+    audience: all
+    title: {fr: "Notifications", en: "Notifications"}
+  - slug: phototheques
+    audience: all
+    title: {fr: "Photothèques Immich et Synology", en: "Immich and Synology photo libraries"}
+  - slug: instagram
+    audience: all
+    title: {fr: "Instagram", en: "Instagram"}
+  - slug: import-instagram
+    audience: all
+    title: {fr: "Importer son archive Instagram", en: "Importing your Instagram archive"}
+  - slug: mastodon
+    audience: all
+    title: {fr: "Avec un compte Mastodon", en: "With a Mastodon account"}
+  - slug: administration
+    audience: admin
+    title: {fr: "Administration", en: "Administration"}

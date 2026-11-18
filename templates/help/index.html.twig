@@ -1,0 +1,17 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Aide · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h"><div class="grow"><h1>Aide</h1><p>Le guide d’utilisation : publier, partager avec ses proches, suivre des comptes d’ici et du fédivers.</p></div></div>
+    <nav class="card help-toc" aria-label="Chapitres de l’aide">
+        <ol>
+            {% for c in chapters %}
+                <li><a href="{{ path('app_help_page', {slug: c.slug}) }}">{{ c.title }}</a>{% if c.adminOnly %} <span class="small">· administrateurs</span>{% endif %}</li>
+            {% endfor %}
+        </ol>
+    </nav>
+</div>
+{% endblock %}

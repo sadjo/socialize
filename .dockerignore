@@ -1,5 +1,7 @@
 **/*.log
 **/*.md
+# Guide d'utilisation, affiché dans l'application (/aide).
+!docs/guide/**
 **/*.php~
 **/._*
 **/.dockerignore

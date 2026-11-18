@@ -1,10 +1,11 @@
 {% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
 
 {% block title %}Apparence · Réglages · Socialize{% endblock %}
 
 {% block content %}
 <div class="page-narrow">
-    <div class="page-h"><div class="grow"><h1>Réglages</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Réglages{{ ui.help('compte-et-reglages', 'apparence', 'l’apparence') }}</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
     {{ include('settings/_tabs.html.twig', {current: 'appearance'}) }}
 
     <section class="card stack">

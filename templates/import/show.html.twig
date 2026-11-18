@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="page-narrow">
-    <div class="page-h"><div class="grow"><h1>Import Instagram</h1><p>{{ import.parts|map(p => p.name)|join(', ') }} · {{ (import.size / 1048576)|round|format_number(locale: 'fr') }} Mo</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Import Instagram{{ ui.help('import-instagram', 'choisir-ce-qui-est-importé', 'l’import Instagram') }}</h1><p>{{ import.parts|map(p => p.name)|join(', ') }} · {{ (import.size / 1048576)|round|format_number(locale: 'fr') }} Mo</p></div></div>
     {{ include('import/_steps.html.twig', {step: {uploading: 1, analyzing: 2, ready: 3, importing: 4, completed: 4, failed: 4}[status]}) }}
 
     {% if status == 'failed' %}

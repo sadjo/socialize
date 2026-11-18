@@ -98,6 +98,9 @@ small,.small{font-size:.82rem;color:var(--muted)}
 .side .sep{height:1px;background:var(--line);margin:10px 12px}
 .side .grow{flex:1}
 .side-version{margin:8px 12px 0;font-size:.75rem;color:var(--faint);font-variant-numeric:tabular-nums}
+/* Lien discret vers l'aide, au-dessus du numéro de version. */
+.side-help{margin:10px 12px 0;font-size:.75rem;color:var(--faint);text-decoration:underline;text-underline-offset:2px;width:max-content}
+.side-help:hover,.side-help.on{color:var(--fg)}
 main{min-width:0;padding-block:28px 110px}
 .mtop{display:none}
 .tabbar{display:none}
@@ -107,6 +110,7 @@ main{min-width:0;padding-block:28px 110px}
   .side .lbl,.logo span,.nav .badge{display:none}
   .nav{justify-content:center;padding:12px}
   .side-version{margin-inline:0;text-align:center;font-size:.68rem}
+  .side-help{margin-inline:auto;font-size:.68rem}
   .logo{justify-content:center;padding-inline:0}
 }
 @media (max-width:767px){
@@ -619,6 +623,31 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 .slide video{background:#000}
 .avatar-img{border-radius:50%;object-fit:cover;flex:none;display:block}
 .page-narrow{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+/* Aide : « ? » discret à côté des titres, et pages du guide (texte long, tableaux, code). */
+.help-q{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:6px;border-radius:50%;color:var(--faint);vertical-align:middle;transition:color .15s}
+.help-q:hover,.help-q:focus-visible{color:var(--accent)}
+.help-crumb{margin:0 0 4px!important;font-size:.82rem}
+.help-crumb a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.help-toc ol,.help-all ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:8px}
+.help-toc a{color:var(--fg);font-weight:600}
+.help-body{gap:0;line-height:1.6}
+.help-body>:first-child{margin-top:0}
+.help-body h2{font-size:1.15rem;margin:1.6em 0 .5em;scroll-margin-top:80px}
+.help-body h3{font-size:1rem;margin:1.3em 0 .4em;scroll-margin-top:80px}
+.help-body p,.help-body ul,.help-body ol{margin:.5em 0}
+.help-body ul,.help-body ol{padding-left:1.3em}
+.help-body li+li{margin-top:.3em}
+.help-body a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.help-body code{font-size:.88em;background:var(--surface-2);padding:.1em .35em;border-radius:5px}
+.help-body pre{background:var(--surface-2);padding:12px 14px;border-radius:10px;overflow-x:auto;font-size:.85rem}
+.help-body pre code{background:none;padding:0}
+.help-body table{width:100%;border-collapse:collapse;margin:.8em 0;font-size:.92rem;display:block;overflow-x:auto}
+.help-body th,.help-body td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.help-body th{color:var(--muted);font-weight:600}
+.help-nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.help-all summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+.help-all ol{margin-top:10px}
+.help-all a{color:var(--fg)}
 .compose{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 .compose-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:20px;align-items:start}
 @media (max-width:860px){.compose-grid{grid-template-columns:minmax(0,1fr)}}
@@ -868,6 +897,7 @@ label.act{cursor:pointer}
 .mobile-menu .sep{height:1px;background:var(--line);margin:8px 12px}
 .mobile-menu .grow{display:none}
 .mobile-menu .side-version{text-align:center;margin:8px 0 2px}
+.mobile-menu .side-help{margin:10px auto 0}
 
 /* Groupes d'abonnés */
 .group-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}

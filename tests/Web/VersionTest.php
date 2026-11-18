@@ -21,6 +21,7 @@ final class VersionTest extends AppWebTestCase
         $this->login($this->register('camille'));
         $crawler = $this->client->request('GET', '/');
         self::assertSelectorTextSame('nav.side > .side-version:last-child', 'dev');
-        self::assertSame('Déconnexion', $crawler->filter('.side-version')->previousAll()->first()->text(), 'Sous le lien de déconnexion.');
+        self::assertSame('Aide', $crawler->filter('.side-version')->previousAll()->first()->text(), 'Sous le lien discret vers l’aide…');
+        self::assertSame('Déconnexion', $crawler->filter('.side-help')->previousAll()->first()->text(), '… lui-même sous le lien de déconnexion.');
     }
 }

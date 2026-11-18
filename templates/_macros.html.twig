@@ -2,6 +2,11 @@
     <svg class="i {{ class }}" aria-hidden="true"><use href="#i-{{ name }}"/></svg>
 {%- endmacro %}
 
+{# Petit « ? » discret vers la partie de l'aide qui correspond à la page (chapitre de docs/guide, ancre d'un titre). #}
+{% macro help(slug, anchor = null, label = 'cette page') -%}
+    <a class="help-q" href="{{ path('app_help_page', {slug: slug}) }}{{ anchor ? '#' ~ anchor }}" aria-label="Aide sur {{ label }}" title="Aide"><svg class="i xs" aria-hidden="true"><use href="#i-help"/></svg></a>
+{%- endmacro %}
+
 {% macro avatar(account, size = 36) -%}
     {%- set url = avatar_url(account) -%}
     {%- if url -%}

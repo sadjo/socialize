@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="compose">
-    <div class="page-h"><div class="grow"><h1>Nouvelle story</h1><p>Visible 24 h, puis rangée dans vos archives. Vous pouvez la mettre à la une pour la garder sur votre profil.</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Nouvelle story{{ ui.help('stories', 'publier-une-story', 'les stories') }}</h1><p>Visible 24 h, puis rangée dans vos archives. Vous pouvez la mettre à la une pour la garder sur votre profil.</p></div></div>
     {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 10}}) }}
         {{ form_errors(form) }}
         <div class="compose-grid">
