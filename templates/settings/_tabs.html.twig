@@ -1,6 +1,8 @@
 {# Onglets des réglages. Variable : current ('profile', 'appearance', 'password', 'groups', 'immich', 'synology' ou 'instagram') #}
 {% import '_macros.html.twig' as ui %}
-<nav class="ptabs ptabs-scroll" aria-label="Réglages" data-controller="tabs">
+<div class="ptabs-wrap" data-controller="tabs">
+<button type="button" class="ptabs-arrow prev" data-tabs-target="prev" data-action="tabs#previous" aria-label="Onglets précédents" tabindex="-1" hidden>{{ ui.icon('left', 'sm') }}</button>
+<nav class="ptabs ptabs-scroll" aria-label="Réglages" data-tabs-target="strip" data-action="scroll->tabs#update wheel->tabs#wheel:!passive">
     <a href="{{ path('app_settings') }}" class="{{ current == 'profile' ? 'on' }}"{{ current == 'profile' ? ' aria-current="page"' }}>{{ ui.icon('user', 'xs') }}Profil</a>
     <a href="{{ path('app_settings_appearance') }}" class="{{ current == 'appearance' ? 'on' }}"{{ current == 'appearance' ? ' aria-current="page"' }}>{{ ui.icon('moon', 'xs') }}Apparence</a>
     {% if not is_granted('ROLE_MASTODON') %}<a href="{{ path('app_settings_password') }}" class="{{ current == 'password' ? 'on' }}"{{ current == 'password' ? ' aria-current="page"' }}>{{ ui.icon('key', 'xs') }}Mot de passe</a>{% endif %}
@@ -9,3 +11,5 @@
     {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_synology_photos') }}" class="{{ current == 'synology' ? 'on' }}"{{ current == 'synology' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Synology</a>{% endif %}
     {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_instagram') }}" class="{{ current == 'instagram' ? 'on' }}"{{ current == 'instagram' ? ' aria-current="page"' }}>{{ ui.icon('image', 'xs') }}Instagram</a>{% endif %}
 </nav>
+<button type="button" class="ptabs-arrow next" data-tabs-target="next" data-action="tabs#next" aria-label="Onglets suivants" tabindex="-1" hidden>{{ ui.icon('right', 'sm') }}</button>
+</div>

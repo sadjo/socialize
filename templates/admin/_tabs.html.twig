@@ -1,7 +1,11 @@
 {# Onglets de l'espace Administration. Variable : current ('accounts', 'invitations' ou 'instance') #}
 {% import '_macros.html.twig' as ui %}
-<nav class="ptabs ptabs-scroll" aria-label="Administration" data-controller="tabs">
+<div class="ptabs-wrap" data-controller="tabs">
+<button type="button" class="ptabs-arrow prev" data-tabs-target="prev" data-action="tabs#previous" aria-label="Onglets précédents" tabindex="-1" hidden>{{ ui.icon('left', 'sm') }}</button>
+<nav class="ptabs ptabs-scroll" aria-label="Administration" data-tabs-target="strip" data-action="scroll->tabs#update wheel->tabs#wheel:!passive">
     <a href="{{ path('admin_accounts') }}" class="{{ current == 'accounts' ? 'on' }}"{{ current == 'accounts' ? ' aria-current="page"' }}>{{ ui.icon('user', 'xs') }}Comptes</a>
     <a href="{{ path('admin_invitations') }}" class="{{ current == 'invitations' ? 'on' }}"{{ current == 'invitations' ? ' aria-current="page"' }}>{{ ui.icon('send', 'xs') }}Invitations</a>
     <a href="{{ path('admin_instance') }}" class="{{ current == 'instance' ? 'on' }}"{{ current == 'instance' ? ' aria-current="page"' }}>{{ ui.icon('server', 'xs') }}Instance</a>
 </nav>
+<button type="button" class="ptabs-arrow next" data-tabs-target="next" data-action="tabs#next" aria-label="Onglets suivants" tabindex="-1" hidden>{{ ui.icon('right', 'sm') }}</button>
+</div>
