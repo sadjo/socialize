@@ -24,7 +24,7 @@ jobs:
         id: version
         run: echo "tag=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ steps.version.outputs.tag }}
           fetch-depth: 0
@@ -74,7 +74,7 @@ jobs:
     needs: image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Create or update the release
