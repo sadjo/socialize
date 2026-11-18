@@ -123,7 +123,7 @@ final class FollowRepository extends ServiceEntityRepository
             ->andWhere('f.state = :state')
             ->setParameter('account', $account->getId(), UuidType::NAME)
             ->setParameter('state', FollowState::Accepted)
-            ->orderBy('f.id', 'DESC')
+            ->orderBy('f.id', \SortDirection::Descending)
             ->setMaxResults($limit + 1);
 
         $cursor = null !== $after ? PublicId::decode($after) : null;

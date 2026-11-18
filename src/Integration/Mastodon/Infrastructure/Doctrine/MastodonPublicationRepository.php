@@ -36,7 +36,7 @@ final class MastodonPublicationRepository extends ServiceEntityRepository
             ->setParameter('pending', MastodonPublicationState::Pending->value)
             ->setParameter('failed', MastodonPublicationState::Failed->value)
             ->setParameter('since', $since, Types::DATETIME_IMMUTABLE)
-            ->orderBy('p.createdAt', 'DESC')
+            ->orderBy('p.createdAt', \SortDirection::Descending)
             ->setMaxResults(10)
             ->getQuery()->getResult();
 
