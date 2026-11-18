@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 
 /* Filtre une liste (abonnés d'un groupe…) au fil de la saisie, d'après le texte de chaque élément (data-text). */

@@ -20,6 +20,13 @@ final class MediaUrls
 
     public function derivative(MediaAttachment $media, string $name): ?string
     {
+        // Média distant copié ici : ses copies locales, sauf la vidéo, qui reste sur son instance d'origine.
+        if ($media->hasLocalCopies()) {
+            $path = MediaAttachment::DERIVATIVE_VIDEO === $name ? null : $media->getDerivative($name);
+            if (null !== $path) {
+                return $this->path($path);
+            }
+        }
         if ($media->isRemote()) {
             // Média distant, sans copie locale : l'affiche d'une vidéo n'existe que si l'instance d'origine l'a fournie.
             $poster = $media->getDerivative(MediaAttachment::DERIVATIVE_POSTER);
@@ -37,11 +44,11 @@ final class MediaUrls
 
     /**
      * Liste srcset d'une famille de copies (ImageSizes::LARGE ou ImageSizes::THUMB) : chaque copie présente avec sa
-     * largeur. Null pour un média distant ou s'il n'y a qu'une taille (le src suffit).
+     * largeur. Null pour un média distant sans copie locale ou s'il n'y a qu'une taille (le src suffit).
      */
     public function srcset(MediaAttachment $media, string $family): ?string
     {
-        if ($media->isRemote() || ($media->isVideo() && ImageSizes::LARGE === $family)) {
+        if (($media->isRemote() && !$media->hasLocalCopies()) || ($media->isVideo() && ImageSizes::LARGE === $family)) {
             return null;
         }
         $candidates = [];

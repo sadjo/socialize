@@ -17,7 +17,7 @@ use Symfony\Component\Uid\Uuid;
 
 /**
  * Range un fichier envoyé, puis fabrique ses copies publiques :
- * tout de suite pour une image, en tâche de fond pour une vidéo.
+ * tout de suite pour une image, en tâche de fond pour une vidéo. Fabrique aussi les copies des médias du fédivers.
  */
 final readonly class MediaIngestor
 {
@@ -66,6 +66,34 @@ final readonly class MediaIngestor
         }
 
         $media->markReady($result->width, $result->height, $derivatives, $result->exif, $result->blurhash);
+    }
+
+    /**
+     * Copies locales d'un média reçu du fédivers, depuis l'image téléchargée (l'affiche, pour une vidéo) : les mêmes
+     * tailles qu'un média d'ici, sans EXIF ni original gardé. Une vidéo n'a que son affiche et ses vignettes de grille.
+     */
+    public function cacheRemote(MediaAttachment $media, string $bytes): void
+    {
+        $result = $this->images->process($bytes);
+        $derivatives = [];
+        if ($media->isVideo()) {
+            $derivatives[MediaAttachment::DERIVATIVE_POSTER] = $this->derivativePath($media, 'poster', 'webp');
+            $this->derivativesStorage->write($derivatives[MediaAttachment::DERIVATIVE_POSTER], $result->files[MediaAttachment::DERIVATIVE_LARGE]);
+            $names = ImageSizes::videoNames();
+        } else {
+            $names = array_keys($result->files);
+        }
+        foreach ($names as $name) {
+            $derivatives[$name] = $this->derivativePath($media, $name, 'webp');
+            $this->derivativesStorage->write($derivatives[$name], $result->files[$name]);
+        }
+
+        // Vidéo : ses dimensions restent celles annoncées par l'instance d'origine, pas celles de l'affiche.
+        if ($media->isVideo()) {
+            $media->cacheRemote(null, null, $derivatives, $result->blurhash);
+        } else {
+            $media->cacheRemote($result->width, $result->height, $derivatives, $result->blurhash);
+        }
     }
 
     /**
@@ -152,7 +180,12 @@ final readonly class MediaIngestor
      */
     public function delete(MediaAttachment $media): void
     {
+        // Média distant : seulement les copies fabriquées ici (l'original reste sur son instance).
         if ($media->isRemote()) {
+            foreach ($media->getLocalDerivatives() as $path) {
+                $this->derivativesStorage->delete($path);
+            }
+
             return;
         }
         $this->originalsStorage->delete($media->getOriginalPath());

@@ -19,6 +19,7 @@ use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\RemoteAccounts;
 use App\Federation\Infrastructure\FederationException;
+use App\Web\Feed\CommentPreviews;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -106,7 +107,7 @@ final class ProfileController extends AbstractController
      * les plus anciennes en dessous (chargées au fil du défilement).
      */
     #[Route('/@{username}/publications', name: 'app_profile_feed', requirements: ['username' => self::ACCT], methods: ['GET'])]
-    public function feed(string $username, Request $request, PostRepository $posts, PostAccess $access, LikeRepository $likes): Response
+    public function feed(string $username, Request $request, PostRepository $posts, PostAccess $access, LikeRepository $likes, CommentPreviews $commentPreviews): Response
     {
         $account = $this->account($username);
         $viewer = $this->currentAccount->get();
@@ -116,6 +117,7 @@ final class ProfileController extends AbstractController
         // Suite du fil (publications plus anciennes), chargée dans un cadre Turbo.
         if ($request->query->has('apres')) {
             $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres')), self::FEED_PAGE_SIZE, $viewer);
+            $commentPreviews->prime($page->posts);
 
             return $this->render('feed/_page.html.twig', $common + ['page' => $page, 'liked' => $likes->likedAmong($viewer, $page->posts)]);
         }
@@ -131,6 +133,7 @@ final class ProfileController extends AbstractController
             array_shift($newer);
         }
         $older = $posts->profileTimeline($account, $visible, Cursor::after($post), self::FEED_PAGE_SIZE, $viewer);
+        $commentPreviews->prime([...$newer, $post, ...$older->posts]);
 
         return $this->render('profile/feed.html.twig', $common + [
             'post' => $post,

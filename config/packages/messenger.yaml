@@ -31,6 +31,8 @@ framework:
             App\Federation\Application\DeliverActivity: federation
             App\Federation\Application\ProcessInboxActivity: federation
             App\Media\Application\ProcessVideo: media
+            # Copies locales des médias reçus du fédivers : téléchargement et conversion, comme les vidéos.
+            App\Federation\Application\CacheRemoteMedia: media
             App\Federation\Application\BackfillAccount: async
             App\Import\Instagram\Application\AnalyzeInstagramArchive: async
             App\Import\Instagram\Application\ImportInstagramBatch: async
@@ -56,6 +58,7 @@ when@test:
                 App\Federation\Application\DeliverActivity: sync
                 App\Federation\Application\ProcessInboxActivity: sync
                 App\Federation\Application\BackfillAccount: sync
+                App\Federation\Application\CacheRemoteMedia: sync
                 App\Import\Instagram\Application\AnalyzeInstagramArchive: sync
                 App\Import\Instagram\Application\ImportInstagramBatch: sync
                 App\Integration\Immich\Application\AddToImmichAlbum: sync

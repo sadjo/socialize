@@ -15,9 +15,11 @@ use App\Core\Domain\Social\AudienceGroup;
 use App\Core\Domain\Social\Follow;
 use App\Core\Domain\Social\FollowState;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Types\UuidType;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * @extends ServiceEntityRepository<Post>
@@ -58,7 +60,7 @@ final class PostRepository extends ServiceEntityRepository
     {
         $id = PublicId::decode($publicId);
 
-        return $id instanceof \Symfony\Component\Uid\Uuid ? $this->find($id) : null;
+        return $id instanceof Uuid ? $this->find($id) : null;
     }
 
     /**
@@ -66,17 +68,25 @@ final class PostRepository extends ServiceEntityRepository
      */
     public function homeTimeline(Account $viewer, ?Cursor $cursor, int $limit): TimelinePage
     {
+        // Auteurs lus d'abord, puis passés en liste : « p.account IN (liste) » en condition principale permet à la base
+        // de parcourir l'index (account_id, published_at) de ces seuls comptes. Avec « p.account = :viewer OR
+        // p.account IN (sous-requête) », MariaDB lisait toute la table posts (fédérées comprises) puis la triait.
+        /** @var list<Uuid|string> $followed */
         $followed = $this->getEntityManager()->createQueryBuilder()
-            ->select('IDENTITY(f.following)')
+            ->select('IDENTITY(f.following) AS id')
             ->from(Follow::class, 'f')
             ->where('f.follower = :viewer')
-            ->andWhere('f.state = :accepted');
-
-        $qb = $this->base()
-            ->where('p.account = :viewer')
-            ->orWhere(\sprintf('p.account IN (%s) AND (p.visibility IN (:shared) OR (p.visibility = :groups AND %s))', $followed->getDQL(), self::MEMBER_OF_GROUPS))
+            ->andWhere('f.state = :accepted')
             ->setParameter('viewer', $viewer->getId(), UuidType::NAME)
             ->setParameter('accepted', FollowState::Accepted)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        $qb = $this->base()
+            ->where('p.account IN (:authors)')
+            ->andWhere(\sprintf('p.account = :viewer OR p.visibility IN (:shared) OR (p.visibility = :groups AND %s)', self::MEMBER_OF_GROUPS))
+            ->setParameter('authors', UuidList::of([$viewer->getId(), ...$followed], $this->getEntityManager()->getConnection()->getDatabasePlatform()), ArrayParameterType::STRING)
+            ->setParameter('viewer', $viewer->getId(), UuidType::NAME)
             ->setParameter('shared', [Visibility::Public, Visibility::Unlisted, Visibility::Followers])
             ->setParameter('groups', Visibility::Groups);
 

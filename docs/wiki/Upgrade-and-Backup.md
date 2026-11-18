@@ -18,6 +18,9 @@ before (`/data/socialize.db.YYYYMMDD-HHMMSS.bak`); you may delete old copies onc
 After upgrading from a version older than 0.9.16, build the responsive image sizes of existing media once:
 `docker compose exec app php bin/console app:media:complete-sizes`.
 
+Since v0.9.25, images received from the fediverse are copied to the instance (in several sizes, like your own).
+For those received earlier, run once: `docker compose exec app php bin/console app:media:cache-remote`.
+
 To pin a version, replace `latest` with a tag in `compose.yaml` (`image: ghcr.io/sadjo/socialize:v0.9.15`).
 Re-running the installer with `--version vX.Y.Z` does the same.
 

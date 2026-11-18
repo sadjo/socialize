@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 
 /* Mentions, comme côté serveur (Mentions::PATTERN) : « ig: » éventuel, nom, domaine éventuel. */

@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 
 const CHUNK_SIZE = 50 * 1024 * 1024;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Admin;
 
+use App\Core\Application\Instance\InstanceAbout;
+use App\Core\Infrastructure\Doctrine\SettingRepository;
 use App\Media\Application\MediaUrls;
 use App\Tests\AppWebTestCase;
 use League\Flysystem\FilesystemOperator;
@@ -92,6 +94,22 @@ final class InstanceAboutTest extends AppWebTestCase
             $this->client->request($method, $url);
             self::assertResponseStatusCodeSame(403, $url);
         }
+    }
+
+    /**
+     * Mode worker : le service vit d'une requête à l'autre. Un changement enregistré par un autre thread doit être vu
+     * à la requête suivante, après la remise à zéro des services entre deux requêtes.
+     */
+    public function testTheBlockIsReadAgainAfterTheServicesAreReset(): void
+    {
+        $about = self::getContainer()->get(InstanceAbout::class);
+        self::assertSame('Instance localhost', $about->title());
+
+        self::getContainer()->get(SettingRepository::class)->set(InstanceAbout::TITLE, 'Le coin photo');
+        self::assertSame('Instance localhost', $about->title(), 'Gardé le temps de la requête.');
+
+        self::getContainer()->get('services_resetter')->reset();
+        self::assertSame('Le coin photo', $about->title());
     }
 
     private function loginAsAdmin(): void

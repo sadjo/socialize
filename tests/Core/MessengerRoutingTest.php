@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Core;
 
+use App\Federation\Application\CacheRemoteMedia;
 use App\Federation\Application\DeliverActivity;
 use App\Federation\Application\ProcessInboxActivity;
 use App\Import\Instagram\Application\ImportInstagramBatch;
@@ -26,6 +27,7 @@ final class MessengerRoutingTest extends TestCase
         self::assertSame('federation', $messenger['routing'][DeliverActivity::class]);
         self::assertSame('federation', $messenger['routing'][ProcessInboxActivity::class]);
         self::assertSame('media', $messenger['routing'][ProcessVideo::class]);
+        self::assertSame('media', $messenger['routing'][CacheRemoteMedia::class], 'Copies des médias du fédivers : pas dans la file de la fédération.');
         self::assertSame('async', $messenger['routing'][ImportInstagramBatch::class]);
         self::assertSame(['federation', 'async', 'media', 'failed', 'sync'], array_keys($messenger['transports']));
     }
