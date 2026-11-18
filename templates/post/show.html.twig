@@ -8,7 +8,7 @@
 <div class="pd" style="max-height:none;margin:0 auto;animation:none" data-controller="like" id="post-{{ post.publicId }}">
     <div class="pd-media">
         {% if post.cover and post.cover.ready %}<div class="glow" style="background-image:url({{ media_url(post.cover, 'thumb') }})"></div>{% endif %}
-        {{ include('post/_media.html.twig') }}
+        {{ include('post/_media.html.twig', {media_width: '560px'}) }}
     </div>
     <div class="pd-side">
         <header class="ph">

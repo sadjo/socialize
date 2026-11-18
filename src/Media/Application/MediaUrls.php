@@ -34,4 +34,27 @@ final class MediaUrls
 
         return null !== $path ? $this->path($path) : null;
     }
+
+    /**
+     * Liste srcset d'une famille de copies (ImageSizes::LARGE ou ImageSizes::THUMB) : chaque copie présente avec sa
+     * largeur. Null pour un média distant ou s'il n'y a qu'une taille (le src suffit).
+     */
+    public function srcset(MediaAttachment $media, string $family): ?string
+    {
+        if ($media->isRemote() || ($media->isVideo() && ImageSizes::LARGE === $family)) {
+            return null;
+        }
+        $candidates = [];
+        foreach (array_keys(ImageSizes::widths($family)) as $name) {
+            $path = $media->getDerivative($name);
+            if (null === $path) {
+                continue;
+            }
+            $width = ImageSizes::actualWidth($name, $media->getWidth(), $media->getHeight());
+            // Petite image d'origine : plusieurs copies de même largeur, une seule suffit.
+            $candidates[$width] ??= $this->path($path).' '.$width.'w';
+        }
+
+        return \count($candidates) > 1 ? implode(', ', $candidates) : null;
+    }
 }

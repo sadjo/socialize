@@ -39,7 +39,8 @@
                         {% for post in samples %}
                             {% set cover = post.cover %}
                             {% set thumb = cover and cover.ready ? media_url(cover, 'thumb') : null %}
-                            {% if thumb %}<span class="gt"><img src="{{ thumb }}" alt="{{ cover.altText }}" loading="lazy" decoding="async"></span>{% endif %}
+                            {% set srcset = thumb ? media_srcset(cover, 'thumb') : null %}
+                            {% if thumb %}<span class="gt"><img src="{{ thumb }}"{% if srcset %} srcset="{{ srcset }}" sizes="(max-width: 767px) 34vw, 210px"{% endif %} alt="{{ cover.altText }}" loading="lazy" decoding="async"></span>{% endif %}
                         {% endfor %}
                     </div>
                 {% endif %}

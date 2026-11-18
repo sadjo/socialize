@@ -287,6 +287,16 @@ class MediaAttachment
         $this->progress = null;
     }
 
+    /**
+     * Ajoute des copies à un média déjà prêt (nouvelles tailles fabriquées après coup).
+     *
+     * @param array<string, string> $derivatives
+     */
+    public function addDerivatives(array $derivatives): void
+    {
+        $this->derivatives = $derivatives + $this->derivatives;
+    }
+
     public function getProgress(): ?int
     {
         return $this->progress;

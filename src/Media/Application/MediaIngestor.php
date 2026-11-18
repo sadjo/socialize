@@ -100,14 +100,51 @@ final readonly class MediaIngestor
             }
             $derivatives[MediaAttachment::DERIVATIVE_POSTER] = $this->derivativePath($media, 'poster', 'webp');
             $this->derivativesStorage->write($derivatives[MediaAttachment::DERIVATIVE_POSTER], $poster->files[MediaAttachment::DERIVATIVE_LARGE]);
-            $derivatives[MediaAttachment::DERIVATIVE_THUMB] = $this->derivativePath($media, 'thumb', 'webp');
-            $this->derivativesStorage->write($derivatives[MediaAttachment::DERIVATIVE_THUMB], $poster->files[MediaAttachment::DERIVATIVE_THUMB]);
+            // Vignettes de la grille, dans toutes leurs largeurs.
+            foreach (ImageSizes::videoNames() as $name) {
+                $derivatives[$name] = $this->derivativePath($media, $name, 'webp');
+                $this->derivativesStorage->write($derivatives[$name], $poster->files[$name]);
+            }
 
             // L'EXIF déjà connu (archive importée) est gardé : une vidéo transcodée n'en a pas.
             $media->markReady($info['width'], $info['height'], $derivatives, $media->getExif(), $poster->blurhash, $info['duration']);
         } finally {
             $this->filesystem->remove($dir);
         }
+    }
+
+    /**
+     * Fabrique les copies qui manquent à un média prêt (tailles ajoutées depuis sa publication) : depuis l'original
+     * pour une image, depuis l'affiche pour une vidéo. Renvoie le nombre de copies ajoutées.
+     */
+    public function completeSizes(MediaAttachment $media): int
+    {
+        if ($media->isRemote() || !$media->isReady()) {
+            return 0;
+        }
+        $expected = $media->isVideo() ? ImageSizes::videoNames() : ImageSizes::names();
+        $missing = array_values(array_filter($expected, static fn (string $name): bool => null === $media->getDerivative($name)));
+        if ([] === $missing) {
+            return 0;
+        }
+        if ($media->isVideo()) {
+            $poster = $media->getDerivative(MediaAttachment::DERIVATIVE_POSTER);
+            if (null === $poster) {
+                return 0;
+            }
+            $source = $this->derivativesStorage->read($poster);
+        } else {
+            $source = $this->originalsStorage->read($media->getOriginalPath());
+        }
+
+        $derivatives = [];
+        foreach ($this->images->derive($source, $missing) as $name => $contents) {
+            $derivatives[$name] = $this->derivativePath($media, $name, 'webp');
+            $this->derivativesStorage->write($derivatives[$name], $contents);
+        }
+        $media->addDerivatives($derivatives);
+
+        return \count($derivatives);
     }
 
     /**
