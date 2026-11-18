@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Twig;
 
+use App\Core\Application\Post\Links;
 use App\Core\Application\Post\Mentions;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
@@ -102,7 +103,7 @@ final readonly class SocializeExtension
 
     /**
      * Texte saisi par un compte : échappé, retours à la ligne conservés,
-     * hashtags et mentions mis en valeur.
+     * adresses web en liens, hashtags et mentions mis en valeur.
      *
      * Texte importé d'Instagram : les mentions (« @compte ») désignent des comptes Instagram,
      * et mènent donc à leur profil sur Instagram plutôt qu'à un profil de l'instance.
@@ -110,9 +111,34 @@ final readonly class SocializeExtension
     #[AsTwigFilter('rich_text', isSafe: ['html'])]
     public function richText(string $text, bool $instagram = false): string
     {
+        $html = '';
+        foreach (Links::split($text) as [$isLink, $part]) {
+            $html .= $isLink ? $this->link($part) : $this->inlineText($part, $instagram);
+        }
+
+        return nl2br($html, false);
+    }
+
+    /**
+     * Adresse web : lien externe, affiché sans « https:// » et raccourci s'il est long.
+     */
+    private function link(string $url): string
+    {
+        [, $visible, $rest] = Links::display($url);
+        $e = static fn (string $s): string => htmlspecialchars($s, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
+
+        return \sprintf('<a class="link" href="%s" target="_blank" rel="noopener nofollow ugc" title="%s">%s%s</a>', $e($url), $e($url), $e($visible), '' !== $rest ? '…' : '');
+    }
+
+    /**
+     * Texte ordinaire (hors adresse web) : échappé, hashtags et mentions mis en valeur.
+     */
+    private function inlineText(string $text, bool $instagram): string
+    {
         $html = htmlspecialchars($text, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
         $html = (string) preg_replace('/(?<![\w&])#([\p{L}\p{N}_]{1,100})/u', '<span class="tag">#$1</span>', $html);
-        $html = (string) preg_replace_callback(
+
+        return (string) preg_replace_callback(
             Mentions::PATTERN,
             static fn (array $m): string => match (true) {
                 // « ig:@nom » : compte Instagram.
@@ -125,8 +151,6 @@ final readonly class SocializeExtension
             $html,
             flags: \PREG_UNMATCHED_AS_NULL,
         );
-
-        return nl2br($html, false);
     }
 
     /**

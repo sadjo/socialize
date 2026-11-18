@@ -129,6 +129,18 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas, même mentionnée.');
     }
 
+    public function testWebAddressesAreLinkedLikeMastodonDoes(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $post = $this->publish($camille, 'Le programme : https://www.exemple.fr/agenda/2026/festival-photo-de-novembre #expo', Visibility::Public);
+        $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertStringContainsString(
+            '<a href="https://www.exemple.fr/agenda/2026/festival-photo-de-novembre" rel="nofollow noopener noreferrer" target="_blank"><span class="invisible">https://www.</span><span class="ellipsis">exemple.fr/agenda/2026/festiva</span><span class="invisible">l-photo-de-novembre</span></a> <a href="http://localhost/tags/expo" class="mention hashtag" rel="tag">#<span>expo</span></a>',
+            $this->str($this->json(), 'content'),
+            'Adresse web en lien, au format de Mastodon.',
+        );
+    }
+
     public function testARemotePostMentioningALocalAccountNotifiesIt(): void
     {
         $camille = $this->register('camille');

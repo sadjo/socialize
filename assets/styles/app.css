@@ -285,6 +285,7 @@ tr:last-child td{border-bottom:0}
 .pbody{padding:2px 16px 16px;display:flex;flex-direction:column;gap:5px;font-size:.92rem}
 .pbody .meta{color:var(--muted);font-size:.86rem}
 .tag{color:var(--accent);font-weight:500}
+.link{color:var(--accent);text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
 .ago{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-top:3px}
 .xp{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted);padding:7px 10px;border-radius:10px;background:var(--surface-2);margin-top:4px;flex-wrap:wrap}
 .xp .i{color:var(--accent)}

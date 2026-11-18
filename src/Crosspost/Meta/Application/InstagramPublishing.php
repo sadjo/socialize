@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Crosspost\Meta\Application;
 
+use App\Core\Application\Post\Links;
 use App\Core\Application\Post\Mentions;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostPublished;
@@ -424,9 +425,9 @@ final readonly class InstagramPublishing
     {
         $text = trim($caption);
         if (!$imported) {
-            $text = (string) preg_replace_callback(Mentions::PATTERN, fn (array $m): string => null !== $m[1]
+            $text = Links::outside($text, fn (string $part): string => (string) preg_replace_callback(Mentions::PATTERN, fn (array $m): string => null !== $m[1]
                 ? '@'.$m[2].(null !== $m[3] ? '@'.$m[3] : '')
-                : $m[2].'@'.($m[3] ?? $this->localDomain), $text, flags: \PREG_UNMATCHED_AS_NULL);
+                : $m[2].'@'.($m[3] ?? $this->localDomain), $part, flags: \PREG_UNMATCHED_AS_NULL));
         }
         if (null !== $contentWarning && '' !== trim($contentWarning)) {
             $text = '⚠️ '.trim($contentWarning)."\n\n".$text;
