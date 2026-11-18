@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.26] - 2026-11-18
+
+Photos on iPhone.
+
+### Fixed
+
+- After a few pages of the feed, Safari on iPhone no longer showed photos (grey frames): only the photo shown in a
+  carousel and its neighbours are loaded, and posts more than two screens away release their photos and videos,
+  loaded again when they come back (feed)
+- Very dense phone screens (3x) get the copy meant for 2x screens: half the memory and data, with no visible
+  difference (feed)
+
+### Changed
+
+- New videos are capped at 3.5 Mbit/s, so they start faster on mobile networks (media)
+
 ## [0.9.25] - 2026-11-18
 
 Faster feeds.

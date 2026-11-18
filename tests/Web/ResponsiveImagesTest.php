@@ -31,7 +31,8 @@ final class ResponsiveImagesTest extends AppWebTestCase
         $crawler = $this->client->request('GET', '/');
         $img = $crawler->filter('article.post .media img')->first();
         self::assertMatchesRegularExpression('#-large_640\.webp 640w, \S+-large_960\.webp 960w, \S+-large\.webp 1440w$#', (string) $img->attr('srcset'));
-        self::assertSame('(max-width: 767px) calc(100vw * 1.67), calc(500px * 1.67)', $img->attr('sizes'));
+        // Téléphone très dense (3x) : copie d'un écran 2x, pour ménager la mémoire de Safari sur iPhone.
+        self::assertSame('(max-width: 767px) and (min-resolution: 2.5dppx) calc(67vw * 1.67), (max-width: 767px) calc(100vw * 1.67), calc(500px * 1.67)', $img->attr('sizes'));
 
         // Page de la publication : cadre plus large.
         $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
@@ -42,6 +43,34 @@ final class ResponsiveImagesTest extends AppWebTestCase
         $thumb = $crawler->filter('.grid3 .gt img')->first();
         self::assertMatchesRegularExpression('#-thumb_240\.webp 240w, \S+-thumb_360\.webp 360w, \S+-thumb\.webp 480w, \S+-thumb_720\.webp 720w$#', (string) $thumb->attr('srcset'));
         self::assertSame('(max-width: 767px) 34vw, 310px', $thumb->attr('sizes'));
+    }
+
+    /**
+     * Carrousel : seule la première photo est chargée avec la page ; les suivantes attendent leur tour (data-src),
+     * chargées par carousel_controller à l'approche.
+     */
+    public function testOnlyTheFirstPhotoOfACarouselIsLoadedWithThePage(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        self::getContainer()->get(PostComposer::class)->publish($camille->getAccount(), 'Série', [
+            ['file' => $this->jpeg(1600, 2000), 'alt' => 'Un'],
+            ['file' => $this->jpeg(1600, 2000), 'alt' => 'Deux'],
+            ['file' => $this->jpeg(1600, 2000), 'alt' => 'Trois'],
+        ]);
+
+        $crawler = $this->client->request('GET', '/');
+        $images = $crawler->filter('article.post .media .slide img');
+        self::assertCount(3, $images);
+        self::assertNotNull($images->eq(0)->attr('src'));
+        self::assertNotNull($images->eq(0)->attr('srcset'));
+        foreach ([1, 2] as $i) {
+            self::assertNull($images->eq($i)->attr('src'), 'Photo '.($i + 1).' sans src.');
+            self::assertNull($images->eq($i)->attr('srcset'));
+            self::assertStringEndsWith('-large.webp', (string) $images->eq($i)->attr('data-src'));
+            self::assertStringContainsString('-large_960.webp 960w', (string) $images->eq($i)->attr('data-srcset'));
+        }
+        // La visionneuse garde l'adresse de chaque photo.
+        self::assertSelectorCount(3, '.slide[data-lightbox-src$="-large.webp"]');
     }
 
     public function testASmallPhotoIsNotOfferedInDuplicateSizes(): void
