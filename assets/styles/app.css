@@ -409,6 +409,12 @@ tr:last-child td{border-bottom:0}
 .ptabs>:first-child{margin-left:auto}
 .ptabs>:last-child{margin-right:auto}
 .ptabs a,.ptabs button{flex:none;white-space:nowrap}
+/* Bande défilante : flèches sur les bords quand des onglets sont cachés (souris, sans barre de défilement). */
+.ptabs-wrap{position:relative}
+.ptabs-arrow{position:absolute;top:1px;bottom:0;z-index:1;width:40px;display:grid;place-items:center;color:var(--fg);cursor:pointer}
+.ptabs-arrow[hidden]{display:none}
+.ptabs-arrow.prev{left:0;justify-content:start;background:linear-gradient(to right,var(--bg) 55%,transparent)}
+.ptabs-arrow.next{right:0;justify-content:end;background:linear-gradient(to left,var(--bg) 55%,transparent)}
 .ptabs button{display:flex;align-items:center;gap:7px;height:50px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border-top:2px solid transparent;margin-top:-1px}
 .ptabs button.on{color:var(--fg);border-top-color:var(--fg)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
