@@ -101,7 +101,7 @@ jusqu'à son accord. Sur votre profil, vous pouvez retirer un abonné ou ne plus
 ou à supprimer. Les administrateurs sont aussi prévenus des nouveaux comptes.
 
 *Notifications › Sur cet appareil* active les **notifications** sur l'appareil : nouvelles publications et stories
-des comptes suivis, « J'aime » et commentaires, chaque type pouvant être coupé.
+des comptes suivis, « J'aime » et commentaires, demandes d'abonnement à valider, chaque type pouvant être coupé.
 
 ## Importer son archive Instagram
 

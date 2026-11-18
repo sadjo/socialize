@@ -25,7 +25,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 /**
  * Notifications sur les appareils (Web Push, application ajoutée à l'écran d'accueil) : nouvelles publications et
  * stories des comptes suivis (pour les abonnés de cette instance qui ont le droit de les voir), J'aime et
- * commentaires reçus. Chacun choisit ce qu'il reçoit ; l'envoi se fait en tâche de fond.
+ * commentaires reçus, demandes d'abonnement à valider. Chacun choisit ce qu'il reçoit ; l'envoi se fait en tâche de fond.
  */
 final readonly class PushNotifications
 {
@@ -76,14 +76,14 @@ final readonly class PushNotifications
         return $this->preferences->forAccount($account) ?? new NotificationPreferences($account);
     }
 
-    public function choose(Account $account, bool $posts, bool $stories, bool $likes, bool $comments): void
+    public function choose(Account $account, bool $posts, bool $stories, bool $likes, bool $comments, bool $followRequests = true): void
     {
         $preferences = $this->preferences->forAccount($account);
         if (!$preferences instanceof NotificationPreferences) {
             $preferences = new NotificationPreferences($account);
             $this->em->persist($preferences);
         }
-        $preferences->choose($posts, $stories, $likes, $comments);
+        $preferences->choose($posts, $stories, $likes, $comments, $followRequests);
         $this->em->flush();
     }
 
@@ -96,6 +96,11 @@ final readonly class PushNotifications
     {
         $post = $comment->getPost();
         $this->push($recipient, PushKind::Comment, $comment->getAccount()->getDisplayName().' a commenté votre publication', $this->excerpt($comment->getContent()), '/p/'.$post->getPublicId().'#comment-'.$comment->getPublicId(), 'comment-'.$comment->getPublicId());
+    }
+
+    public function followRequested(Account $recipient, Account $follower): void
+    {
+        $this->push($recipient, PushKind::FollowRequest, $follower->getDisplayName().' demande à vous suivre', '@'.$follower->getAcct(), '/abonnes/demandes', 'follow-request-'.$follower->getAcct());
     }
 
     /**

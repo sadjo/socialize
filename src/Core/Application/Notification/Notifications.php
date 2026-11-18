@@ -126,6 +126,7 @@ final readonly class Notifications
         }
         $this->em->persist(new Notification($account, $follow->getFollower(), NotificationType::FollowRequest, null, null, $this->clock->now()));
         $this->em->flush();
+        $this->push->followRequested($account, $follow->getFollower());
     }
 
     /** Demande acceptée : sa notification n'a plus lieu d'être. */

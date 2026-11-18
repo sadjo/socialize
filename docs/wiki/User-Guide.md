@@ -103,7 +103,7 @@ accept. On your own profile you can remove a follower or unfollow an account.
 unread, or delete them. Administrators are also notified of new accounts.
 
 *Notifications › Sur cet appareil* enables **push notifications** on the current device: new posts and stories of
-the accounts you follow, likes and comments, each type can be switched on or off.
+the accounts you follow, likes and comments, follow requests to approve, each type can be switched on or off.
 
 ## Importing your Instagram archive
 

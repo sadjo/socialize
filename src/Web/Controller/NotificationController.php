@@ -46,12 +46,13 @@ final class NotificationController extends AbstractController
         $preferences = $this->push->preferences($account);
         $form = $this->createForm(NotificationPreferencesType::class, [
             'posts' => $preferences->posts(), 'stories' => $preferences->stories(), 'likes' => $preferences->likes(), 'comments' => $preferences->comments(),
+            'followRequests' => $preferences->followRequests(),
         ]);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{posts: bool, stories: bool, likes: bool, comments: bool} $data */
+            /** @var array{posts: bool, stories: bool, likes: bool, comments: bool, followRequests: bool} $data */
             $data = $form->getData();
-            $this->push->choose($account, $data['posts'], $data['stories'], $data['likes'], $data['comments']);
+            $this->push->choose($account, $data['posts'], $data['stories'], $data['likes'], $data['comments'], $data['followRequests']);
             $this->addFlash('success', 'Choix des notifications enregistré.');
 
             return $this->back();

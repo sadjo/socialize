@@ -12,7 +12,7 @@ use Symfony\Component\Uid\Uuid;
 
 /**
  * Ce qu'un compte reçoit en notification sur ses appareils : nouvelles publications et stories des comptes suivis,
- * J'aime et commentaires sur ses publications. Tout est activé par défaut.
+ * J'aime et commentaires sur ses publications, demandes d'abonnement à valider. Tout est activé par défaut.
  */
 #[ORM\Entity(repositoryClass: NotificationPreferencesRepository::class)]
 #[ORM\Table(name: 'notification_preferences')]
@@ -34,6 +34,9 @@ class NotificationPreferences
     #[ORM\Column(options: ['default' => true])]
     private bool $comments = true;
 
+    #[ORM\Column(options: ['default' => true])]
+    private bool $followRequests = true;
+
     public function __construct(
         #[ORM\OneToOne]
         #[ORM\JoinColumn(unique: true, nullable: false, onDelete: 'CASCADE')]
@@ -42,8 +45,9 @@ class NotificationPreferences
         $this->id = Uuid::v7();
     }
 
-    public function choose(bool $posts, bool $stories, bool $likes, bool $comments): void
+    public function choose(bool $posts, bool $stories, bool $likes, bool $comments, bool $followRequests = true): void
     {
+        $this->followRequests = $followRequests;
         $this->posts = $posts;
         $this->stories = $stories;
         $this->likes = $likes;
@@ -57,6 +61,7 @@ class NotificationPreferences
             PushKind::Story => $this->stories,
             PushKind::Like => $this->likes,
             PushKind::Comment => $this->comments,
+            PushKind::FollowRequest => $this->followRequests,
         };
     }
 
@@ -83,5 +88,10 @@ class NotificationPreferences
     public function comments(): bool
     {
         return $this->comments;
+    }
+
+    public function followRequests(): bool
+    {
+        return $this->followRequests;
     }
 }
