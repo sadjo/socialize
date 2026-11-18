@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.22] - 2026-11-18
+
+Scrolling tabs on desktop.
+
+### Fixed
+
+- Settings and administration tabs that do not fit are reachable with a mouse: arrows on the edges when tabs are
+  hidden, and the mouse wheel scrolls the strip (ui)
+
 ## [0.9.21] - 2026-11-18
 
 Password change.
@@ -651,7 +660,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.21...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.22...HEAD
+[0.9.22]: https://github.com/sadjo/socialize/compare/v0.9.21...v0.9.22
 [0.9.21]: https://github.com/sadjo/socialize/compare/v0.9.20...v0.9.21
 [0.9.20]: https://github.com/sadjo/socialize/compare/v0.9.19...v0.9.20
 [0.9.19]: https://github.com/sadjo/socialize/compare/v0.9.18...v0.9.19
