@@ -7,6 +7,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.25] - 2026-11-18
+
+Faster feeds.
+
+### Added
+
+- Images received from the fediverse (and the posters of their videos) are copied to the instance in the background,
+  in the same sizes as local photos, instead of being loaded full size from their original server; the original
+  address is still used until the copy is made or if it fails. Videos stay on their instance (federation)
+- `app:media:cache-remote` queues the copies of media received before this version (console)
+
+### Changed
+
+- The home feed reads the posts of the followed accounts through an index instead of scanning the whole posts table,
+  fediverse posts included (feed)
+- Comment previews of a feed page are loaded with a single query (feed)
+- Compiled assets are cached by the browser for a year (`immutable`), so opening the app no longer revalidates every
+  script (deployment)
+- Stimulus controllers only used by forms, stories, settings, administration and imports are loaded on demand (ui)
+
+### Fixed
+
+- The *Instance* block next to the feeds is read again on every request in worker mode: a change made in the
+  administration is no longer hidden by threads that read the old text (admin)
+
 ## [0.9.24] - 2026-11-18
 
 User guide.
