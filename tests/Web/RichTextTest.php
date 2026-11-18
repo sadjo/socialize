@@ -40,6 +40,32 @@ final class RichTextTest extends TestCase
         self::assertStringContainsString('a@b', $html);
     }
 
+    public function testWebAddressesBecomeLinks(): void
+    {
+        $html = new SocializeExtension(new MediaUrls())->richText("Le programme : https://www.exemple.fr/agenda/2026/novembre/festival-photo?id=12#jour-2.\n(voir http://exemple.org) et <https://x.test/@hugo>");
+
+        self::assertStringContainsString('<a class="link" href="https://www.exemple.fr/agenda/2026/novembre/festival-photo?id=12#jour-2" target="_blank" rel="noopener nofollow ugc" title="https://www.exemple.fr/agenda/2026/novembre/festival-photo?id=12#jour-2">exemple.fr/agenda/2026/novembr…</a>.<br>', $html, 'Adresse raccourcie, sans le point final ni de hashtag dans l’ancre.');
+        self::assertStringContainsString('(voir <a class="link" href="http://exemple.org" target="_blank" rel="noopener nofollow ugc" title="http://exemple.org">exemple.org</a>)', $html, 'La parenthèse fermante n’est pas dans l’adresse.');
+        self::assertStringContainsString('&lt;<a class="link" href="https://x.test/@hugo"', $html, 'Ni mention dans une adresse, ni chevron.');
+        self::assertStringNotContainsString('mi-local', $html);
+    }
+
+    public function testAddressesWithoutSchemeBecomeLinks(): void
+    {
+        $html = new SocializeExtension(new MediaUrls())->richText('Infos sur www.exemple.fr et avec @alice@mastodon.social');
+
+        self::assertStringContainsString('<a class="link" href="https://www.exemple.fr" target="_blank" rel="noopener nofollow ugc" title="https://www.exemple.fr">exemple.fr</a>', $html);
+        self::assertStringContainsString('<a class="tag" href="/@alice@mastodon.social">', $html, 'Une adresse du fédivers reste une mention.');
+    }
+
+    public function testAnAddressWithoutHostStaysText(): void
+    {
+        $html = new SocializeExtension(new MediaUrls())->richText('https:// et https://" onmouseover="x');
+
+        self::assertStringNotContainsString('<a', $html);
+        self::assertStringContainsString('&quot;', $html);
+    }
+
     public function testRelativeDates(): void
     {
         $ext = new SocializeExtension(new MediaUrls());

@@ -129,6 +129,18 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->fediverse()->delivered('Create'), 'Une publication privée ne part pas, même mentionnée.');
     }
 
+    public function testWebAddressesAreLinkedLikeMastodonDoes(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $post = $this->publish($camille, 'Le programme : https://www.exemple.fr/agenda/2026/festival-photo-de-novembre #expo', Visibility::Public);
+        $this->client->request('GET', '/p/'.$post->getPublicId(), server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertStringContainsString(
+            '<a href="https://www.exemple.fr/agenda/2026/festival-photo-de-novembre" rel="nofollow noopener noreferrer" target="_blank"><span class="invisible">https://www.</span><span class="ellipsis">exemple.fr/agenda/2026/festiva</span><span class="invisible">l-photo-de-novembre</span></a> <a href="http://localhost/tags/expo" class="mention hashtag" rel="tag">#<span>expo</span></a>',
+            $this->str($this->json(), 'content'),
+            'Adresse web en lien, au format de Mastodon.',
+        );
+    }
+
     public function testARemotePostMentioningALocalAccountNotifiesIt(): void
     {
         $camille = $this->register('camille');
@@ -310,6 +322,36 @@ final class FederationTest extends AppWebTestCase
         $resync = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:resync'));
         $sent = $this->during(static fn (): int => $resync->execute(['publication' => $import->getPublicId()]));
         self::assertSame([], $this->ofType($sent, 'Create'));
+    }
+
+    public function testTheRefreshCommandUpdatesPostsWithLinksUnderTheirId(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/9', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        $linked = $this->publish($this->reloadAccount($camille), 'Programme sur www.exemple.fr', Visibility::Public);
+        $plain = $this->publish($this->reloadAccount($camille), 'Sans lien', Visibility::Public);
+        $this->publish($this->reloadAccount($camille), 'Privée : exemple.fr', Visibility::Private);
+        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:refresh'));
+
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--essai' => true]));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([], $sent);
+        self::assertStringContainsString('1 publication à mettre à jour', $command->getDisplay());
+
+        // Par défaut : seulement les publications avec une adresse web, sous leur identifiant, sans retrait.
+        $linkedId = 'http://localhost/p/'.$linked->getPublicId();
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--pause' => '0']));
+        $command->assertCommandIsSuccessful();
+        self::assertSame([$linkedId], $this->objectIds($sent, 'Update'));
+        self::assertSame([], $this->ofType($sent, 'Delete'));
+        self::assertSame([], $this->ofType($sent, 'Create'));
+        self::assertStringContainsString('<a href="https://www.exemple.fr"', $this->text($this->ofType($sent, 'Update')[0], 'object', 'content'));
+
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--toutes' => true, '--pause' => '0']));
+        self::assertSame([$linkedId, 'http://localhost/p/'.$plain->getPublicId()], $this->objectIds($sent, 'Update'));
+
+        $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--publications' => $plain->getPublicId(), '--pause' => '0']));
+        self::assertSame(['http://localhost/p/'.$plain->getPublicId()], $this->objectIds($sent, 'Update'));
     }
 
     public function testTheResyncCommandRemovesLeftoverCopies(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Integration\Mastodon\Application;
 
+use App\Core\Application\Post\Links;
 use App\Core\Application\Post\Mentions;
 use App\Integration\Mastodon\Infrastructure\MastodonClient;
 use Symfony\Component\Clock\ClockInterface;
@@ -63,8 +64,8 @@ final readonly class MastodonStatusSender
      */
     public static function forMastodon(string $text): string
     {
-        return (string) preg_replace_callback(Mentions::PATTERN, static fn (array $m): string => null !== $m[1]
+        return Links::outside($text, static fn (string $part): string => (string) preg_replace_callback(Mentions::PATTERN, static fn (array $m): string => null !== $m[1]
             ? Mentions::instagramUrl($m[2])
-            : $m[0], $text, flags: \PREG_UNMATCHED_AS_NULL);
+            : $m[0], $part, flags: \PREG_UNMATCHED_AS_NULL));
     }
 }

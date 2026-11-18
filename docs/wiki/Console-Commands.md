@@ -32,6 +32,7 @@ printf '%s' 'S3cret!' | docker compose exec -T app php bin/console app:user:crea
 | --- | --- |
 | `app:federation:resync <post-url-or-id>` | Withdraw old copies of a post from the fediverse, then send it again if visible. For a deleted post: `--compte=<account>` and optionally `--revisions=<n>` |
 | `app:federation:reorder <account>` | Send the posts of an account again in chronological order. Options: `--depuis=YYYY-MM-DD`, `--pause=5`, `--essai` (dry run) |
+| `app:federation:refresh <account>` | Update the content of an account's posts in the fediverse (Update, keeping their reactions; Mastodon marks them as edited), for instance so that web addresses in older captions become links. By default, only captions containing a web address. Options: `--publications=<id>,<id>`, `--toutes` (all posts), `--depuis=YYYY-MM-DD`, `--pause=1`, `--essai` (dry run) |
 | `app:federation:retract-local-only` | Withdraw from the fediverse unlisted and group posts federated by older versions. `--simulation` lists them |
 
 ## Media

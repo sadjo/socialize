@@ -80,6 +80,8 @@ Dans les légendes et les commentaires :
 | `@nom@instance` | un compte du fédivers (Mastodon, Pixelfed…) |
 | `ig:@nom` | un compte Instagram |
 
+Les adresses web (`https://…`, `www.exemple.fr`, `exemple.fr/page`) deviennent des liens, ici et dans le fédivers.
+
 Les suggestions apparaissent dès « @ » : comptes suivis, comptes d'ici, puis du fédivers. Un second « @ » bascule
 vers les comptes du fédivers seulement, et une adresse complète encore inconnue est cherchée sur son serveur. Échap
 ferme les suggestions, Ctrl+Espace les rouvre. Les comptes mentionnés sont prévenus.

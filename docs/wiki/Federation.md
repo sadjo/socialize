@@ -44,6 +44,10 @@ bin/console app:federation:resync https://photos.example.org/p/1Ch1rCiDZ7zSfRdPM
 bin/console app:federation:reorder alice --essai               # dry run
 bin/console app:federation:reorder alice --depuis=2025-09-05   # since a date, 5 s pause between posts
 
+# Update posts already in the fediverse (e.g. links in older captions), keeping their reactions; Mastodon marks them as edited
+bin/console app:federation:refresh alice --essai               # dry run: posts whose caption contains a web address
+bin/console app:federation:refresh alice --publications=<id>   # only some posts (--toutes: all of them)
+
 # Withdraw unlisted and group posts that were federated by older versions
 bin/console app:federation:retract-local-only --simulation
 ```

@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.19] - 2026-11-18
+
+Links in captions.
+
+### Added
+
+- Web addresses in captions, comments and bios become links, with or without `http(s)://`, shortened for display
+  and federated in the Mastodon format (posts)
+- `app:federation:refresh` sends the current content of an account's posts to the fediverse under their id, keeping
+  their reactions; by default only posts whose caption contains a web address (federation)
+
+### Fixed
+
+- A `#fragment` or an `@name` inside a web address is no longer taken for a hashtag or a mention (posts)
+
 ## [0.9.18] - 2026-11-18
 
 Composer lock file fix.
@@ -617,7 +632,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.18...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.19...HEAD
+[0.9.19]: https://github.com/sadjo/socialize/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/sadjo/socialize/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/sadjo/socialize/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/sadjo/socialize/compare/v0.9.15...v0.9.16

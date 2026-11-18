@@ -32,6 +32,7 @@ printf '%s' 'S3cret!' | docker compose exec -T app php bin/console app:user:crea
 | --- | --- |
 | `app:federation:resync <adresse-ou-identifiant>` | Retire du fédivers les anciennes copies d'une publication, puis la renvoie si elle est visible. Publication supprimée : `--compte=<compte>` et au besoin `--revisions=<n>` |
 | `app:federation:reorder <compte>` | Renvoie les publications d'un compte dans l'ordre chronologique. Options : `--depuis=AAAA-MM-JJ`, `--pause=5`, `--essai` (simulation) |
+| `app:federation:refresh <compte>` | Met à jour dans le fédivers le contenu des publications d'un compte (Update, sans perdre leurs réactions ; Mastodon les marque « modifiées »), par exemple pour que les adresses web des anciennes légendes deviennent des liens. Par défaut, seulement les légendes avec une adresse web. Options : `--publications=<id>,<id>`, `--toutes`, `--depuis=AAAA-MM-JJ`, `--pause=1`, `--essai` (simulation) |
 | `app:federation:retract-local-only` | Retire du fédivers les publications non répertoriées et de groupe envoyées par d'anciennes versions. `--simulation` pour les lister |
 
 ## Médias

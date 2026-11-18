@@ -44,6 +44,10 @@ bin/console app:federation:resync https://photos.example.org/p/1Ch1rCiDZ7zSfRdPM
 bin/console app:federation:reorder alice --essai               # simulation
 bin/console app:federation:reorder alice --depuis=2025-09-05   # depuis une date, pause de 5 s entre deux
 
+# Mettre à jour les publications déjà dans le fédivers (ex. liens des anciennes légendes), sans perdre leurs réactions ; Mastodon les marque « modifiées »
+bin/console app:federation:refresh alice --essai               # simulation : publications dont la légende contient une adresse web
+bin/console app:federation:refresh alice --publications=<id>   # seulement certaines (--toutes : toutes)
+
 # Retirer du fédivers les publications non répertoriées et de groupe envoyées par d'anciennes versions
 bin/console app:federation:retract-local-only --simulation
 ```

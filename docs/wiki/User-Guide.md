@@ -82,6 +82,8 @@ In captions and comments:
 | `@name@instance` | an account of the fediverse (Mastodon, Pixelfed…) |
 | `ig:@name` | an Instagram account |
 
+Web addresses (`https://…`, `www.example.org`, `example.org/page`) become links, here and in the fediverse.
+
 Suggestions appear as soon as you type `@`: accounts you follow, local accounts, then fediverse accounts. A second
 `@` switches to fediverse accounts only, and an unknown full address is looked up on its server. `Esc` closes the
 suggestions, `Ctrl+Space` opens them again. Mentioned accounts are notified.

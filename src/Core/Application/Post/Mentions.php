@@ -86,7 +86,7 @@ final readonly class Mentions
      */
     private function matches(string $text): array
     {
-        preg_match_all(self::PATTERN, $text, $all, \PREG_SET_ORDER | \PREG_UNMATCHED_AS_NULL);
+        preg_match_all(self::PATTERN, Links::without($text), $all, \PREG_SET_ORDER | \PREG_UNMATCHED_AS_NULL);
 
         return array_map(static fn (array $m): array => [null !== $m[1], (string) $m[2], $m[3]], $all);
     }
