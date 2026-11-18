@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-narrow admin">
-    <div class="page-h"><div class="grow"><h1>Administration</h1><p>Le bloc « Instance » s’affiche à côté des fils Publications, Local et Fédéré.</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Administration{{ ui.help('administration', 'bloc-instance', 'le bloc Instance') }}</h1><p>Le bloc « Instance » s’affiche à côté des fils Publications, Local et Fédéré.</p></div></div>
     {{ include('admin/_tabs.html.twig', {current: 'instance'}) }}
 
     <section class="card">

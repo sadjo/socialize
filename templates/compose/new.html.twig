@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="compose">
-    <div class="page-h"><div class="grow"><h1>Nouvelle publication</h1><p>Jusqu’à 20 photos ou vidéos. Les originaux et leurs métadonnées sont conservés ; les copies publiques ne contiennent pas votre position GPS.</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Nouvelle publication{{ ui.help('publier', 'créer-une-publication', 'la publication') }}</h1><p>Jusqu’à 20 photos ou vidéos. Les originaux et leurs métadonnées sont conservés ; les copies publiques ne contiennent pas votre position GPS.</p></div></div>
 
     {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 20, 'data-compose-alt-name-value': 'compose_post[altTexts][__key__]'}}) }}
         {{ form_errors(form) }}

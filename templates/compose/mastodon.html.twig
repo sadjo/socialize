@@ -1,4 +1,5 @@
 {% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
 
 {% block title %}Nouvelle publication · Socialize{% endblock %}
 
@@ -6,7 +7,7 @@
 {# Publication sur un compte Mastodon (connexion Mastodon) : médias de l'appareil, dans les limites de son serveur.
    Variables : form, limits (MastodonLimits), domain #}
 <div class="compose">
-    <div class="page-h"><div class="grow"><h1>Nouvelle publication</h1><p>Publiée sur votre compte de {{ domain }} : jusqu’à {{ limits.maxMedia }} photos ou vidéos et {{ limits.maxCharacters|format_number(locale: 'fr') }} caractères, comme le permet votre serveur.</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Nouvelle publication{{ ui.help('mastodon', 'ce-qui-change-avec-un-compte-mastodon', 'la publication sur Mastodon') }}</h1><p>Publiée sur votre compte de {{ domain }} : jusqu’à {{ limits.maxMedia }} photos ou vidéos et {{ limits.maxCharacters|format_number(locale: 'fr') }} caractères, comme le permet votre serveur.</p></div></div>
 
     {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': limits.maxMedia, 'data-compose-caption-max-value': limits.maxCharacters, 'data-compose-alt-name-value': 'mastodon_compose[altTexts][__key__]'}}) }}
         {{ form_errors(form) }}

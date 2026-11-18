@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-narrow">
-    <div class="page-h"><div class="grow"><h1>Réglages</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Réglages{{ ui.help('compte-et-reglages', 'profil', 'le profil') }}</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
     {{ include('settings/_tabs.html.twig', {current: 'profile'}) }}
     <section class="card">
         <h2>Profil public</h2>

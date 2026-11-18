@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-narrow">
-    <div class="page-h"><div class="grow"><h1>{{ group.name }}</h1><p>Groupe d’abonnés · {{ group.members|length }} membre{{ group.members|length > 1 ? 's' }}</p></div>
+    <div class="page-h"><div class="grow"><h1>{{ group.name }}{{ ui.help('groupes', 'créer-un-groupe', 'les groupes') }}</h1><p>Groupe d’abonnés · {{ group.members|length }} membre{{ group.members|length > 1 ? 's' }}</p></div>
         <a class="btn" href="{{ path('app_settings_groups') }}">Retour aux groupes</a></div>
 
     {{ form_start(form, {attr: {class: 'form card'}}) }}

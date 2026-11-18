@@ -8,7 +8,7 @@
 {% set unread = notifications|filter(n => not n.read)|length %}
 <div class="page-narrow">
     <div class="page-h">
-        <div class="grow"><h1>Notifications</h1><p>Les « J’aime », commentaires et mentions reçus{{ is_granted('ROLE_ADMIN') ? ', et les nouveaux comptes de l’instance' }}. {{ unread ? unread ~ ' non lue' ~ (unread > 1 ? 's') ~ '.' : 'Tout est lu.' }}</p></div>
+        <div class="grow"><h1>Notifications{{ ui.help('notifications', null, 'les notifications') }}</h1><p>Les « J’aime », commentaires et mentions reçus{{ is_granted('ROLE_ADMIN') ? ', et les nouveaux comptes de l’instance' }}. {{ unread ? unread ~ ' non lue' ~ (unread > 1 ? 's') ~ '.' : 'Tout est lu.' }}</p></div>
         {% if notifications is not empty %}
             <div class="row wrap">
                 {% if unread %}

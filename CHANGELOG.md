@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.24] - 2026-11-18
+
+User guide.
+
+### Added
+
+- User guide in English and French, written once in `docs/guide` and published in the app (`/aide`, readable without
+  an account, administration chapter for administrators), on the wiki and on the website (`guide/`) (docs)
+- Discreet *Aide* link under the menu and small *?* next to page titles, leading to the matching part of the guide (ui)
+- `make guide` builds the wiki and website pages of the guide locally (docs)
+
+### Changed
+
+- The *User Guide* and *Guide d'utilisation* wiki pages are now generated from `docs/guide` (docs)
+
 ## [0.9.23] - 2026-11-18
 
 Test fix.
@@ -669,7 +684,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.23...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.24...HEAD
+[0.9.24]: https://github.com/sadjo/socialize/compare/v0.9.23...v0.9.24
 [0.9.23]: https://github.com/sadjo/socialize/compare/v0.9.22...v0.9.23
 [0.9.22]: https://github.com/sadjo/socialize/compare/v0.9.21...v0.9.22
 [0.9.21]: https://github.com/sadjo/socialize/compare/v0.9.20...v0.9.21
