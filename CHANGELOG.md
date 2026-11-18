@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.18] - 2026-11-18
+
+Composer lock file fix.
+
+### Fixed
+
+- `composer.lock` is in sync with `composer.json`: `composer validate --strict` passes again (ci)
+
 ## [0.9.17] - 2026-11-18
 
 Open source release.
@@ -609,7 +617,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.17...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.18...HEAD
+[0.9.18]: https://github.com/sadjo/socialize/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/sadjo/socialize/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/sadjo/socialize/compare/v0.9.15...v0.9.16
 [0.9.15]: https://github.com/sadjo/socialize/compare/v0.9.14...v0.9.15
