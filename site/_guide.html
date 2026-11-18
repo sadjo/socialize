@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} · {{ guide }} · Socialize</title>
+<link rel="icon" href="{{ root }}assets/icon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="{{ other_lang }}" href="{{ other_href }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<!-- Pages du guide d'utilisation, produites par tools/guide/build.py (gabarit, non publié tel quel). -->
+<style>
+:root{
+  --bg:#f7f6fb; --surface:#fff; --surface-2:#f0eef7; --line:#e3e0ee; --fg:#1d1a2b; --muted:#5f5a75; --accent:#6d3fd6;
+  --grad:linear-gradient(125deg,#4f5bd5,#a24fd0 52%,#f08a6b); --code-bg:#1d1a2b; --code-fg:#f3f0ff; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13111c; --surface:#1b1827; --surface-2:#242033; --line:#353049; --fg:#f2f0f8; --muted:#aaa4c0; --accent:#b49cff;
+    --code-bg:#0c0a13; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13111c; --surface:#1b1827; --surface-2:#242033; --line:#353049; --fg:#f2f0f8; --muted:#aaa4c0; --accent:#b49cff;
+  --code-bg:#0c0a13; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3{font-family:"Plus Jakarta Sans",Inter,sans-serif;line-height:1.2}
+.wrap{max-width:1160px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:10;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--bg) 78%,transparent);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:16px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Plus Jakarta Sans",sans-serif;font-weight:800;font-size:20px;color:var(--fg)}
+.brand:hover{text-decoration:none}
+.brand img{width:32px;height:32px;border-radius:9px}
+.brand b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.top .sp{margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.btn:hover{text-decoration:none;border-color:var(--accent)}
+.theme{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;width:38px;height:38px;cursor:pointer;font-size:16px}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;padding:36px 16px 72px}
+.layout.single{grid-template-columns:minmax(0,1fr)}
+.side{position:sticky;top:96px;align-self:start;font-size:14px}
+.side b{display:block;margin-bottom:8px;color:var(--muted);font-weight:600}
+.side ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.side a{display:block;padding:6px 10px;border-radius:8px;color:var(--fg)}
+.side a:hover{background:var(--surface-2);text-decoration:none}
+.side li.on a{background:var(--surface-2);font-weight:600}
+article{max-width:760px}
+article h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.01em;margin:0 0 16px}
+article h2{font-size:22px;margin:40px 0 10px;scroll-margin-top:84px}
+article h3{font-size:18px;margin:28px 0 8px;scroll-margin-top:84px}
+article .lead{color:var(--muted);font-size:18px}
+article ol.chapters{display:grid;gap:8px;padding-left:1.3em}
+article ol.chapters a{font-weight:600}
+article small{color:var(--muted)}
+article code{font:14px ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--surface-2);padding:.1em .35em;border-radius:5px}
+article pre{background:var(--code-bg);color:var(--code-fg);border-radius:12px;padding:14px 16px;overflow-x:auto}
+article pre code{background:none;padding:0;color:inherit;font-size:13px}
+article table{width:100%;border-collapse:collapse;margin:16px 0;font-size:15px;display:block;overflow-x:auto}
+article th,article td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+article th{color:var(--muted);font-weight:600}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:48px}
+footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:14px}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;gap:20px;padding-top:24px}
+  .side{position:static;order:2;border-top:1px solid var(--line);padding-top:20px}
+  .top .sp{white-space:nowrap}
+  .side ol{flex-direction:row;flex-wrap:wrap;gap:6px}
+  .side a{border:1px solid var(--line)}
+}
+@media (max-width:480px){
+  .top .sp{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="{{ root }}"><img src="{{ root }}assets/icon.svg" alt=""><span>Social<b>ize</b></span></a>
+    <a class="sp" href="index.html">{{ guide }}</a>
+    <a class="btn" href="{{ other_href }}" hreflang="{{ other_lang }}">{{ other_label }}</a>
+    <button class="theme" type="button" id="theme" aria-label="Toggle dark mode">◐</button>
+  </div>
+</header>
+<div class="wrap layout{{ layout }}">
+  {{ side }}
+  <article>{{ content }}</article>
+</div>
+<footer><div class="wrap"><a href="{{ root }}">{{ home }}</a> · <a href="https://github.com/sadjo/socialize">GitHub</a> · <a href="https://github.com/sadjo/socialize/wiki">Wiki</a></div></footer>
+<script>
+(function () {
+  var root = document.documentElement, key = 'socialize-site-theme';
+  try { var saved = localStorage.getItem(key); if (saved) root.dataset.theme = saved; } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ name: Wiki
 on:
   push:
     branches: [main]
-    paths: ['docs/wiki/**', '.github/workflows/wiki.yml']
+    paths: ['docs/wiki/**', 'docs/guide/**', 'tools/guide/**', '.github/workflows/wiki.yml']
   workflow_dispatch:
 
 permissions:
@@ -19,6 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      # User guide pages (User-Guide, Guide-d-utilisation) are built from docs/guide, also shown in the app (/aide).
+      - name: Build the user guide pages
+        run: |
+          pip install --quiet pyyaml
+          python tools/guide/build.py wiki docs/wiki
       - name: Push pages to the wiki
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}

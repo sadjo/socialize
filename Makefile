@@ -3,7 +3,7 @@ DC   = docker compose -f compose.yaml -f compose.dev.yaml
 EXEC = $(DC) exec app
 
 .DEFAULT_GOAL := help
-.PHONY: help build up down logs sh console composer test quality fix prod immich-up immich-seed immich-down
+.PHONY: help build up down logs sh console composer test quality fix prod guide immich-up immich-seed immich-down
 
 help: ## Afficher cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -31,6 +31,12 @@ composer: ## Lancer Composer : make composer c="require symfony/uid"
 
 test: ## Lancer les tests
 	$(EXEC) php bin/phpunit
+
+guide: ## Construire le guide d'utilisation pour le wiki et le site dans var/guide (à relire avant publication)
+	docker run --rm -u $$(id -u):$$(id -g) -v $(CURDIR):/app -w /app -e HOME=/tmp python:3.13-slim sh -c \
+		"pip install -q --user markdown pyyaml 2>/dev/null && python tools/guide/build.py wiki var/guide/wiki \
+		&& python tools/guide/build.py site var/guide/site --template tools/socialize/overlay/site/_guide.html"
+	@echo "Wiki : var/guide/wiki · site : var/guide/site/guide/index.html"
 
 quality: ## Style, Rector, PHPStan et Deptrac (comme la CI)
 	$(EXEC) php bin/console cache:warmup --env=dev -q

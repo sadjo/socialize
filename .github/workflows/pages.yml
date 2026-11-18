@@ -3,7 +3,7 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'docs/assets/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'docs/assets/**', 'docs/guide/**', 'tools/guide/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -30,6 +30,15 @@ jobs:
           cp -r docs/assets/. _site/assets/
           cp public/icons/icon.svg _site/assets/icon.svg
           cp install.sh _site/install.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      # User guide pages (guide/, guide/fr/) built from docs/guide, also shown in the app (/aide).
+      - name: Build the user guide
+        run: |
+          pip install --quiet markdown pyyaml
+          python tools/guide/build.py site _site --template site/_guide.html
+          rm _site/_guide.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
