@@ -16,16 +16,20 @@ use App\Media\Application\MediaProcessingException;
 use App\Media\Application\ProfileImage;
 use App\Media\Application\ProfileImages;
 use App\Web\Form\AppearanceSettingsType;
+use App\Web\Form\ChangePasswordType;
 use App\Web\Form\ProfileSettingsType;
 use App\Web\Security\CurrentAccount;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Authenticator\Passport\Badge\RememberMeBadge;
 
 final class SettingsController extends AbstractController
 {
@@ -106,6 +110,36 @@ final class SettingsController extends AbstractController
         $samples = $posts->profileTimeline($account, Visibility::cases(), null, self::FILTER_SAMPLES, $account)->posts;
 
         return $this->render('settings/appearance.html.twig', ['form' => $form, 'account' => $account, 'samples' => $samples]);
+    }
+
+    /**
+     * Mot de passe, changé par la personne elle-même (comptes de cette instance ; un compte Mastodon n'en a pas ici).
+     * Ses autres sessions et appareils mémorisés sont déconnectés ; celle-ci reste ouverte.
+     */
+    #[Route('/reglages/mot-de-passe', name: 'app_settings_password', methods: ['GET', 'POST'])]
+    public function password(Request $request, UserPasswordHasherInterface $hasher, EntityManagerInterface $em, Security $security): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('Réglage réservé aux comptes de cette instance.');
+        }
+        $form = $this->createForm(ChangePasswordType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var array{currentPassword: string, newPassword: string} $data */
+            $data = $form->getData();
+            $user->changePassword($hasher->hashPassword($user, $data['newPassword']));
+            $em->flush();
+            // Le mot de passe fait partie de la session et du cookie « rester connecté » : sans nouvelle connexion,
+            // cet appareil serait déconnecté lui aussi (cookie refait s'il en avait un).
+            $security->login($user, badges: $request->cookies->has('REMEMBERME') ? [new RememberMeBadge()->enable()] : []);
+            $this->addFlash('success', 'Mot de passe changé. Vos autres appareils devront se reconnecter.');
+
+            return $this->redirectToRoute('app_settings_password', status: Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('settings/password.html.twig', ['form' => $form, 'account' => $user->getAccount()]);
     }
 
     private function uploaded(mixed $data): ?UploadedFile

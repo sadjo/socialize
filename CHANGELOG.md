@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.21] - 2026-11-18
+
+Password change.
+
+### Added
+
+- *Réglages › Mot de passe*: people change their own password with the current one; other sessions and remembered
+  devices are signed out, the current one stays signed in (settings)
+
 ## [0.9.20] - 2026-11-18
 
 Follow requests.
@@ -642,7 +651,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.20...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.21...HEAD
+[0.9.21]: https://github.com/sadjo/socialize/compare/v0.9.20...v0.9.21
 [0.9.20]: https://github.com/sadjo/socialize/compare/v0.9.19...v0.9.20
 [0.9.19]: https://github.com/sadjo/socialize/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/sadjo/socialize/compare/v0.9.17...v0.9.18

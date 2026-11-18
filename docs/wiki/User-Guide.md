@@ -12,6 +12,8 @@
   *Valider moi-même les demandes d'abonnement* makes every new follower, local or from the fediverse, wait for your
   approval; requests show up in your notifications and are handled on the *Demandes* page of your profile (Accepter,
   Refuser). Unticking the setting accepts the pending requests.
+- **Password** (*Réglages › Mot de passe*): changed by entering the current one (at least 10 characters); your other
+  devices are signed out, the current one stays signed in.
 - **Appearance** (*Réglages › Apparence*): light, dark, night violet or automatic theme, previewed instantly, and a
   **media filter** (off, light, medium, strong) that softens the colors of photos and videos in feeds and grids —
   post pages, the viewer and stories keep the original colors.

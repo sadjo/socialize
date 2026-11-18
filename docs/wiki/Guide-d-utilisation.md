@@ -10,6 +10,8 @@
   *Valider moi-même les demandes d'abonnement* : chaque nouvel abonné, d'ici ou du fédivers, attend votre accord ;
   les demandes arrivent dans les notifications et se traitent sur la page *Demandes* du profil (Accepter, Refuser).
   Décocher le réglage accepte les demandes en attente.
+- **Mot de passe** (*Réglages › Mot de passe*) : changé avec le mot de passe actuel (10 caractères au minimum) ; vos
+  autres appareils sont déconnectés, celui-ci reste connecté.
 - **Apparence** (*Réglages › Apparence*) : thème clair, sombre, violet nuit ou automatique, avec aperçu immédiat, et
   **filtre des médias** (désactivé, léger, moyen, marqué) qui adoucit les couleurs des photos et vidéos dans les fils
   et les grilles — la page d'une publication, la visionneuse et les stories gardent les couleurs d'origine.

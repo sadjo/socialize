@@ -1,8 +1,9 @@
-{# Onglets des réglages. Variable : current ('profile', 'appearance', 'groups', 'immich', 'synology' ou 'instagram') #}
+{# Onglets des réglages. Variable : current ('profile', 'appearance', 'password', 'groups', 'immich', 'synology' ou 'instagram') #}
 {% import '_macros.html.twig' as ui %}
 <nav class="ptabs ptabs-scroll" aria-label="Réglages" data-controller="tabs">
     <a href="{{ path('app_settings') }}" class="{{ current == 'profile' ? 'on' }}"{{ current == 'profile' ? ' aria-current="page"' }}>{{ ui.icon('user', 'xs') }}Profil</a>
     <a href="{{ path('app_settings_appearance') }}" class="{{ current == 'appearance' ? 'on' }}"{{ current == 'appearance' ? ' aria-current="page"' }}>{{ ui.icon('moon', 'xs') }}Apparence</a>
+    {% if not is_granted('ROLE_MASTODON') %}<a href="{{ path('app_settings_password') }}" class="{{ current == 'password' ? 'on' }}"{{ current == 'password' ? ' aria-current="page"' }}>{{ ui.icon('key', 'xs') }}Mot de passe</a>{% endif %}
     <a href="{{ path('app_settings_groups') }}" class="{{ current == 'groups' ? 'on' }}"{{ current == 'groups' ? ' aria-current="page"' }}>{{ ui.icon('stack', 'xs') }}Groupes</a>
     {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_immich') }}" class="{{ current == 'immich' ? 'on' }}"{{ current == 'immich' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Immich</a>{% endif %}
     {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_synology_photos') }}" class="{{ current == 'synology' ? 'on' }}"{{ current == 'synology' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Synology</a>{% endif %}
