@@ -7,12 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.17] - 2026-11-18
+
+Open source release.
+
 ### Added
 
 - Open source release under the AGPL-3.0, with a one-line installer (`install.sh`)
 - Bilingual documentation (English and French) in the wiki, website with screenshots and demo video
 - GitHub Actions: CI, multi-architecture release images on GHCR, website and wiki publishing
 - Contributing guide, code of conduct, security policy, issue and pull request templates
+
+### Fixed
+
+- Restore border-box sizing on every element: the full-screen viewer no longer overflows the screen (ui)
+- Pass SortDirection instead of 'ASC' / 'DESC' strings to Doctrine (db)
 
 ## [0.9.16] - 2026-11-18
 
@@ -600,7 +609,8 @@ Accounts, photo and video posts, feed and profile.
 
 Project foundation.
 
-[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.16...HEAD
+[Unreleased]: https://github.com/sadjo/socialize/compare/v0.9.17...HEAD
+[0.9.17]: https://github.com/sadjo/socialize/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/sadjo/socialize/compare/v0.9.15...v0.9.16
 [0.9.15]: https://github.com/sadjo/socialize/compare/v0.9.14...v0.9.15
 [0.9.14]: https://github.com/sadjo/socialize/compare/v0.9.13...v0.9.14
