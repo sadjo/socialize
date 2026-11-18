@@ -65,6 +65,7 @@ final class ProfileController extends AbstractController
                 $highlights->forAccount($account),
                 static fn (Highlight $h): bool => $stories->highlight($h, $viewer) instanceof \App\Core\Application\Story\StoryGroup,
             )),
+            'pending_requests' => $isOwner ? $follows->countPendingRequests($account) : 0,
             'stats' => [
                 'posts' => $posts->countForProfile($account, $visible, $viewer),
                 'followers' => $follows->countFollowers($account),
@@ -188,14 +189,54 @@ final class ProfileController extends AbstractController
     {
         $this->denyAccessUnlessGranted('ROLE_USER');
         $follower = $this->account($username);
-        if (!$this->isCsrfTokenValid('remove-follower-'.$follower->getAcct(), $request->request->getString('_token'))) {
+
+        // Le refus d'une demande d'abonnement passe aussi par ici (jeton propre aux demandes).
+        if (!$this->isCsrfTokenValid('remove-follower-'.$follower->getAcct(), $request->request->getString('_token'))
+            && !$this->isCsrfTokenValid('follow-request-'.$follower->getAcct(), $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
         }
-
         $viewer = $this->currentAccount->require();
         $social->removeFollower($viewer, $follower);
 
         return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_profile_followers', ['username' => $viewer->getAcct()]), Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Demandes d'abonnement à valider par le compte connecté (réglage « Valider moi-même les demandes d'abonnement »).
+     */
+    #[Route('/abonnes/demandes', name: 'app_follow_requests', methods: ['GET'])]
+    public function followRequests(FollowRepository $follows): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        $account = $this->currentAccount->require();
+
+        return $this->render('profile/follow_requests.html.twig', [
+            'account' => $account,
+            'requests' => $follows->pendingRequestsOf($account),
+            'stats' => [
+                'followers' => $follows->countFollowers($account),
+                'following' => $follows->countFollowing($account),
+                'requests' => $follows->countPendingRequests($account),
+            ],
+        ]);
+    }
+
+    /**
+     * Accepte la demande d'abonnement de ce compte (la refuser : app_profile_remove_follower).
+     */
+    #[Route('/@{username}/accepter-l-abonnement', name: 'app_follow_request_accept', requirements: ['username' => self::ACCT], methods: ['POST'])]
+    public function acceptFollower(string $username, Request $request, SocialActions $social): \Symfony\Component\HttpFoundation\RedirectResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        $follower = $this->account($username);
+        if (!$this->isCsrfTokenValid('follow-request-'.$follower->getAcct(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
+        }
+        if ($social->acceptFollower($this->currentAccount->require(), $follower)) {
+            $this->addFlash('success', \sprintf('%s fait maintenant partie de vos abonnés.', $follower->getDisplayName()));
+        }
+
+        return $this->redirectToRoute('app_follow_requests', status: Response::HTTP_SEE_OTHER);
     }
 
     /**
@@ -219,10 +260,11 @@ final class ProfileController extends AbstractController
             'route' => 'followers' === $list ? 'app_profile_followers' : 'app_profile_following',
             'page' => $page,
             'allowed' => $allowed,
-            'is_owner' => $viewer instanceof Account && $viewer->getId()->equals($account->getId()),
+            'is_owner' => $isOwner = $viewer instanceof Account && $viewer->getId()->equals($account->getId()),
             'stats' => [
                 'followers' => $follows->countFollowers($account),
                 'following' => $follows->countFollowing($account),
+                'requests' => $isOwner ? $follows->countPendingRequests($account) : 0,
             ],
         ];
 

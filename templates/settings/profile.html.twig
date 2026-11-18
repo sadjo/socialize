@@ -15,6 +15,7 @@
             {{ form_row(form.displayName) }}
             {{ form_row(form.bio) }}
             <label class="chk">{{ form_widget(form.hideNetwork) }}<span>{{ form.hideNetwork.vars.label }}<br><small>Les autres visiteurs verront seulement le nombre d’abonnés et d’abonnements.</small></span></label>
+            <label class="chk">{{ form_widget(form.approveFollowers) }}<span>{{ form.approveFollowers.vars.label }}<br><small>Chaque nouvel abonné, d’ici ou du fédivers, attend votre accord avant de voir vos publications réservées aux abonnés. En décochant, les demandes en attente sont acceptées.{% if pending_requests %} <a class="lnk" href="{{ path('app_follow_requests') }}">{{ pending_requests }} demande{{ pending_requests > 1 ? 's' }} en attente</a>{% endif %}</small></span></label>
             <div><button class="btn pri">Enregistrer</button></div>
         {{ form_end(form) }}
     </section>

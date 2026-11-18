@@ -46,7 +46,7 @@
                         {% if follow_pending %}
                             <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('follow-' ~ account.acct) }}">
-                                <button class="btn sm done" title="L’instance de ce compte n’a pas encore confirmé">Demande envoyée · Annuler</button>
+                                <button class="btn sm done" title="En attente de l’accord de ce compte">Demande envoyée · Annuler</button>
                             </form>
                         {% elseif is_following %}
                             <form method="post" action="{{ path('app_profile_unfollow', {username: account.acct}) }}">
@@ -122,5 +122,6 @@
         <span title="Liste réservée aux abonnés"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</span>
         <span title="Liste réservée aux abonnés"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</span>
     {% endif %}
+    {% if pending_requests|default(0) %}<a href="{{ path('app_follow_requests') }}"><b>{{ pending_requests|format_number(locale: 'fr') }}</b> demande{{ pending_requests > 1 ? 's' }}</a>{% endif %}
 </div>
 {% endblock %}

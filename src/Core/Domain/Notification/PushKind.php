@@ -13,4 +13,5 @@ enum PushKind: string
     case Story = 'story';
     case Like = 'like';
     case Comment = 'comment';
+    case FollowRequest = 'follow_request';
 }

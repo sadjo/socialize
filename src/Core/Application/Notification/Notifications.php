@@ -7,7 +7,11 @@ namespace App\Core\Application\Notification;
 use App\Core\Application\Post\Mentions;
 use App\Core\Application\Post\PostAccess;
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Event\AccountRegistered;
+use App\Core\Domain\Event\AccountUnfollowed;
+use App\Core\Domain\Event\FollowerRemoved;
+use App\Core\Domain\Event\FollowRequestAccepted;
 use App\Core\Domain\Event\PostPublished;
 use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Notification\Notification;
@@ -22,7 +26,8 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
  * Notifications des comptes locaux : « J'aime » et commentaires reçus sur leurs publications, venus d'ici ou du
- * fédivers (jamais pour ses propres actions) ; mentions dans une légende ; nouveaux comptes, pour les administrateurs. Lues ou non lues, supprimées une à une ou toutes ensemble.
+ * fédivers (jamais pour ses propres actions) ; mentions dans une légende ; demandes d'abonnement à valider ; nouveaux
+ * comptes, pour les administrateurs. Lues ou non lues, supprimées une à une ou toutes ensemble.
  */
 final readonly class Notifications
 {
@@ -105,6 +110,57 @@ final readonly class Notifications
     {
         if ($event->contentChanged) {
             $this->mentionedInCaption($event->post);
+        }
+    }
+
+    /**
+     * Demande d'abonnement à valider, venue d'ici (abonnement en attente) ou du fédivers (InboxProcessor).
+     */
+    #[AsEventListener]
+    public function onAccountFollowed(AccountFollowed $event): void
+    {
+        $follow = $event->follow;
+        $account = $follow->getFollowing();
+        if ($follow->isAccepted() || !$account->isLocal() || !$account->manuallyApprovesFollowers()) {
+            return;
+        }
+        $this->em->persist(new Notification($account, $follow->getFollower(), NotificationType::FollowRequest, null, null, $this->clock->now()));
+        $this->em->flush();
+        $this->push->followRequested($account, $follow->getFollower());
+    }
+
+    /** Demande acceptée : sa notification n'a plus lieu d'être. */
+    #[AsEventListener]
+    public function onFollowRequestAccepted(FollowRequestAccepted $event): void
+    {
+        $this->followRequestHandled($event->follow->getFollowing(), $event->follow->getFollower());
+    }
+
+    /** Demande refusée (ou abonné retiré). */
+    #[AsEventListener]
+    public function onFollowerRemoved(FollowerRemoved $event): void
+    {
+        $this->followRequestHandled($event->account, $event->follower);
+    }
+
+    /** Demande annulée par son auteur. */
+    #[AsEventListener]
+    public function onAccountUnfollowed(AccountUnfollowed $event): void
+    {
+        $this->followRequestHandled($event->following, $event->follower);
+    }
+
+    /**
+     * Demande d'abonnement traitée, annulée ou retirée : sa notification est supprimée.
+     */
+    public function followRequestHandled(Account $account, Account $follower): void
+    {
+        $found = $this->notifications->findBy(['recipient' => $account, 'actor' => $follower, 'type' => NotificationType::FollowRequest]);
+        foreach ($found as $notification) {
+            $this->em->remove($notification);
+        }
+        if ([] !== $found) {
+            $this->em->flush();
         }
     }
 

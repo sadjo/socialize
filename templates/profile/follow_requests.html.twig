@@ -1,0 +1,47 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}Demandes d’abonnement · Socialize{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+    <div class="page-h">
+        <a href="{{ path('app_profile', {username: account.acct}) }}" aria-label="Retour à votre profil">{{ ui.avatar(account, 48) }}</a>
+        <div class="grow"><h1>Demandes d’abonnement</h1><p>{{ handle(account, local_domain) }}</p></div>
+    </div>
+    <nav class="ptabs" aria-label="Listes du compte">
+        <a href="{{ path('app_profile_followers', {username: account.acct}) }}"><span class="num">{{ stats.followers|format_number(locale: 'fr') }}</span> abonné{{ stats.followers > 1 ? 's' }}</a>
+        <a href="{{ path('app_profile_following', {username: account.acct}) }}"><span class="num">{{ stats.following|format_number(locale: 'fr') }}</span> abonnement{{ stats.following > 1 ? 's' }}</a>
+        <a href="{{ path('app_follow_requests') }}" class="on" aria-current="page"><span class="num">{{ stats.requests|format_number(locale: 'fr') }}</span> demande{{ stats.requests > 1 ? 's' }}</a>
+    </nav>
+    {% if not account.manuallyApprovesFollowers %}
+        <p class="small">Vous ne validez plus vos abonnés : les nouveaux abonnements sont acceptés d’office. <a class="lnk" href="{{ path('app_settings') }}">Réglages du profil</a></p>
+    {% endif %}
+
+    {% if requests is empty %}
+        <div class="empty">
+            {{ ui.icon('user') }}
+            <b>Aucune demande en attente</b>
+            {% if account.manuallyApprovesFollowers %}<span>Les comptes qui souhaitent vous suivre apparaîtront ici.</span>{% endif %}
+        </div>
+    {% else %}
+        <div class="netlist">
+        {% for request in requests %}
+            {% set other = request.follower %}
+            <div class="found" id="follow-request-{{ other.acct }}">
+                <a href="{{ path('app_profile', {username: other.acct}) }}">{{ ui.avatar(other, 44) }}</a>
+                <a class="t" href="{{ path('app_profile', {username: other.acct}) }}"><b>{{ other.displayName }}</b><br><small>{{ handle(other, local_domain) }}</small></a>
+                <form method="post" action="{{ path('app_follow_request_accept', {username: other.acct}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('follow-request-' ~ other.acct) }}">
+                    <button class="btn sm pri">Accepter</button>
+                </form>
+                <form method="post" action="{{ path('app_profile_remove_follower', {username: other.acct}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('follow-request-' ~ other.acct) }}">
+                    <button class="btn sm">Refuser</button>
+                </form>
+            </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

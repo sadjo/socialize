@@ -15,7 +15,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * @extends AbstractType<array{displayName: string, bio: ?string, hideNetwork: bool, avatar: mixed, avatarCrop: ?string, cover: mixed, coverCrop: ?string, removeCover: bool}>
+ * @extends AbstractType<array{displayName: string, bio: ?string, hideNetwork: bool, approveFollowers: bool, avatar: mixed, avatarCrop: ?string, cover: mixed, coverCrop: ?string, removeCover: bool}>
  */
 final class ProfileSettingsType extends AbstractType
 {
@@ -35,6 +35,10 @@ final class ProfileSettingsType extends AbstractType
             ])
             ->add('hideNetwork', CheckboxType::class, [
                 'label' => 'Réserver mes listes d’abonnés et d’abonnements à mes abonnés',
+                'required' => false,
+            ])
+            ->add('approveFollowers', CheckboxType::class, [
+                'label' => 'Valider moi-même les demandes d’abonnement',
                 'required' => false,
             ])
             ->add('avatar', FileType::class, self::imageOptions('Photo de profil'))

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Web\Controller;
 
+use App\Core\Application\Social\SocialActions;
 use App\Core\Domain\Account\MediaFilter;
 use App\Core\Domain\Account\Theme;
 use App\Core\Domain\Account\User;
 use App\Core\Domain\Event\ProfileUpdated;
 use App\Core\Domain\Post\Visibility;
+use App\Core\Infrastructure\Doctrine\FollowRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\ProfileImage;
@@ -28,21 +30,24 @@ use Symfony\Component\Routing\Attribute\Route;
 final class SettingsController extends AbstractController
 {
     #[Route('/reglages', name: 'app_settings', methods: ['GET', 'POST'])]
-    public function profile(Request $request, CurrentAccount $currentAccount, ProfileImages $images, EntityManagerInterface $em, EventDispatcherInterface $events): Response
+    public function profile(Request $request, CurrentAccount $currentAccount, ProfileImages $images, EntityManagerInterface $em, EventDispatcherInterface $events, SocialActions $social, FollowRepository $follows): Response
     {
         $account = $currentAccount->require();
         $form = $this->createForm(ProfileSettingsType::class, [
             'displayName' => $account->getDisplayName(),
             'bio' => $account->getBio(),
             'hideNetwork' => $account->isNetworkHidden(),
+            'approveFollowers' => $account->manuallyApprovesFollowers(),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{displayName: string, bio: ?string, hideNetwork: bool} $data */
+            /** @var array{displayName: string, bio: ?string, hideNetwork: bool, approveFollowers: bool} $data */
             $data = $form->getData();
             $account->updateProfile($data['displayName'], $data['bio']);
             $account->hideNetwork($data['hideNetwork']);
+            $approvedBefore = $account->manuallyApprovesFollowers();
+            $account->requireFollowApproval($data['approveFollowers']);
 
             $field = 'avatar';
             try {
@@ -51,7 +56,9 @@ final class SettingsController extends AbstractController
                 $images->apply($account, ProfileImage::Cover, $this->uploaded($form->get('cover')->getData()), $this->crop($form->get('coverCrop')->getData()), true === $form->get('removeCover')->getData());
                 $em->flush();
                 $events->dispatch(new ProfileUpdated($account));
-                $this->addFlash('success', 'Profil enregistré.');
+                // Validation désactivée : les demandes en attente sont acceptées, comme le ferait Mastodon.
+                $accepted = $approvedBefore && !$account->manuallyApprovesFollowers() ? $social->acceptAllFollowers($account) : 0;
+                $this->addFlash('success', 'Profil enregistré.'.($accepted > 0 ? \sprintf(' %d demande%s d’abonnement acceptée%2$s.', $accepted, $accepted > 1 ? 's' : '') : ''));
 
                 return $this->redirectToRoute('app_settings', status: Response::HTTP_SEE_OTHER);
             } catch (MediaProcessingException $e) {
@@ -64,7 +71,7 @@ final class SettingsController extends AbstractController
             }
         }
 
-        return $this->render('settings/profile.html.twig', ['form' => $form, 'account' => $account]);
+        return $this->render('settings/profile.html.twig', ['form' => $form, 'account' => $account, 'pending_requests' => $follows->countPendingRequests($account)]);
     }
 
     /** Vignettes de ses propres publications, pour voir l'effet du filtre des médias. */

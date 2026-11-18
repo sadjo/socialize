@@ -11,7 +11,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 /**
  * Ce que le compte reçoit en notification sur ses appareils.
  *
- * @extends AbstractType<array{posts: bool, stories: bool, likes: bool, comments: bool}>
+ * @extends AbstractType<array{posts: bool, stories: bool, likes: bool, comments: bool, followRequests: bool}>
  */
 final class NotificationPreferencesType extends AbstractType
 {
@@ -21,6 +21,7 @@ final class NotificationPreferencesType extends AbstractType
             ->add('posts', CheckboxType::class, ['label' => 'Nouvelles publications des comptes que je suis', 'required' => false])
             ->add('stories', CheckboxType::class, ['label' => 'Nouvelles stories des comptes que je suis', 'required' => false])
             ->add('likes', CheckboxType::class, ['label' => 'J’aime sur mes publications', 'required' => false])
-            ->add('comments', CheckboxType::class, ['label' => 'Commentaires sur mes publications', 'required' => false]);
+            ->add('comments', CheckboxType::class, ['label' => 'Commentaires sur mes publications', 'required' => false])
+            ->add('followRequests', CheckboxType::class, ['label' => 'Demandes d’abonnement à valider', 'required' => false]);
     }
 }

@@ -6,7 +6,7 @@ namespace App\Core\Domain\Social;
 
 enum FollowState: string
 {
-    /** Demande en attente (compte privé ou accord d'une instance distante). */
+    /** Demande en attente : à valider par le compte suivi, ou accord d'une instance distante. */
     case Pending = 'pending';
     case Accepted = 'accepted';
 }

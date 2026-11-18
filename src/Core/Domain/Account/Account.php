@@ -91,6 +91,10 @@ class Account
     #[ORM\Column(options: ['default' => false])]
     private bool $networkHidden = false;
 
+    /** Demandes d'abonnement validées une à une par le titulaire (sinon acceptées d'office). */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $manuallyApprovesFollowers = false;
+
     public function __construct(
         #[ORM\Column(length: 100)]
         private string $username,
@@ -159,6 +163,16 @@ class Account
     public function hideNetwork(bool $hidden): void
     {
         $this->networkHidden = $hidden;
+    }
+
+    public function manuallyApprovesFollowers(): bool
+    {
+        return $this->manuallyApprovesFollowers;
+    }
+
+    public function requireFollowApproval(bool $required): void
+    {
+        $this->manuallyApprovesFollowers = $required;
     }
 
     /**

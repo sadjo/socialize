@@ -495,6 +495,50 @@ final class FederationTest extends AppWebTestCase
         self::assertFalse(self::getContainer()->get(FollowRepository::class)->isFollowing($this->alice(), $this->reloadAccount($camille->getAccount())));
     }
 
+    public function testARemoteFollowWaitsForTheApprovalOfTheAccount(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $camille->getAccount()->requireFollowApproval(true);
+        self::getContainer()->get('doctrine')->getManager()->flush();
+
+        $this->client->request('GET', '/users/camille', server: ['HTTP_ACCEPT' => self::AP]);
+        self::assertTrue($this->json()['manuallyApprovesFollowers'], 'Le fédivers sait que la demande sera validée.');
+
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/7', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        self::assertSame([], $this->fediverse()->delivered('Accept'), 'Pas d’Accept avant la décision.');
+        self::assertFalse(self::getContainer()->get(FollowRepository::class)->isFollowing($this->alice(), $this->reloadAccount($camille->getAccount())));
+
+        // Acceptée depuis la liste des demandes : Accept du Follow d'origine.
+        $crawler = $this->client->request('GET', '/abonnes/demandes');
+        self::assertSelectorTextContains('.netlist', 'Alice Martin');
+        $this->client->submit($crawler->selectButton('Accepter')->form());
+        $accept = $this->fediverse()->delivered('Accept');
+        self::assertCount(1, $accept);
+        self::assertSame('http://localhost/users/camille', $accept[0]['actor']);
+        self::assertSame(FakeFediverse::ALICE.'#follows/7', $this->dig($accept, 0, 'object', 'id'));
+        self::assertSame(FakeFediverse::ALICE.'/inbox', $this->dig($this->fediverse()->deliveries, \count($this->fediverse()->deliveries) - 1, 'url'));
+        self::assertTrue(self::getContainer()->get(FollowRepository::class)->isFollowing($this->alice(), $this->reloadAccount($camille->getAccount())));
+
+        // Le même abonnement redemandé plus tard est accepté d'office.
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/8', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+        self::assertSame(FakeFediverse::ALICE.'#follows/8', $this->dig($this->fediverse()->delivered('Accept'), 0, 'object', 'id'));
+    }
+
+    public function testARefusedRemoteRequestIsRejected(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $camille->getAccount()->requireFollowApproval(true);
+        self::getContainer()->get('doctrine')->getManager()->flush();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/7', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+
+        $crawler = $this->client->request('GET', '/abonnes/demandes');
+        $this->client->submit($crawler->selectButton('Refuser')->form());
+        $reject = $this->fediverse()->delivered('Reject');
+        self::assertCount(1, $reject);
+        self::assertSame(FakeFediverse::ALICE.'#follows/7', $this->dig($reject, 0, 'object', 'id'));
+        self::assertNull(self::getContainer()->get(FollowRepository::class)->findBetween($this->alice(), $this->reloadAccount($camille->getAccount())));
+    }
+
     public function testEditingAPostIsFederated(): void
     {
         $camille = $this->register('camille')->getAccount();

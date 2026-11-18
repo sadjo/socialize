@@ -100,6 +100,30 @@ final class PushNotificationTest extends AppWebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testAnAccountThatApprovesItsFollowersIsNotifiedOfRequests(): void
+    {
+        $camille = $this->register('camille');
+        $camille->getAccount()->requireFollowApproval(true);
+        self::getContainer()->get('doctrine')->getManager()->flush();
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/notifications');
+        $this->device((string) $crawler->filter('[data-controller="push"]')->attr('data-push-token-value'), 'https://push.example/telephone-camille');
+
+        self::getContainer()->get(SocialActions::class)->follow($this->register('hugo')->getAccount(), $this->account($camille));
+        self::assertSame(['title' => 'Hugo demande à vous suivre', 'body' => '@hugo', 'url' => '/abonnes/demandes', 'tag' => 'follow-request-hugo'], $this->lastSent());
+
+        // Camille ne veut plus ces notifications sur ses appareils (elles restent dans la page des notifications).
+        $crawler = $this->client->request('GET', '/notifications');
+        $form = $crawler->selectButton('Enregistrer')->form();
+        $requests = $form['notification_preferences[followRequests]'];
+        self::assertInstanceOf(\Symfony\Component\DomCrawler\Field\ChoiceFormField::class, $requests);
+        $requests->untick();
+        $this->client->submit($form);
+        $lea = $this->register('lea');
+        self::getContainer()->get(SocialActions::class)->follow($this->account($lea), $this->account($camille));
+        self::assertCount(1, $this->sent());
+    }
+
     /**
      * Notifications envoyées (relues à chaque appel).
      *

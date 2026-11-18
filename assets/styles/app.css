@@ -1012,6 +1012,7 @@ label.act{cursor:pointer}
 .md-status{color:var(--muted)}
 .notif-kind.signup{background:oklch(0.62 0.15 160)}
 .notif-kind.mention{background:oklch(0.6 0.16 245)}
+.notif-kind.follow_request{background:oklch(0.62 0.15 300)}
 
 /* Mentions : compte Instagram, et suggestions pendant la saisie d'une légende. */
 .tag.ig{text-decoration-style:dotted}
