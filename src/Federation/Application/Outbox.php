@@ -11,6 +11,7 @@ use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
 use App\Core\Domain\Event\CommentDeleting;
 use App\Core\Domain\Event\FollowerRemoved;
+use App\Core\Domain\Event\FollowRequestAccepted;
 use App\Core\Domain\Event\PostArchived;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostLiked;
@@ -341,6 +342,34 @@ final readonly class Outbox
             'type' => 'Reject',
             'actor' => $this->urls->actor($event->account),
             'object' => $this->followActivity($event->followApUri ?? $this->urls->activity($event->follower, 'follow'), $event->follower, $event->account),
+        ]);
+    }
+
+    /**
+     * Demande d'un compte du fédivers acceptée : son instance en est prévenue (Accept de son Follow).
+     */
+    #[AsEventListener]
+    public function onFollowRequestAccepted(FollowRequestAccepted $event): void
+    {
+        $follow = $event->follow;
+        $account = $follow->getFollowing();
+        $follower = $follow->getFollower();
+        if (!$account->isLocal() || $follower->isLocal()) {
+            return;
+        }
+        $this->acceptFollow($account, $follower, $this->followActivity($follow->getApUri() ?? $this->urls->activity($follower, 'follow'), $follower, $account));
+    }
+
+    /**
+     * @param array<string, mixed> $follow activité Follow acceptée
+     */
+    public function acceptFollow(Account $account, Account $follower, array $follow): void
+    {
+        $this->deliver($account, [$follower->getInboxUrl()], [
+            'id' => $this->urls->activity($account, 'accept'),
+            'type' => 'Accept',
+            'actor' => $this->urls->actor($account),
+            'object' => $follow,
         ]);
     }
 

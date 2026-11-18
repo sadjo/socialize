@@ -106,6 +106,10 @@ final class NotificationController extends AbstractController
         $this->notifications->markRead($notification);
         $comment = $notification->getComment();
         $post = $notification->getPost();
+        // Demande d'abonnement : la liste des demandes, où l'accepter ou la refuser.
+        if (\App\Core\Domain\Notification\NotificationType::FollowRequest === $notification->getType()) {
+            return $this->redirectToRoute('app_follow_requests', status: Response::HTTP_SEE_OTHER);
+        }
         // Nouveau compte (administrateurs) : la liste des comptes, où lui accorder ses droits.
         if (!$post instanceof \App\Core\Domain\Post\Post) {
             return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);

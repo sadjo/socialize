@@ -60,7 +60,7 @@ final readonly class Serializer
             'followers' => $this->urls->followers($account),
             'following' => $this->urls->following($account),
             'endpoints' => ['sharedInbox' => $this->urls->sharedInbox()],
-            'manuallyApprovesFollowers' => false,
+            'manuallyApprovesFollowers' => $account->manuallyApprovesFollowers(),
             'discoverable' => true,
             'published' => $account->getCreatedAt()->format(\DATE_ATOM),
             'publicKey' => [

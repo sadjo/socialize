@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Federation\Application;
 
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Event\AccountFollowed;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Media\MediaType;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\Comment;
 use App\Core\Domain\Social\Follow;
+use App\Core\Domain\Social\FollowState;
 use App\Core\Domain\Social\Like;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\CommentRepository;
@@ -20,6 +22,7 @@ use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Infrastructure\FederationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Attribute\WithMonologChannel;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -47,6 +50,7 @@ final readonly class InboxProcessor
         private MessageBusInterface $bus,
         private \App\Core\Application\Notification\Notifications $notifications,
         private \App\Core\Application\Account\PilotedAccounts $piloted,
+        private EventDispatcherInterface $events,
     ) {
     }
 
@@ -97,21 +101,25 @@ final readonly class InboxProcessor
         }
 
         $follow = $this->follows->findBetween($actor, $target);
+        $new = !$follow instanceof Follow;
         if (!$follow instanceof Follow) {
-            $follow = new Follow($actor, $target);
+            $follow = new Follow($actor, $target, $target->manuallyApprovesFollowers() ? FollowState::Pending : FollowState::Accepted);
             $this->em->persist($follow);
         }
         $follow->setApUri($id);
+        // Demande à valider par le compte : l'Accept partira quand il l'acceptera (Reject s'il la refuse).
+        if (!$follow->isAccepted() && $target->manuallyApprovesFollowers()) {
+            $this->em->flush();
+            if ($new) {
+                $this->events->dispatch(new AccountFollowed($follow));
+            }
+
+            return;
+        }
         $follow->accept();
         $this->em->flush();
 
-        // Abonnements acceptés automatiquement (les comptes privés viendront plus tard).
-        $this->outbox->deliver($target, [$actor->getInboxUrl()], [
-            'id' => $this->urls->activity($target, 'accept'),
-            'type' => 'Accept',
-            'actor' => $this->urls->actor($target),
-            'object' => $activity,
-        ]);
+        $this->outbox->acceptFollow($target, $actor, $activity);
     }
 
     /**
@@ -158,6 +166,8 @@ final readonly class InboxProcessor
             if ($follow instanceof Follow && $follow->getFollower()->getId()->equals($actor->getId())) {
                 $this->em->remove($follow);
                 $this->em->flush();
+                // Demande annulée avant d'être traitée : sa notification disparaît.
+                $this->notifications->followRequestHandled($follow->getFollowing(), $actor);
             }
 
             return;

@@ -74,6 +74,32 @@ final class FollowRepository extends ServiceEntityRepository
         return $this->count(['following' => $account, 'state' => FollowState::Accepted]);
     }
 
+    /**
+     * Demandes d'abonnement à valider par un compte, de la plus ancienne à la plus récente.
+     *
+     * @return list<Follow>
+     */
+    public function pendingRequestsOf(Account $account, int $limit = 500): array
+    {
+        /* @var list<Follow> */
+        return $this->createQueryBuilder('f')
+            ->addSelect('a')
+            ->join('f.follower', 'a')
+            ->where('f.following = :account')
+            ->andWhere('f.state = :pending')
+            ->setParameter('account', $account->getId(), UuidType::NAME)
+            ->setParameter('pending', FollowState::Pending)
+            ->orderBy('f.id', \SortDirection::Ascending)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function countPendingRequests(Account $account): int
+    {
+        return $this->count(['following' => $account, 'state' => FollowState::Pending]);
+    }
+
     public function countFollowing(Account $account): int
     {
         return $this->count(['follower' => $account, 'state' => FollowState::Accepted]);

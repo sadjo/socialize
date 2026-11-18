@@ -12,6 +12,7 @@
     <nav class="ptabs" aria-label="Listes du compte">
         <a href="{{ path('app_profile_followers', {username: account.acct}) }}" class="{{ list == 'followers' ? 'on' }}"{{ list == 'followers' ? ' aria-current="page"' }}><span class="num">{{ stats.followers|format_number(locale: 'fr') }}</span> abonné{{ stats.followers > 1 ? 's' }}</a>
         <a href="{{ path('app_profile_following', {username: account.acct}) }}" class="{{ list == 'following' ? 'on' }}"{{ list == 'following' ? ' aria-current="page"' }}><span class="num">{{ stats.following|format_number(locale: 'fr') }}</span> abonnement{{ stats.following > 1 ? 's' }}</a>
+        {% if is_owner and stats.requests %}<a href="{{ path('app_follow_requests') }}"><span class="num">{{ stats.requests|format_number(locale: 'fr') }}</span> demande{{ stats.requests > 1 ? 's' }}</a>{% endif %}
     </nav>
     {% if not account.local %}
         <p class="small">Compte de <b>{{ account.domain }}</b> : seuls les comptes connus de cette instance sont listés.</p>

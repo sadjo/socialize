@@ -15,4 +15,6 @@ enum NotificationType: string
     case Mention = 'mention';
     /** Nouveau compte (inscription, ou première connexion avec Mastodon), pour les administrateurs. */
     case Signup = 'signup';
+    /** Demande d'abonnement à valider (compte qui valide ses abonnés). */
+    case FollowRequest = 'follow_request';
 }

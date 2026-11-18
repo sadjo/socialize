@@ -9,6 +9,9 @@
 - **Profile** (*Réglages*): display name, biography, profile picture and cover image (4:1 banner). Both images are
   cropped in the browser — drag and zoom — and can be repositioned later.
 - **Privacy**: *Réserver mes listes à mes abonnés* hides your followers and following lists from other visitors.
+  *Valider moi-même les demandes d'abonnement* makes every new follower, local or from the fediverse, wait for your
+  approval; requests show up in your notifications and are handled on the *Demandes* page of your profile (Accepter,
+  Refuser). Unticking the setting accepts the pending requests.
 - **Appearance** (*Réglages › Apparence*): light, dark, night violet or automatic theme, previewed instantly, and a
   **media filter** (off, light, medium, strong) that softens the colors of photos and videos in feeds and grids —
   post pages, the viewer and stories keep the original colors.

@@ -10,6 +10,7 @@ use App\Core\Domain\Event\AccountUnfollowed;
 use App\Core\Domain\Event\CommentAdded;
 use App\Core\Domain\Event\CommentDeleting;
 use App\Core\Domain\Event\FollowerRemoved;
+use App\Core\Domain\Event\FollowRequestAccepted;
 use App\Core\Domain\Event\PostLiked;
 use App\Core\Domain\Event\PostUnliked;
 use App\Core\Domain\Post\Post;
@@ -47,8 +48,9 @@ final readonly class SocialActions
             return;
         }
         if ($follower->isLocal()) {
-            // Un compte distant doit accepter l'abonnement (activité Accept) avant qu'il soit effectif.
-            $accepted = $following->isLocal();
+            // Un compte distant doit accepter l'abonnement (activité Accept) avant qu'il soit effectif ; un compte d'ici
+            // aussi, s'il valide lui-même ses abonnés.
+            $accepted = $following->isLocal() && !$following->manuallyApprovesFollowers();
         } else {
             $accepted = $this->piloted->follow($follower, $following);
             if (null !== $this->follows->findOneBy(['follower' => $follower, 'following' => $following])) {
@@ -73,6 +75,39 @@ final readonly class SocialActions
             $this->em->flush();
             $this->events->dispatch(new AccountUnfollowed($follower, $following, $apUri));
         }
+    }
+
+    /**
+     * Le compte accepte une demande d'abonnement en attente.
+     *
+     * @return bool false s'il n'y avait pas de demande en attente
+     */
+    public function acceptFollower(Account $account, Account $follower): bool
+    {
+        $follow = $this->follows->findBetween($follower, $account);
+        if (!$follow instanceof Follow || $follow->isAccepted()) {
+            return false;
+        }
+        $follow->accept();
+        $this->em->flush();
+        $this->events->dispatch(new FollowRequestAccepted($follow));
+
+        return true;
+    }
+
+    /**
+     * Toutes les demandes en attente acceptées (le compte ne valide plus ses abonnés).
+     *
+     * @return int nombre de demandes acceptées
+     */
+    public function acceptAllFollowers(Account $account): int
+    {
+        $accepted = 0;
+        foreach ($this->follows->pendingRequestsOf($account) as $follow) {
+            $accepted += (int) $this->acceptFollower($account, $follow->getFollower());
+        }
+
+        return $accepted;
     }
 
     /**

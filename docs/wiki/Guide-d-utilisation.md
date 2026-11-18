@@ -7,6 +7,9 @@
 - **Profil** (*Réglages*) : nom affiché, biographie, photo de profil et image de couverture (bandeau 4:1), recadrées
   dans le navigateur (glisser, zoomer) et repositionnables plus tard.
 - **Confidentialité** : *Réserver mes listes à mes abonnés* cache vos listes d'abonnés et d'abonnements aux autres.
+  *Valider moi-même les demandes d'abonnement* : chaque nouvel abonné, d'ici ou du fédivers, attend votre accord ;
+  les demandes arrivent dans les notifications et se traitent sur la page *Demandes* du profil (Accepter, Refuser).
+  Décocher le réglage accepte les demandes en attente.
 - **Apparence** (*Réglages › Apparence*) : thème clair, sombre, violet nuit ou automatique, avec aperçu immédiat, et
   **filtre des médias** (désactivé, léger, moyen, marqué) qui adoucit les couleurs des photos et vidéos dans les fils
   et les grilles — la page d'une publication, la visionneuse et les stories gardent les couleurs d'origine.
