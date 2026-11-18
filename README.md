@@ -110,6 +110,15 @@ bin/console app:federation:reorder alice --essai                 # liste, sans r
 bin/console app:federation:reorder alice --depuis=2025-09-05     # depuis une date (pause de 5 s entre deux)
 ```
 
+Les photos sont servies en plusieurs tailles (640, 960 et 1440 pixels ; vignettes de grille en 240, 360, 480 et
+720) : le navigateur prend celle qui correspond à l'écran, au lieu de réduire fortement la grande copie (qui
+scintille alors et paraît moins nette). Pour les médias publiés avant la v0.9.16, fabriquer une fois les tailles
+manquantes (relancée, la commande ne refait que ce qui manque) :
+
+```bash
+bin/console app:media:complete-sizes
+```
+
 ### Variables d'environnement
 
 | Variable | Par défaut | Rôle |

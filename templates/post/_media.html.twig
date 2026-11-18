@@ -1,4 +1,5 @@
-{# Médias d'une publication : carrousel, visionneuse (clic), vidéo, musique, avertissement de contenu. Variables : post
+{# Médias d'une publication : carrousel, visionneuse (clic), vidéo, musique, avertissement de contenu. Variables : post,
+   media_width en option (largeur du cadre sur ordinateur, 500px par défaut : celle d'un fil).
    Toutes les publications ont le même cadre 4:5, que le média couvre entièrement (la visionneuse le montre en
    entier). Les points du carrousel sont sous le cadre. #}
 {% import '_macros.html.twig' as ui %}
@@ -29,7 +30,12 @@
                         </button>
                     </div>
                 {% elseif media.ready %}
+                    {# Plusieurs tailles : le navigateur prend la plus proche de l'affichage (une forte réduction scintille).
+                       L'image couvre un cadre 4:5 : une photo plus large que 4:5 s'affiche plus large que le cadre. #}
+                    {% set srcset = media_srcset(media) %}
+                    {% set cover_factor = media.width and media.height ? max(1, (1.25 * media.width / media.height)|round(2, 'ceil')) : 1 %}
                     <img src="{{ media_url(media, 'large') }}" width="{{ media.width }}" height="{{ media.height }}"
+                         {%- if srcset %} srcset="{{ srcset }}" sizes="(max-width: 767px) calc(100vw * {{ cover_factor }}), calc({{ media_width|default('500px') }} * {{ cover_factor }})"{% endif %}
                          alt="{{ media.altText ?? ('Photo ' ~ loop.index ~ ' sur ' ~ count) }}" loading="lazy" decoding="async" draggable="false">
                 {% elseif media.status.value == 'failed' %}
                     <div class="processing">{{ ui.icon('flag') }}<br>Ce média n’a pas pu être préparé.<br>{{ media.failureReason }}</div>

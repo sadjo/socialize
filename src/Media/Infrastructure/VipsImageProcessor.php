@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Media\Infrastructure;
 
-use App\Core\Domain\Media\MediaAttachment;
 use App\Media\Application\ImageCrop;
+use App\Media\Application\ImageSizes;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\ProcessedImage;
 use Jcupitt\Vips\Exception as VipsException;
@@ -13,16 +13,12 @@ use Jcupitt\Vips\Image;
 use kornrunner\Blurhash\Blurhash;
 
 /**
- * Fabrique les copies publiques d'une image avec libvips : grande taille, miniature
- * de grille, empreinte floue (blurhash). Les copies perdent toutes leurs métadonnées,
- * dont la position GPS ; l'EXIF de l'original est conservé à part.
+ * Fabrique les copies publiques d'une image avec libvips : image entière et vignettes de grille en plusieurs
+ * largeurs (ImageSizes), empreinte floue (blurhash). Les copies perdent toutes leurs métadonnées, dont la position
+ * GPS ; l'EXIF de l'original est conservé à part.
  */
 final class VipsImageProcessor
 {
-    private const int LARGE_WIDTH = 1440;
-    private const int LARGE_HEIGHT = 2560;
-    private const int THUMB_WIDTH = 480;
-    private const int THUMB_HEIGHT = 600;
     private const int WEBP_QUALITY = 82;
 
     public function process(string $bytes): ProcessedImage
@@ -31,19 +27,36 @@ final class VipsImageProcessor
             $original = Image::newFromBuffer($bytes)->autorot();
             $exif = $this->exif(Image::newFromBuffer($bytes));
 
-            $large = Image::thumbnail_buffer($bytes, self::LARGE_WIDTH, ['height' => self::LARGE_HEIGHT, 'size' => 'down']);
-            $thumb = Image::thumbnail_buffer($bytes, self::THUMB_WIDTH, ['height' => self::THUMB_HEIGHT, 'crop' => 'attention']);
-
             return new ProcessedImage(
                 width: $original->width,
                 height: $original->height,
-                files: [
-                    MediaAttachment::DERIVATIVE_LARGE => $this->webp($large),
-                    MediaAttachment::DERIVATIVE_THUMB => $this->webp($thumb),
-                ],
+                files: $this->derive($bytes, ImageSizes::names()),
                 exif: $exif,
                 blurhash: $this->blurhash($bytes),
             );
+        } catch (VipsException $e) {
+            throw new MediaProcessingException('Cette image n’a pas pu être lue. Vérifiez qu’il s’agit bien d’une photo valide.', $e->getCode(), previous: $e);
+        }
+    }
+
+    /**
+     * Copies demandées d'une image (noms d'ImageSizes), en WebP.
+     *
+     * @param list<string> $names
+     *
+     * @return array<string, string> contenu WebP par nom de copie
+     */
+    public function derive(string $bytes, array $names): array
+    {
+        try {
+            $files = [];
+            foreach ($names as $name) {
+                [$width, $height, $crop] = ImageSizes::box($name);
+                $options = $crop ? ['height' => $height, 'crop' => 'attention'] : ['height' => $height, 'size' => 'down'];
+                $files[$name] = $this->webp(Image::thumbnail_buffer($bytes, $width, $options));
+            }
+
+            return $files;
         } catch (VipsException $e) {
             throw new MediaProcessingException('Cette image n’a pas pu être lue. Vérifiez qu’il s’agit bien d’une photo valide.', $e->getCode(), previous: $e);
         }

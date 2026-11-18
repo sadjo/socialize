@@ -48,7 +48,14 @@
   --shadow:0 1px 2px rgb(0 0 0 / .4),0 16px 40px -18px rgb(0 0 0 / .7);
   color-scheme:dark}
 
-*{box-sizing:border-box}
+/* Filtre des médias dans les listes (Réglages › Apparence, attribut data-media-filter de <html>) : adoucit,
+   rapproche et assombrit légèrement les couleurs. Léger par défaut ; la page d'une publication, la visionneuse et les stories n'en ont pas. */
+:root{--media-filter:saturate(.92) contrast(.95) brightness(.97)}
+:root[data-media-filter="off"]{--media-filter:none}
+:root[data-media-filter="medium"]{--media-filter:saturate(.84) contrast(.92) brightness(.94)}
+:root[data-media-filter="strong"]{--media-filter:saturate(.74) contrast(.88) brightness(.9)}
+article.post .media .slide img,article.post .media .slide video,.gt img,.gt video{filter:var(--media-filter)}
+
 html,body{min-height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-text);-webkit-font-smoothing:antialiased;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -875,6 +882,7 @@ label.act{cursor:pointer}
 .theme-swatch[data-swatch="light"]{background:#fafafa}
 .theme-swatch[data-swatch="dark"]{background:linear-gradient(#000 60%,#262626 60%)}
 .theme-swatch[data-swatch="violet"]{background:oklch(0.155 0.018 285)}
+.filter-samples{margin-top:10px}
 
 /* Crosspost Instagram : case à la création, état sur la publication, réglages */
 .crosspost{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}

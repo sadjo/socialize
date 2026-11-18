@@ -7,6 +7,7 @@ namespace App\Web\Twig;
 use App\Core\Application\Post\Mentions;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Media\Application\ImageSizes;
 use App\Media\Application\MediaUrls;
 use Twig\Attribute\AsTwigFilter;
 use Twig\Attribute\AsTwigFunction;
@@ -29,6 +30,15 @@ final readonly class SocializeExtension
     public function mediaUrl(MediaAttachment $media, string $derivative = MediaAttachment::DERIVATIVE_LARGE): ?string
     {
         return $this->urls->derivative($media, $derivative);
+    }
+
+    /**
+     * Tailles proposées au navigateur (srcset) : « large » pour l'image entière, « thumb » pour la vignette de grille.
+     */
+    #[AsTwigFunction('media_srcset')]
+    public function mediaSrcset(MediaAttachment $media, string $family = ImageSizes::LARGE): ?string
+    {
+        return $this->urls->srcset($media, $family);
     }
 
     #[AsTwigFunction('avatar_url')]
