@@ -75,7 +75,7 @@ final class HtmlText
 
         return \sprintf(
             '<a href="%s" rel="nofollow noopener noreferrer" target="_blank"><span class="invisible">%s</span><span class="%s">%s</span><span class="invisible">%s</span></a>',
-            $e($url), $e($prefix), '' !== $rest ? 'ellipsis' : '', $e($visible), $e($rest),
+            $e(Links::href($url)), $e($prefix), '' !== $rest ? 'ellipsis' : '', $e($visible), $e($rest),
         );
     }
 

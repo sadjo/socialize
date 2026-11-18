@@ -5,14 +5,21 @@ declare(strict_types=1);
 namespace App\Core\Application\Post;
 
 /**
- * Adresses web (http, https) d'un texte (légende, commentaire, bio), à afficher en liens.
+ * Adresses web d'un texte (légende, commentaire, bio), à afficher en liens : avec « http(s):// », ou sans
+ * (« www.exemple.fr », « exemple.fr/agenda »). Sans « http(s):// », un nom de domaine n'est reconnu que s'il commence
+ * par « www. » ou finit par une extension courante (TLDS) : « photo.jpg » ou « v0.5.1 » restent du texte, de même
+ * qu'un domaine collé à « @ » (adresse e-mail, compte du fédivers) ou à « # ».
  *
  * La ponctuation qui suit une adresse (« Voir https://exemple.fr. ») n'en fait pas partie, ni une parenthèse fermante
  * sans parenthèse ouvrante dans l'adresse (« (voir https://exemple.fr) »).
  */
 final class Links
 {
-    private const string PATTERN = '~(?<![\w/])https?://[^\s<>"]+~iu';
+    private const string TLDS = 'com|net|org|info|biz|edu|gov|io|co|me|tv|fm|ai|app|dev|page|blog|site|online|store|shop|xyz|art|photo|photos|photography|gallery|pics|video|social|network|news|media|studio|design|travel|eu|fr|be|ch|lu|mc|ca|quebec|us|uk|de|at|es|it|pt|nl|dk|se|no|fi|pl|cz|ie|gr|ro|hu|jp|kr|cn|in|au|nz|br|mx|ar|ma|tn|dz|sn|ci|cm|re|gp|mq|nc|pf|bzh|paris|alsace|corsica';
+
+    private const string LABEL = '[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?';
+
+    private const string PATTERN = '~(?<![\w/@#.\-])(?:https?://[^\s<>"]+|(?:www\.'.self::LABEL.'(?:\.'.self::LABEL.')+|(?:'.self::LABEL.'\.)+(?:'.self::TLDS.'))(?![\p{L}\p{N}_-])(?!\.[\p{L}\p{N}])(?::\d{1,5})?(?:[/?#][^\s<>"]*)?)~iu';
 
     /** Longueur au-delà de laquelle l'adresse affichée est raccourcie. */
     private const int DISPLAY_MAX = 30;
@@ -57,6 +64,14 @@ final class Links
     }
 
     /**
+     * Adresse complète d'un lien : « https:// » ajouté quand il n'a pas été saisi.
+     */
+    public static function href(string $url): string
+    {
+        return 1 === preg_match('~^https?://~i', $url) ? $url : 'https://'.$url;
+    }
+
+    /**
      * Texte sans ses adresses (remplacées par une espace), pour y chercher hashtags et mentions.
      */
     public static function without(string $text): string
@@ -65,13 +80,13 @@ final class Links
     }
 
     /**
-     * Adresse telle qu'affichée : sans « https:// » ni « www. », raccourcie si elle est longue.
+     * Adresse telle qu'affichée : sans « https:// » ni « www. » (saisis ou non), raccourcie si elle est longue.
      *
      * @return array{0: string, 1: string, 2: string} préfixe masqué, partie visible, reste masqué (raccourcie)
      */
     public static function display(string $url): array
     {
-        preg_match('~^(https?://(?:www\.)?)(.*)$~is', $url, $m);
+        preg_match('~^((?:https?://)?(?:www\.)?)(.*)$~is', $url, $m);
         $prefix = $m[1] ?? '';
         $rest = $m[2] ?? $url;
         if (mb_strlen($rest) <= self::DISPLAY_MAX) {
@@ -99,7 +114,7 @@ final class Links
 
     private static function valid(string $url): bool
     {
-        $host = parse_url($url, \PHP_URL_HOST);
+        $host = parse_url(self::href($url), \PHP_URL_HOST);
 
         return \is_string($host) && 1 === preg_match('/^[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*$/u', $host);
     }

@@ -50,6 +50,14 @@ final class RichTextTest extends TestCase
         self::assertStringNotContainsString('mi-local', $html);
     }
 
+    public function testAddressesWithoutSchemeBecomeLinks(): void
+    {
+        $html = new SocializeExtension(new MediaUrls())->richText('Infos sur www.exemple.fr et avec @alice@mastodon.social');
+
+        self::assertStringContainsString('<a class="link" href="https://www.exemple.fr" target="_blank" rel="noopener nofollow ugc" title="https://www.exemple.fr">exemple.fr</a>', $html);
+        self::assertStringContainsString('<a class="tag" href="/@alice@mastodon.social">', $html, 'Une adresse du fédivers reste une mention.');
+    }
+
     public function testAnAddressWithoutHostStaysText(): void
     {
         $html = new SocializeExtension(new MediaUrls())->richText('https:// et https://" onmouseover="x');

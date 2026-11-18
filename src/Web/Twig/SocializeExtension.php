@@ -127,7 +127,7 @@ final readonly class SocializeExtension
         [, $visible, $rest] = Links::display($url);
         $e = static fn (string $s): string => htmlspecialchars($s, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
 
-        return \sprintf('<a class="link" href="%s" target="_blank" rel="noopener nofollow ugc" title="%s">%s%s</a>', $e($url), $e($url), $e($visible), '' !== $rest ? '…' : '');
+        return \sprintf('<a class="link" href="%s" target="_blank" rel="noopener nofollow ugc" title="%s">%s%s</a>', $e(Links::href($url)), $e(Links::href($url)), $e($visible), '' !== $rest ? '…' : '');
     }
 
     /**
