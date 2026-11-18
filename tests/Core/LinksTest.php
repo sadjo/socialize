@@ -26,7 +26,7 @@ final class LinksTest extends TestCase
     {
         $links = static fn (string $text): array => array_values(array_map(static fn (array $p): string => $p[1], array_filter(Links::split($text), static fn (array $p): bool => $p[0])));
 
-        self::assertSame(['www.exemple.fr', 'exemple.fr/agenda?id=2#jour', 'blog.socialize.example', 'www.musee.museum', 'exemple.org:8080/x'], $links('Voir www.exemple.fr, exemple.fr/agenda?id=2#jour et blog.socialize.example. Aussi www.musee.museum (exemple.org:8080/x).'));
+        self::assertSame(['www.exemple.fr', 'exemple.fr/agenda?id=2#jour', 'blog.exemple.social', 'www.musee.museum', 'exemple.org:8080/x'], $links('Voir www.exemple.fr, exemple.fr/agenda?id=2#jour et blog.exemple.social. Aussi www.musee.museum (exemple.org:8080/x).'));
         self::assertSame([], $links('photo.jpg, IMG_12.JPG, v0.5.1, 3.14, Node.js, fin.Merci, exemple.com.jpg, contact@exemple.fr, @alice@mastodon.social, #exemple.fr, exemple.fra'));
         self::assertSame('https://www.exemple.fr', Links::href('www.exemple.fr'));
         self::assertSame('http://exemple.fr', Links::href('http://exemple.fr'));
