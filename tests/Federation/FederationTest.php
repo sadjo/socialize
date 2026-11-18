@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace App\Tests\Federation;
 
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Media\MediaType;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Infrastructure\HttpSignature;
+use App\Media\Application\MediaUrls;
 use App\Media\Application\PostComposer;
 use App\Tests\AppWebTestCase;
+use League\Flysystem\FilesystemOperator;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Tester\CommandTester;
 
 final class FederationTest extends AppWebTestCase
 {
@@ -300,7 +306,7 @@ final class FederationTest extends AppWebTestCase
             }
             $em->flush();
         }
-        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:reorder'));
+        $command = new CommandTester(new Application(self::$kernel ?? throw new \LogicException())->find('app:federation:reorder'));
 
         // Essai : la liste, sans rien envoyer.
         $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--essai' => true]));
@@ -319,7 +325,7 @@ final class FederationTest extends AppWebTestCase
         $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--depuis' => '2025-09-15', '--pause' => '0']));
         self::assertSame([$recent.'/v3'], $this->objectIds($sent, 'Create'));
         // Resync d'une publication importée sans annonce : retirée, jamais envoyée.
-        $resync = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:resync'));
+        $resync = new CommandTester(new Application(self::$kernel ?? throw new \LogicException())->find('app:federation:resync'));
         $sent = $this->during(static fn (): int => $resync->execute(['publication' => $import->getPublicId()]));
         self::assertSame([], $this->ofType($sent, 'Create'));
     }
@@ -331,7 +337,7 @@ final class FederationTest extends AppWebTestCase
         $linked = $this->publish($this->reloadAccount($camille), 'Programme sur www.exemple.fr', Visibility::Public);
         $plain = $this->publish($this->reloadAccount($camille), 'Sans lien', Visibility::Public);
         $this->publish($this->reloadAccount($camille), 'Privée : exemple.fr', Visibility::Private);
-        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:refresh'));
+        $command = new CommandTester(new Application(self::$kernel ?? throw new \LogicException())->find('app:federation:refresh'));
 
         $sent = $this->during(static fn (): int => $command->execute(['compte' => 'camille', '--essai' => true]));
         $command->assertCommandIsSuccessful();
@@ -360,7 +366,7 @@ final class FederationTest extends AppWebTestCase
         $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/8', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
         $post = $this->publish($this->reloadAccount($camille), 'Restée sur Mastodon', Visibility::Public);
         $noteId = 'http://localhost/p/'.$post->getPublicId();
-        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:resync'));
+        $command = new CommandTester(new Application(self::$kernel ?? throw new \LogicException())->find('app:federation:resync'));
 
         // Publication visible : anciennes copies retirées, puis renvoi sous un nouvel identifiant.
         $sent = $this->during(static fn (): int => $command->execute(['publication' => 'https://socialize.example/p/'.$post->getPublicId()]));
@@ -393,7 +399,7 @@ final class FederationTest extends AppWebTestCase
         $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/11', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
         $unlisted = $this->publish($this->reloadAccount($camille), 'Avec le lien', Visibility::Unlisted);
         $this->publish($this->reloadAccount($camille), 'Publique', Visibility::Public);
-        $command = new \Symfony\Component\Console\Tester\CommandTester(new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? throw new \LogicException())->find('app:federation:retract-local-only'));
+        $command = new CommandTester(new Application(self::$kernel ?? throw new \LogicException())->find('app:federation:retract-local-only'));
 
         $sent = $this->during(static fn (): int => $command->execute(['--simulation' => true]));
         $command->assertCommandIsSuccessful();
@@ -634,8 +640,8 @@ final class FederationTest extends AppWebTestCase
 
             // Plus tard, camille annonce finalement ses publications importées discrètement.
             $before = \count($this->fediverse()->delivered('Create'));
-            $console = new \Symfony\Bundle\FrameworkBundle\Console\Application(self::$kernel ?? self::bootKernel());
-            $command = new \Symfony\Component\Console\Tester\CommandTester($console->find('app:import:announce'));
+            $console = new Application(self::$kernel ?? self::bootKernel());
+            $command = new CommandTester($console->find('app:import:announce'));
             $command->execute(['identifier' => 'camille', '--dry-run' => true]);
             self::assertStringContainsString('3 publications importées à annoncer', $command->getDisplay());
             self::assertCount($before, $this->fediverse()->delivered('Create'), 'Essai à blanc : rien n’est envoyé.');
@@ -711,7 +717,13 @@ final class FederationTest extends AppWebTestCase
 
         $this->client->request('GET', '/');
         self::assertSelectorTextContains('article.post', 'Voie lactée');
-        self::assertSelectorExists('article.post img[src="https://remote.test/media/1.jpg"][alt="Ciel étoilé"]');
+        // Image copiée ici (CacheRemoteMedia) : servie depuis /m/, en plusieurs tailles, au lieu de l'original distant.
+        $img = $this->client->getCrawler()->filter('article.post .media img[alt="Ciel étoilé"]');
+        self::assertCount(1, $img);
+        self::assertStringStartsWith('/m/', (string) $img->attr('src'));
+        self::assertStringContainsString('-large_640.webp 640w', (string) $img->attr('srcset'));
+        $copies = $this->remoteMediaOf('https://remote.test/notes/1')->getLocalDerivatives();
+        self::assertNotEmpty($copies);
         self::assertSelectorTextContains('article.post .fed', 'remote.test');
         $this->client->request('GET', '/federe');
         self::assertSelectorCount(1, 'article.post');
@@ -731,6 +743,87 @@ final class FederationTest extends AppWebTestCase
         $this->inbox('/inbox', ['id' => 'https://remote.test/notes/1#delete', 'type' => 'Delete', 'actor' => FakeFediverse::ALICE, 'object' => ['id' => 'https://remote.test/notes/1', 'type' => 'Tombstone']]);
         self::getContainer()->get('doctrine')->getManager()->clear();
         self::assertNull(self::getContainer()->get(PostRepository::class)->findOneBy(['apUri' => 'https://remote.test/notes/1']));
+        foreach ($copies as $path) {
+            self::assertFalse($this->derivatives()->fileExists($path), 'Copies locales supprimées avec la publication : '.$path);
+        }
+    }
+
+    public function testARemoteImageThatCannotBeDownloadedKeepsItsOriginalAddress(): void
+    {
+        $this->followAlice();
+        $note = $this->remoteNote('https://remote.test/notes/2', 'Brume', imageUrl: 'https://remote.test/media/absente.jpg');
+        $this->inbox('/inbox', ['id' => 'https://remote.test/notes/2/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE, 'object' => $note]);
+        self::assertResponseStatusCodeSame(202);
+
+        self::assertFalse($this->remoteMediaOf('https://remote.test/notes/2')->hasLocalCopies());
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('article.post img[src="https://remote.test/media/absente.jpg"]:not([srcset])');
+    }
+
+    public function testTheCopiesOfARemoteAccountGoAwayWithIt(): void
+    {
+        $this->followAlice();
+        $this->inbox('/inbox', ['id' => 'https://remote.test/notes/3/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE, 'object' => $this->remoteNote('https://remote.test/notes/3', 'Lac')]);
+        $copies = $this->remoteMediaOf('https://remote.test/notes/3')->getLocalDerivatives();
+        self::assertNotEmpty($copies);
+
+        $this->inbox('/inbox', ['id' => FakeFediverse::ALICE.'#delete', 'type' => 'Delete', 'actor' => FakeFediverse::ALICE, 'object' => FakeFediverse::ALICE]);
+        self::assertResponseStatusCodeSame(202);
+        foreach ($copies as $path) {
+            self::assertFalse($this->derivatives()->fileExists($path), $path);
+        }
+    }
+
+    /**
+     * Médias reçus avant la copie locale : la commande les copie (image entière ; affiche seule pour une vidéo).
+     */
+    public function testTheCommandCopiesTheRemoteMediaReceivedBefore(): void
+    {
+        $this->followAlice();
+        $em = self::getContainer()->get('doctrine')->getManager();
+        $post = Post::federated($this->alice(), 'Avant', Visibility::Public, null, 'https://remote.test/notes/4', 'https://remote.test/notes/4', new \DateTimeImmutable('-1 day'));
+        $image = MediaAttachment::remote($post, MediaType::Image, 0, 'https://remote.test/media/4.jpg', 'image/jpeg', null, 1080, 1350, null);
+        $video = MediaAttachment::remote($post, MediaType::Video, 1, 'https://remote.test/media/5.mp4', 'video/mp4', null, 1080, 1920, null, 'https://remote.test/media/5.jpg');
+        $em->persist($post);
+        $em->flush();
+
+        $tester = new CommandTester(new Application(self::$kernel ?? self::bootKernel())->find('app:media:cache-remote'));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+        self::assertStringContainsString('2 copies demandées', preg_replace('/\s+/', ' ', $tester->getDisplay()) ?? '');
+
+        $em->clear();
+        $image = $em->find(MediaAttachment::class, $image->getId());
+        $video = $em->find(MediaAttachment::class, $video->getId());
+        self::assertInstanceOf(MediaAttachment::class, $image);
+        self::assertInstanceOf(MediaAttachment::class, $video);
+        self::assertTrue($image->hasLocalCopies());
+        self::assertNotNull($image->getDerivative('large_960'));
+        $urls = self::getContainer()->get(MediaUrls::class);
+        self::assertStringStartsWith('/m/', (string) $urls->derivative($video, MediaAttachment::DERIVATIVE_POSTER));
+        self::assertStringStartsWith('/m/', (string) $urls->derivative($video, MediaAttachment::DERIVATIVE_THUMB));
+        self::assertSame('https://remote.test/media/5.mp4', $urls->derivative($video, MediaAttachment::DERIVATIVE_VIDEO), 'La vidéo reste sur son instance.');
+        self::assertSame(1920, $video->getHeight(), 'Dimensions de la vidéo, pas de son affiche.');
+
+        // Relancée : plus rien à demander.
+        $tester->execute([]);
+        self::assertStringContainsString('0 copie demandée', preg_replace('/\s+/', ' ', $tester->getDisplay()) ?? '');
+    }
+
+    private function remoteMediaOf(string $apUri): MediaAttachment
+    {
+        self::getContainer()->get('doctrine')->getManager()->clear();
+        $post = self::getContainer()->get(PostRepository::class)->findOneBy(['apUri' => $apUri]);
+        self::assertInstanceOf(Post::class, $post);
+        $media = $post->getMedia()->first();
+        self::assertInstanceOf(MediaAttachment::class, $media);
+
+        return $media;
+    }
+
+    private function derivatives(): FilesystemOperator
+    {
+        return self::getContainer()->get('derivatives.storage');
     }
 
     public function testCommentsOnLocalPostsAreFederatedAndTheirDeletionToo(): void
@@ -868,7 +961,7 @@ final class FederationTest extends AppWebTestCase
     /**
      * @return array<string, mixed>
      */
-    private function remoteNote(string $id, string $content, ?string $inReplyTo = null, bool $withImage = true): array
+    private function remoteNote(string $id, string $content, ?string $inReplyTo = null, bool $withImage = true, string $imageUrl = 'https://remote.test/media/1.jpg'): array
     {
         return array_filter([
             'id' => $id,
@@ -879,7 +972,7 @@ final class FederationTest extends AppWebTestCase
             'published' => '2026-11-12T08:00:00Z',
             'to' => ['https://www.w3.org/ns/activitystreams#Public'],
             'cc' => [FakeFediverse::ALICE.'/followers'],
-            'attachment' => $withImage ? [['type' => 'Document', 'mediaType' => 'image/jpeg', 'url' => 'https://remote.test/media/1.jpg', 'name' => 'Ciel étoilé', 'width' => 1080, 'height' => 1350]] : [],
+            'attachment' => $withImage ? [['type' => 'Document', 'mediaType' => 'image/jpeg', 'url' => $imageUrl, 'name' => 'Ciel étoilé', 'width' => 1080, 'height' => 1350]] : [],
         ], static fn (mixed $v): bool => null !== $v);
     }
 

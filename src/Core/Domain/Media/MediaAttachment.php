@@ -131,6 +131,40 @@ class MediaAttachment
         return null !== $this->remoteUrl;
     }
 
+    /**
+     * Média distant dont les copies ont été fabriquées ici (cacheRemote()) : servies comme celles d'un média local.
+     * Un dérivé local est un chemin relatif ; l'affiche fournie par l'instance d'origine, une adresse absolue.
+     */
+    public function hasLocalCopies(): bool
+    {
+        return $this->isRemote() && [] !== $this->getLocalDerivatives();
+    }
+
+    /**
+     * Copies rangées sur cette instance (sans l'affiche distante d'un média reçu du fédivers).
+     *
+     * @return array<string, string>
+     */
+    public function getLocalDerivatives(): array
+    {
+        return array_filter($this->derivatives, static fn (string $path): bool => !str_contains($path, '://'));
+    }
+
+    /**
+     * Copies locales d'un média distant, fabriquées depuis l'image (ou l'affiche d'une vidéo) téléchargée :
+     * elles remplacent l'affiche distante. La vidéo elle-même reste servie depuis son instance d'origine.
+     *
+     * @param array<string, string> $derivatives
+     */
+    public function cacheRemote(?int $width, ?int $height, array $derivatives, ?string $blurhash): void
+    {
+        \assert($this->isRemote());
+        $this->width = $width ?? $this->width;
+        $this->height = $height ?? $this->height;
+        $this->derivatives = $derivatives;
+        $this->blurhash ??= $blurhash;
+    }
+
     public function getId(): Uuid
     {
         return $this->id;

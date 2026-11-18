@@ -72,6 +72,50 @@ final readonly class FederationClient
     }
 
     /**
+     * Télécharge une image d'une autre instance (média d'une publication reçue), pour en fabriquer les copies ici.
+     * Mêmes protections que getJson() ; refuse ce qui n'est pas une image ou dépasse $maxBytes.
+     *
+     * @throws FederationException
+     */
+    public function downloadImage(string $url, int $maxBytes): string
+    {
+        $tooLarge = static fn (): FederationException => new FederationException(\sprintf('%s : image trop volumineuse.', $url));
+        try {
+            $response = $this->client->request('GET', $url, [
+                'headers' => ['Accept' => 'image/*', 'User-Agent' => 'Socialize (+ActivityPub)'],
+                'timeout' => 10,
+                'max_duration' => 60,
+                'max_redirects' => 3,
+                // Arrêt dès que la taille est dépassée, même sans Content-Length.
+                'on_progress' => static function (int $downloaded) use ($maxBytes, $tooLarge): void {
+                    if ($downloaded > $maxBytes) {
+                        throw $tooLarge();
+                    }
+                },
+            ]);
+            $status = $response->getStatusCode();
+            if ($status >= 400) {
+                throw new FederationException(\sprintf('%s a répondu %d.', $url, $status), $status);
+            }
+            $type = mb_strtolower((string) ($response->getHeaders(false)['content-type'][0] ?? ''));
+            if (!str_starts_with($type, 'image/')) {
+                throw new FederationException(\sprintf('%s n’est pas une image (%s).', $url, '' === $type ? 'type inconnu' : $type));
+            }
+            $body = $response->getContent(false);
+        } catch (ExceptionInterface $e) {
+            if ($e->getPrevious() instanceof FederationException) {
+                throw $e->getPrevious();
+            }
+            throw new FederationException(\sprintf('%s est injoignable : %s', $url, $e->getMessage()), 0, $e);
+        }
+        if (\strlen($body) > $maxBytes) {
+            throw $tooLarge();
+        }
+
+        return $body;
+    }
+
+    /**
      * Livre une activité dans une boîte de réception.
      *
      * @param array{keyId: string, privateKey: string} $signer

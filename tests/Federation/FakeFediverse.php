@@ -6,6 +6,7 @@ namespace App\Tests\Federation;
 
 use App\Federation\Infrastructure\HttpSignature;
 use App\Federation\Infrastructure\KeyVault;
+use Jcupitt\Vips\Image;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -20,6 +21,8 @@ final class FakeFediverse
 
     /** @var array{public: string, private: string}|null */
     private static ?array $keys = null;
+
+    private static ?string $photo = null;
 
     /** @var list<array{url: string, headers: array<string, string>, body: string, activity: array<string, mixed>}> */
     public array $deliveries = [];
@@ -57,6 +60,11 @@ final class FakeFediverse
             return new MockResponse('', ['http_code' => 202]);
         }
 
+        // Médias des publications : une vraie photo JPEG pour /media/<numéro>.jpg (copiée ici par CacheRemoteMedia).
+        if (1 === preg_match('#^/media/\d+\.jpg$#', $path)) {
+            return new MockResponse(self::photo(), ['response_headers' => ['content-type' => 'image/jpeg']]);
+        }
+
         if ('/.well-known/webfinger' === $path) {
             return $this->json(['subject' => 'acct:alice@remote.test', 'links' => [['rel' => 'self', 'type' => 'application/activity+json', 'href' => self::ALICE]]]);
         }
@@ -80,6 +88,14 @@ final class FakeFediverse
         }
 
         return new MockResponse('{"error":"not found"}', ['http_code' => 404]);
+    }
+
+    /**
+     * Photo 4:5, comme celles des instances du fédivers (fabriquée une fois pour toute la suite de tests).
+     */
+    public static function photo(): string
+    {
+        return self::$photo ??= Image::black(1080, 1350, ['bands' => 3])->add([40, 60, 140])->cast('uchar')->writeToBuffer('.jpg', ['Q' => 80]);
     }
 
     /**

@@ -20,6 +20,8 @@ use App\Core\Infrastructure\Doctrine\FollowRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Infrastructure\FederationException;
+use App\Media\Application\AccountFilesCleaner;
+use App\Media\Application\MediaIngestor;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -51,6 +53,8 @@ final readonly class InboxProcessor
         private \App\Core\Application\Notification\Notifications $notifications,
         private \App\Core\Application\Account\PilotedAccounts $piloted,
         private EventDispatcherInterface $events,
+        private MediaIngestor $ingestor,
+        private AccountFilesCleaner $accountFiles,
     ) {
     }
 
@@ -252,6 +256,12 @@ final readonly class InboxProcessor
         }
         $this->em->persist($post);
         $this->em->flush();
+        // Copies locales des images (et affiches des vidéos), fabriquées en tâche de fond.
+        foreach ($post->getMedia() as $media) {
+            if (null !== CacheRemoteMediaHandler::sourceOf($media)) {
+                $this->bus->dispatch(new CacheRemoteMedia($media->getId()->toRfc4122()));
+            }
+        }
         $this->notifications->mentioned($post, $this->mentionedLocals($note));
     }
 
@@ -333,6 +343,7 @@ final readonly class InboxProcessor
             return;
         }
         if ($id === $actor->getApUri()) {
+            $this->accountFiles->deleteFilesOf($actor);
             $this->em->remove($actor); // compte supprimé sur son instance : ses publications, likes et abonnements partent avec lui
             $this->em->flush();
 
@@ -341,6 +352,9 @@ final readonly class InboxProcessor
 
         $post = $this->posts->findOneBy(['apUri' => $id]);
         if (null !== $post && $post->getAccount()->getId()->equals($actor->getId())) {
+            foreach ($post->getMedia() as $media) {
+                $this->ingestor->delete($media);
+            }
             $this->em->remove($post);
             $this->em->flush();
 

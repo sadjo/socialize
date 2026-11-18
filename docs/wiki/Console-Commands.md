@@ -40,6 +40,7 @@ printf '%s' 'S3cret!' | docker compose exec -T app php bin/console app:user:crea
 | Command | Description |
 | --- | --- |
 | `app:media:complete-sizes` | Build the missing responsive sizes (640/960 px images, 240/360/720 px grid thumbnails, video posters) of media published by older versions. Safe to run again |
+| `app:media:cache-remote` | Queue (on the `media` queue) local copies of images and video posters received from the fediverse before v0.9.25, or whose copy failed. Safe to run again |
 
 ## Development
 
