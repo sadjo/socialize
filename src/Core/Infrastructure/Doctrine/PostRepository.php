@@ -16,7 +16,6 @@ use App\Core\Domain\Social\Follow;
 use App\Core\Domain\Social\FollowState;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
-use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Types\UuidType;
@@ -86,7 +85,7 @@ final class PostRepository extends ServiceEntityRepository
         $qb = $this->base()
             ->where('p.account IN (:authors)')
             ->andWhere(\sprintf('p.account = :viewer OR p.visibility IN (:shared) OR (p.visibility = :groups AND %s)', self::MEMBER_OF_GROUPS))
-            ->setParameter('authors', $this->uuidList([$viewer->getId(), ...$followed]), ArrayParameterType::STRING)
+            ->setParameter('authors', UuidList::of([$viewer->getId(), ...$followed], $this->getEntityManager()->getConnection()->getDatabasePlatform()), ArrayParameterType::STRING)
             ->setParameter('viewer', $viewer->getId(), UuidType::NAME)
             ->setParameter('shared', [Visibility::Public, Visibility::Unlisted, Visibility::Followers])
             ->setParameter('groups', Visibility::Groups);
@@ -272,27 +271,6 @@ final class PostRepository extends ServiceEntityRepository
             }
         }
         $qb->andWhere([] === $conditions ? '1 = 0' : '('.implode(') OR (', $conditions).')');
-    }
-
-    /**
-     * Identifiants convertis comme le fait le type uuid (binaire, ou texte sur une base à type UUID natif) pour une
-     * liste « IN (:ids) » : Doctrine ne sait pas convertir lui-même un tableau d'UUID.
-     *
-     * @param list<Uuid|string> $ids
-     *
-     * @return list<string>
-     */
-    private function uuidList(array $ids): array
-    {
-        $type = Type::getType(UuidType::NAME);
-        $platform = $this->getEntityManager()->getConnection()->getDatabasePlatform();
-
-        return array_map(static function (Uuid|string $id) use ($type, $platform): string {
-            $value = $type->convertToDatabaseValue($id, $platform);
-            \assert(\is_string($value));
-
-            return $value;
-        }, $ids);
     }
 
     private function base(): QueryBuilder

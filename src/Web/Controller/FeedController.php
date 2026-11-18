@@ -11,6 +11,7 @@ use App\Core\Application\Story\StoryFeed;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
+use App\Web\Feed\CommentPreviews;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -27,6 +28,7 @@ final class FeedController extends AbstractController
         private readonly PostRepository $posts,
         private readonly LikeRepository $likes,
         private readonly CurrentAccount $currentAccount,
+        private readonly CommentPreviews $commentPreviews,
         /** Accueil réduit au formulaire de connexion pour les visiteurs (temporaire, variable HOME_LOGIN_ONLY). */
         #[Autowire(env: 'bool:HOME_LOGIN_ONLY')]
         private readonly bool $homeLoginOnly = false,
@@ -83,6 +85,7 @@ final class FeedController extends AbstractController
      */
     private function renderFeed(Request $request, string $tab, TimelinePage $page, array $extra = []): Response
     {
+        $this->commentPreviews->prime($page->posts);
         $parameters = [
             'tab' => $tab,
             'page' => $page,
