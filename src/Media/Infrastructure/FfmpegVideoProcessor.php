@@ -62,7 +62,9 @@ final class FfmpegVideoProcessor
         $command = [
             ...$command,
             '-vf', "scale=w='min(1080,iw)':h='min(1920,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
-            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p',
+            // Qualité constante (crf), plafonnée en débit : une vidéo de téléphone très détaillée reste lisible sans
+            // attendre sur un réseau mobile (lecture automatique dans le fil).
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-maxrate', '3500k', '-bufsize', '7000k', '-pix_fmt', 'yuv420p',
             '-c:a', 'aac', '-b:a', '128k',
             '-map_metadata', '-1', '-movflags', '+faststart',
             $output,
