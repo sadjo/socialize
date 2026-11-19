@@ -1,6 +1,6 @@
 # Posting
 
-The **Créer** button offers *Publication* (post) or *Story* (see [Stories](stories.md)). It requires the
+The **Créer** button offers *Publication* (post), *Texte* (text) or *Story* (see [Stories](stories.md)). It requires the
 *Publication* permission, granted by an administrator.
 
 ## Creating a post
@@ -14,6 +14,17 @@ The **Créer** button offers *Publication* (post) or *Story* (see [Stories](stor
 - Optional **content warning**: media stay blurred until someone chooses to see them.
 
 Originals and their metadata are kept; public copies do not contain your GPS position.
+
+## Posting a text
+
+At the top of *Nouvelle publication*, two tabs: **Photos et vidéos** and **Texte**. The Texte tab posts a text alone,
+without photo or video, up to 2,200 characters, with `#hashtags`, mentions and links. It puts the text forward and
+hides what only media need: music and posting to Instagram. The text already written is kept when switching tabs.
+
+When the text contains a link, the post shows a **preview** of the first one: site, title, description and image of
+the page. The image is copied to your instance: visitors load nothing from the linked site.
+
+A text post goes to the fediverse as an ordinary message, readable from Mastodon and other networks.
 
 ## Adding music
 

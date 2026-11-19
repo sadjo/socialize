@@ -1,6 +1,6 @@
 # Publier
 
-Le bouton **Créer** propose *Publication* ou *Story* (voir [Stories](stories.md)). Il faut le droit *Publication*,
+Le bouton **Créer** propose *Publication*, *Texte* ou *Story* (voir [Stories](stories.md)). Il faut le droit *Publication*,
 accordé par un administrateur.
 
 ## Créer une publication
@@ -14,6 +14,19 @@ accordé par un administrateur.
 - **Avertissement de contenu** facultatif : les médias restent floutés jusqu'à ce qu'on choisisse de les voir.
 
 Les originaux et leurs métadonnées sont conservés ; les copies publiques ne contiennent pas votre position GPS.
+
+## Publier un texte
+
+En haut de *Nouvelle publication*, deux onglets : **Photos et vidéos** et **Texte**. L'onglet Texte publie un texte
+seul, sans photo ni vidéo, jusqu'à 2 200 caractères, avec `#hashtags`, mentions et liens. Il met le texte en avant et
+masque ce qui ne sert qu'aux médias : musique et publication sur Instagram. Le texte déjà écrit est gardé quand on
+change d'onglet.
+
+Quand le texte contient un lien, la publication montre un **aperçu** du premier : site, titre, description et image de
+la page. L'image est copiée sur votre instance : les visiteurs ne chargent rien depuis le site du lien.
+
+Une publication texte part dans le fédivers comme un message ordinaire, lisible depuis Mastodon et les autres
+réseaux.
 
 ## Ajouter une musique
 

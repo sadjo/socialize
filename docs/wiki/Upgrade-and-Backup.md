@@ -21,6 +21,9 @@ After upgrading from a version older than 0.9.16, build the responsive image siz
 Since v0.9.25, images received from the fediverse are copied to the instance (in several sizes, like your own).
 For those received earlier, run once: `docker compose exec app php bin/console app:media:cache-remote`.
 
+Since v0.9.37, text posts show a preview of their first link. For those already present, run once:
+`docker compose exec app php bin/console app:link-previews:fetch`.
+
 To pin a version, replace `latest` with a tag in `compose.yaml` (`image: ghcr.io/sadjo/socialize:v0.9.15`).
 Re-running the installer with `--version vX.Y.Z` does the same.
 

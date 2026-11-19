@@ -15,7 +15,8 @@ here**: *Se connecter avec Mastodon*, then choose your server and authorize acce
   a local account; your Mastodon app notifies you as well. Device notifications remain those of your Mastodon app.
 - **Appearance**: theme and media filter are chosen here, in *Apparence* (menu); the other settings stay on your
   Mastodon server.
-- **Posting**: photos and videos posted from Socialize go to your Mastodon account.
+- **Posting**: photos, videos and texts posted from Socialize go to your Mastodon account; the *Texte* tab posts a
+  message without media.
 - **Instagram import**: possible if an administrator allows it; the archive is posted to your Mastodon account.
 
 Socialize acts with the authorization granted when signing in, never knowing your Mastodon password.
