@@ -56,6 +56,10 @@ final class NotificationTest extends AppWebTestCase
         $crawler = $this->client->request('GET', '/notifications');
         self::assertSelectorCount(1, '.notif.unread');
 
+        // Icônes : un œil pour marquer comme lue, un œil barré pour revenir à non lue.
+        self::assertSelectorExists('.notif.unread button[aria-label="Marquer comme lue"] use[href="#i-eye"]');
+        self::assertSelectorExists('.notif:not(.unread) button[aria-label="Marquer comme non lue"] use[href="#i-eye-off"]');
+
         // Lue → non lue, puis tout marquer comme lu.
         $this->client->submit($crawler->filter('.notif')->first()->filter('button[aria-label="Marquer comme non lue"]')->form());
         $crawler = $this->client->followRedirect();
