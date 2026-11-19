@@ -7,6 +7,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.27] - 2026-11-19
+
+Reliable post lists on mobile.
+
+### Fixed
+
+- Videos and photos no longer turn black after scrolling the feed on iPhone: list photos are softened by a
+  translucent veil instead of a CSS filter, and buttons over media no longer blur what is behind them (one graphics
+  layer less per image) (feed)
+- A video released far from the screen gets its poster and preloading back when it returns, instead of staying black
+  (feed)
+
+### Changed
+
+- Feeds and profile grids are a single flat list: the next page is requested 1.5 screens ahead as a Turbo Stream,
+  one request at a time, with a "Retry" button when the network drops and an automatic retry once it is back
+  (feed, profile)
+- Next pages only render their posts: no suggestions, stories or profile header computed for them (feed, profile)
+
 ## [0.9.26] - 2026-11-18
 
 Photos on iPhone.
