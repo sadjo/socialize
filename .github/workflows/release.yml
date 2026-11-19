@@ -62,6 +62,9 @@ jobs:
           context: .
           target: frankenphp_prod
           platforms: linux/amd64,linux/arm64
+          # No provenance attestation: it added two untagged manifests ("sha256:…") to the registry for every release,
+          # which installing Socialize does not need. What remains: the tagged index and the amd64 and arm64 images.
+          provenance: false
           push: true
           build-args: APP_VERSION=${{ steps.version.outputs.tag }}
           tags: ${{ steps.meta.outputs.tags }}
