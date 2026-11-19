@@ -29,7 +29,7 @@ final class ProfileGridTest extends AppWebTestCase
         self::assertCount(1, $next, 'Repère de la page suivante, en fin de grille.');
 
         // Suite en flux Turbo : seulement les vignettes, insérées avant le repère, qui disparaît en fin de grille.
-        $this->client->request('GET', (string) $next->attr('href'), server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
+        $this->client->request('GET', (string) $next->attr('href'), server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html', 'HTTP_X_SOCIALIZE_NEXT_PAGE' => '1']);
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('Content-Type', 'text/vnd.turbo-stream.html; charset=UTF-8');
         self::assertSelectorCount(2, 'turbo-stream[action="before"][target="grid-more"] .gt');

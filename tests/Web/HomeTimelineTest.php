@@ -37,7 +37,7 @@ final class HomeTimelineTest extends AppWebTestCase
         // Page suivante, chargée au défilement en flux Turbo : la onzième publication, la plus ancienne (la sienne).
         $next = $crawler->filter('#feed-more a[href*="apres="]')->attr('href');
         self::assertNotNull($next);
-        $this->client->request('GET', $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
+        $this->client->request('GET', $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html', 'HTTP_X_SOCIALIZE_NEXT_PAGE' => '1']);
         self::assertSelectorCount(1, 'article.post');
         self::assertSelectorTextContains('article.post', 'Les miennes, même réservées aux abonnés');
     }

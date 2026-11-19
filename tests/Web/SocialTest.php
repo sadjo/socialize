@@ -178,7 +178,7 @@ final class SocialTest extends AppWebTestCase
         $next = $crawler->filter('#feed-more a')->attr('href');
         self::assertNotNull($next);
 
-        $this->client->request('GET', $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
+        $this->client->request('GET', $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html', 'HTTP_X_SOCIALIZE_NEXT_PAGE' => '1']);
         self::assertResponseIsSuccessful();
         self::assertSelectorCount(2, 'article.post');
         self::assertSelectorExists('turbo-stream[action="remove"][target="feed-more"]', 'Fin du fil : plus de repère.');

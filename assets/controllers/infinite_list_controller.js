@@ -11,6 +11,9 @@ import { renderStreamMessage } from '@hotwired/turbo';
  * mobile), relancé seul au retour de la connexion.
  */
 const AHEAD = '0px 0px 150% 0px';
+// En-tête propre à la page suivante (App\Web\Feed\NextPage) : un formulaire Turbo redirigé vers le fil demande aussi
+// les flux, mais doit recevoir la page complète.
+const NEXT_PAGE_HEADER = 'X-Socialize-Next-Page';
 const RETRY = 'Réessayer';
 
 export default class extends Controller {
@@ -46,7 +49,7 @@ export default class extends Controller {
         this.failed = false;
         more.setAttribute('aria-busy', 'true');
         try {
-            const response = await fetch(link.href, { headers: { Accept: 'text/vnd.turbo-stream.html' }, credentials: 'same-origin' });
+            const response = await fetch(link.href, { headers: { Accept: 'text/vnd.turbo-stream.html', [NEXT_PAGE_HEADER]: '1' }, credentials: 'same-origin' });
             const contentType = response.headers.get('Content-Type') ?? '';
             if (!response.ok || !contentType.startsWith('text/vnd.turbo-stream.html')) throw new Error(`HTTP ${response.status}`);
             renderStreamMessage(await response.text());
