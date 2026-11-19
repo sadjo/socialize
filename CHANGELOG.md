@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.32] - 2026-11-19
+
+Follower approval for Mastodon accounts.
+
+### Fixed
+
+- A Mastodon account signed in here that followed a local account approving its followers was followed straight away;
+  its request now waits for the account's approval, with its notification, like a local account's (Mastodon)
+
 ## [0.9.31] - 2026-11-19
 
 No black screen before videos.
