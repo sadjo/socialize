@@ -74,6 +74,21 @@ final class FakeFediverse
             return new MockResponse(self::photo(), ['response_headers' => ['content-type' => 'image/jpeg']]);
         }
 
+        // Pages web (aperçus de liens) : un article avec ses balises Open Graph, et une adresse qui n'est pas une page.
+        if ('/article' === $path) {
+            return new MockResponse(<<<'HTML'
+                <!doctype html><html><head><title>Titre de la page</title>
+                <meta property="og:site_name" content="Le Journal">
+                <meta property="og:title" content="Un article à lire">
+                <meta property="og:description" content="Ce que dit l&#39;article, en deux lignes.">
+                <meta property="og:image" content="/media/7.jpg">
+                </head><body><p>Contenu</p></body></html>
+                HTML, ['response_headers' => ['content-type' => 'text/html; charset=utf-8']]);
+        }
+        if ('/data.json' === $path) {
+            return $this->json(['not' => 'html']);
+        }
+
         if ('/.well-known/webfinger' === $path) {
             return $this->json(['subject' => 'acct:alice@remote.test', 'links' => [['rel' => 'self', 'type' => 'application/activity+json', 'href' => self::ALICE]]]);
         }

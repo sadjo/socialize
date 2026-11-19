@@ -57,6 +57,7 @@ final readonly class InboxProcessor
         private EventDispatcherInterface $events,
         private MediaIngestor $ingestor,
         private AccountFilesCleaner $accountFiles,
+        private LinkPreviews $linkPreviews,
     ) {
     }
 
@@ -286,6 +287,8 @@ final readonly class InboxProcessor
                 $this->bus->dispatch(new CacheRemoteMedia($media->getId()->toRfc4122()));
             }
         }
+        // Publication texte : aperçu de son premier lien.
+        $this->linkPreviews->refresh($post);
         $this->notifications->mentioned($post, $this->mentionedLocals($note));
     }
 
@@ -353,6 +356,7 @@ final readonly class InboxProcessor
             if (null !== $post && $post->getAccount()->getId()->equals($actor->getId())) {
                 $post->updateFederated(HtmlText::toText(Json::string($object, 'content')), Json::string($object, 'summary'));
                 $this->em->flush();
+                $this->linkPreviews->refresh($post);
             }
         }
     }
@@ -379,6 +383,7 @@ final readonly class InboxProcessor
             foreach ($post->getMedia() as $media) {
                 $this->ingestor->delete($media);
             }
+            $this->linkPreviews->removeImage($post);
             $this->em->remove($post);
             $this->em->flush();
 

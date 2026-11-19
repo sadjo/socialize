@@ -8,6 +8,7 @@ use App\Core\Application\Post\Links;
 use App\Core\Application\Post\Mentions;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Post\LinkPreview;
 use App\Media\Application\ImageSizes;
 use App\Media\Application\MediaUrls;
 use Twig\Attribute\AsTwigFilter;
@@ -40,6 +41,15 @@ final readonly class SocializeExtension
     public function mediaSrcset(MediaAttachment $media, string $family = ImageSizes::LARGE): ?string
     {
         return $this->urls->srcset($media, $family);
+    }
+
+    /**
+     * Image d'aperçu d'un lien : sa copie locale (jamais l'image du site d'origine), null sans image.
+     */
+    #[AsTwigFunction('link_preview_image')]
+    public function linkPreviewImage(LinkPreview $preview): ?string
+    {
+        return null !== $preview->image ? $this->urls->path($preview->image) : null;
     }
 
     #[AsTwigFunction('avatar_url')]

@@ -116,6 +116,44 @@ final readonly class FederationClient
     }
 
     /**
+     * Lit le début d'une page web (aperçu d'un lien) : mêmes protections que getJson(), page HTML seulement, lecture
+     * arrêtée après $maxBytes (l'en-tête, qui porte les balises Open Graph, est au début).
+     *
+     * @throws FederationException
+     */
+    public function fetchHtml(string $url, int $maxBytes): string
+    {
+        try {
+            $response = $this->client->request('GET', $url, [
+                'headers' => ['Accept' => 'text/html,application/xhtml+xml', 'User-Agent' => 'Socialize (+link preview)'],
+                'timeout' => 10,
+                'max_duration' => 20,
+                'max_redirects' => 5,
+            ]);
+            $status = $response->getStatusCode();
+            if ($status >= 400) {
+                throw new FederationException(\sprintf('%s a répondu %d.', $url, $status), $status);
+            }
+            $type = mb_strtolower((string) ($response->getHeaders(false)['content-type'][0] ?? ''));
+            if (!str_contains($type, 'html')) {
+                throw new FederationException(\sprintf('%s n’est pas une page web (%s).', $url, '' === $type ? 'type inconnu' : $type));
+            }
+            $body = '';
+            foreach ($this->client->stream($response) as $chunk) {
+                $body .= $chunk->getContent();
+                if (\strlen($body) >= $maxBytes) {
+                    $response->cancel();
+                    break;
+                }
+            }
+        } catch (ExceptionInterface $e) {
+            throw new FederationException(\sprintf('%s est injoignable : %s', $url, $e->getMessage()), 0, $e);
+        }
+
+        return substr($body, 0, $maxBytes);
+    }
+
+    /**
      * Livre une activité dans une boîte de réception.
      *
      * @param array{keyId: string, privateKey: string} $signer

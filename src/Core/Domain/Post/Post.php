@@ -116,6 +116,26 @@ class Post
     #[ORM\Column(options: ['default' => 0])]
     private int $musicStart = 0;
 
+    /** Aperçu du premier lien d'une publication texte (LinkPreview) : adresse, état, puis ce qu'en dit la page. */
+    #[ORM\Column(length: 1000, nullable: true)]
+    private ?string $previewUrl = null;
+
+    #[ORM\Column(length: 10, nullable: true, enumType: LinkPreviewState::class)]
+    private ?LinkPreviewState $previewState = null;
+
+    #[ORM\Column(length: 200, nullable: true)]
+    private ?string $previewSite = null;
+
+    #[ORM\Column(length: 300, nullable: true)]
+    private ?string $previewTitle = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $previewDescription = null;
+
+    /** Copie locale de l'image d'aperçu (chemin dans les copies publiques). */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $previewImage = null;
+
     public function __construct(
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -307,6 +327,58 @@ class Post
     public function getMedia(): Collection
     {
         return $this->media;
+    }
+
+    /**
+     * Aperçu du lien, une fois la page lue (null sinon, ou si elle ne dit rien d'utile).
+     */
+    public function getLinkPreview(): ?LinkPreview
+    {
+        if (LinkPreviewState::Ready !== $this->previewState || null === $this->previewUrl || (null === $this->previewTitle && null === $this->previewDescription)) {
+            return null;
+        }
+
+        return new LinkPreview($this->previewUrl, $this->previewSite, $this->previewTitle, $this->previewDescription, $this->previewImage);
+    }
+
+    public function getPreviewUrl(): ?string
+    {
+        return $this->previewUrl;
+    }
+
+    public function getPreviewState(): ?LinkPreviewState
+    {
+        return $this->previewState;
+    }
+
+    /** Image d'aperçu actuelle, à supprimer si l'aperçu change. */
+    public function getPreviewImage(): ?string
+    {
+        return $this->previewImage;
+    }
+
+    /**
+     * Aperçu demandé pour ce lien (null : plus de lien, plus d'aperçu) ; la page sera lue en tâche de fond.
+     */
+    public function requestLinkPreview(?string $url): void
+    {
+        $this->previewUrl = null !== $url ? mb_substr($url, 0, 1000) : null;
+        $this->previewState = null !== $url ? LinkPreviewState::Pending : null;
+        $this->previewSite = $this->previewTitle = $this->previewDescription = $this->previewImage = null;
+    }
+
+    public function completeLinkPreview(?string $site, ?string $title, ?string $description, ?string $image): void
+    {
+        $this->previewState = LinkPreviewState::Ready;
+        $this->previewSite = null !== $site ? mb_substr($site, 0, 200) : null;
+        $this->previewTitle = null !== $title ? mb_substr($title, 0, 300) : null;
+        $this->previewDescription = null !== $description ? mb_substr($description, 0, 500) : null;
+        $this->previewImage = $image;
+    }
+
+    public function failLinkPreview(): void
+    {
+        $this->previewState = LinkPreviewState::Failed;
     }
 
     public function getCover(): ?MediaAttachment
