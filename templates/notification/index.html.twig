@@ -14,7 +14,7 @@
                 {% if unread %}
                     <form method="post" action="{{ path('app_notifications_read_all') }}">
                         <input type="hidden" name="_token" value="{{ token }}">
-                        <button class="btn sm">{{ ui.icon('check', 'xs') }}Tout marquer comme lu</button>
+                        <button class="btn sm">{{ ui.icon('eye', 'xs') }}Tout marquer comme lu</button>
                     </form>
                 {% endif %}
                 <form method="post" action="{{ path('app_notifications_delete_all') }}" data-turbo-confirm="Supprimer toutes vos notifications ?">
@@ -75,7 +75,7 @@
                     <div class="notif-acts">
                         <form method="post" action="{{ path('app_notification_toggle', {id: n.id}) }}">
                             <input type="hidden" name="_token" value="{{ token }}">
-                            <button class="ib" aria-label="{{ n.read ? 'Marquer comme non lue' : 'Marquer comme lue' }}" title="{{ n.read ? 'Marquer comme non lue' : 'Marquer comme lue' }}">{{ ui.icon(n.read ? 'eye' : 'check', 'sm') }}</button>
+                            <button class="ib" aria-label="{{ n.read ? 'Marquer comme non lue' : 'Marquer comme lue' }}" title="{{ n.read ? 'Marquer comme non lue' : 'Marquer comme lue' }}">{# Œil : marquer comme lue ; œil barré : de nouveau non lue. #}{{ ui.icon(n.read ? 'eye-off' : 'eye', 'sm') }}</button>
                         </form>
                         <form method="post" action="{{ path('app_notification_delete', {id: n.id}) }}">
                             <input type="hidden" name="_token" value="{{ token }}">
