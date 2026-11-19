@@ -205,7 +205,12 @@ final class ProfileController extends AbstractController
             throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
         }
         $viewer = $this->currentAccount->require();
-        $social->removeFollower($viewer, $follower);
+        try {
+            $social->removeFollower($viewer, $follower);
+        } catch (PilotedActionFailed $e) {
+            // Compte Mastodon : son serveur a refusé, rien n'a changé.
+            $this->addFlash('error', $e->getMessage());
+        }
 
         return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_profile_followers', ['username' => $viewer->getAcct()]), Response::HTTP_SEE_OTHER);
     }
@@ -241,8 +246,13 @@ final class ProfileController extends AbstractController
         if (!$this->isCsrfTokenValid('follow-request-'.$follower->getAcct(), $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
         }
-        if ($social->acceptFollower($this->currentAccount->require(), $follower)) {
-            $this->addFlash('success', \sprintf('%s fait maintenant partie de vos abonnés.', $follower->getDisplayName()));
+        try {
+            if ($social->acceptFollower($this->currentAccount->require(), $follower)) {
+                $this->addFlash('success', \sprintf('%s fait maintenant partie de vos abonnés.', $follower->getDisplayName()));
+            }
+        } catch (PilotedActionFailed $e) {
+            // Compte Mastodon : son serveur a refusé, rien n'a changé.
+            $this->addFlash('error', $e->getMessage());
         }
 
         return $this->redirectToRoute('app_follow_requests', status: Response::HTTP_SEE_OTHER);

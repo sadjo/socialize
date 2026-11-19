@@ -6,6 +6,8 @@ namespace App\Federation\Application;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountFollowed;
+use App\Core\Domain\Event\FollowerRemoved;
+use App\Core\Domain\Event\FollowRequestAccepted;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Media\MediaType;
 use App\Core\Domain\Post\Post;
@@ -135,6 +137,8 @@ final readonly class InboxProcessor
         if ($follow instanceof Follow && !$follow->isAccepted()) {
             $follow->accept();
             $this->em->flush();
+            // Demande acceptée (sa notification, chez un compte Mastodon connecté ici, n'a plus lieu d'être).
+            $this->events->dispatch(new FollowRequestAccepted($follow));
             // Abonnement accepté : on récupère l'historique récent du compte suivi.
             $this->bus->dispatch(new BackfillAccount($actor->getId()->toRfc4122()));
         }
@@ -147,8 +151,11 @@ final readonly class InboxProcessor
     {
         $follow = $this->ourFollowOf($activity, $actor);
         if ($follow instanceof Follow) {
+            $apUri = $follow->getApUri();
             $this->em->remove($follow);
             $this->em->flush();
+            // Demande refusée ou abonné retiré par le compte suivi (sa notification disparaît).
+            $this->events->dispatch(new FollowerRemoved($actor, $follow->getFollower(), $apUri));
         }
     }
 

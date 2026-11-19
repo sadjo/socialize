@@ -25,7 +25,9 @@
         {% endif %}
     </div>
 
-    {# Notifications sur l'appareil (Web Push) et choix de ce qu'on reçoit. #}
+    {# Notifications sur l'appareil (Web Push) et choix de ce qu'on reçoit ; pas pour un compte Mastodon, que son
+       application prévient déjà. #}
+    {% if not is_granted('ROLE_MASTODON') %}
     <section class="card stack push-card" data-controller="push"
              data-push-key-value="{{ vapid_key }}" data-push-token-value="{{ csrf_token('push-device') }}"
              data-push-subscribe-url-value="{{ path('app_push_subscribe') }}" data-push-unsubscribe-url-value="{{ path('app_push_unsubscribe') }}">
@@ -44,6 +46,7 @@
             {{ form_end(preferences_form) }}
         </details>
     </section>
+    {% endif %}
 
     {% if notifications is empty %}
         <section class="card empty-notifs">{{ ui.icon('bell') }}<p>Aucune notification. Les « J’aime » et commentaires sur vos publications apparaîtront ici.</p></section>
@@ -60,7 +63,7 @@
                             <span class="notif-av">{{ ui.avatar(who, 44) }}<span class="notif-kind {{ n.type.value }}">{{ ui.icon({like: 'heart', comment: 'comment', mention: 'at', signup: 'user', follow_request: 'user'}[n.type.value], 'xs') }}</span></span>
                             <span class="notif-text">
                                 <span><b>{{ who.displayName }}</b>{% if not who.local %} <small>@{{ who.domain }}</small>{% endif %}
-                                {%- if n.type.value == 'signup' %} {{ who.local ? 'a créé son compte' : 's’est connecté avec son compte Mastodon' }} (@{{ who.acct }}). Accordez-lui ses droits dans l’administration.
+                                {%- if n.type.value == 'signup' %} {% if who.local %}a créé son compte (@{{ who.acct }}). Accordez-lui ses droits dans l’administration.{% else %}s’est connecté pour la première fois avec son compte Mastodon (@{{ who.acct }}).{% endif %}
                                 {%- elseif n.type.value == 'follow_request' %} demande à s’abonner à votre compte.
                                 {%- elseif n.type.value == 'mention' %} vous a mentionné dans sa publication{% if n.post.caption %} : « {{ n.post.caption|length > 120 ? n.post.caption|slice(0, 120) ~ '…' : n.post.caption }} »{% else %}.{% endif %}
                                 {%- elseif n.type.value == 'like' %} a aimé votre publication.{% else %} a commenté votre publication{% if n.comment %} : « {{ n.comment.content|length > 120 ? n.comment.content|slice(0, 120) ~ '…' : n.comment.content }} »{% else %}.{% endif %}{% endif %}</span>

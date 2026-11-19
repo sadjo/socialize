@@ -92,8 +92,8 @@
     {% if me %}
         {% if is_granted('ROLE_PUBLISHER') %}<button type="button" class="plus" popovertarget="create-menu" aria-haspopup="dialog" aria-label="Créer">{{ ui.icon('plus') }}</button>{% elseif is_granted('ROLE_MASTODON') %}<a class="plus" href="{{ path('app_mastodon_compose') }}" aria-label="Publier">{{ ui.icon('plus') }}</a>{% endif %}
         {# Notifications à la place des réglages (toujours dans le menu). #}
-        {% set unread = is_granted('ROLE_MASTODON') ? 0 : unread_notifications() %}
-        {% if not is_granted('ROLE_MASTODON') %}<a href="{{ path('app_notifications') }}" class="notif-link{{ current_route == 'app_notifications' ? ' on' }}" aria-label="Notifications{{ unread ? ' (' ~ unread ~ ' non lue' ~ (unread > 1 ? 's') ~ ')' }}">{{ ui.icon('bell') }}{% if unread %}<span class="badge num" aria-hidden="true">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>{% endif %}
+        {% set unread = unread_notifications() %}
+        <a href="{{ path('app_notifications') }}" class="notif-link{{ current_route == 'app_notifications' ? ' on' }}" aria-label="Notifications{{ unread ? ' (' ~ unread ~ ' non lue' ~ (unread > 1 ? 's') ~ ')' }}">{{ ui.icon('bell') }}{% if unread %}<span class="badge num" aria-hidden="true">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>
         <a href="{{ path('app_profile', {username: me.acct}) }}" aria-label="Profil">{{ ui.avatar(me, 26) }}</a>
     {% else %}
         <a href="{{ login_url }}" class="plus" aria-label="Connexion">{{ ui.icon('login') }}</a>

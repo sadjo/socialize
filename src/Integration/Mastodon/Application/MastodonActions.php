@@ -100,6 +100,19 @@ final readonly class MastodonActions implements PilotedActions
         $this->run($follower, fn (string $domain, string $token): bool => $this->client->follow($domain, $token, $this->account($domain, $token, $following), 'unfollow'));
     }
 
+    public function acceptFollower(Account $account, Account $follower): void
+    {
+        $this->run($account, fn (string $domain, string $token) => $this->client->answerFollowRequest($domain, $token, $this->account($domain, $token, $follower), 'authorize'));
+    }
+
+    public function removeFollower(Account $account, Account $follower, bool $pending): void
+    {
+        $this->run($account, function (string $domain, string $token) use ($follower, $pending): void {
+            $id = $this->account($domain, $token, $follower);
+            $pending ? $this->client->answerFollowRequest($domain, $token, $id, 'reject') : $this->client->removeFromFollowers($domain, $token, $id);
+        });
+    }
+
     /**
      * @template T
      *

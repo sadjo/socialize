@@ -68,7 +68,12 @@ final class SignupNotificationTest extends AppWebTestCase
         $this->login($admin);
         $this->client->request('GET', '/notifications');
         self::assertSelectorCount(1, '.notif', 'Seulement à la première connexion.');
-        self::assertSelectorTextContains('.notif', 's’est connecté avec son compte Mastodon (@alice@remote.test)');
+        self::assertSelectorTextContains('.notif', 's’est connecté pour la première fois avec son compte Mastodon (@alice@remote.test)');
+        self::assertSelectorTextNotContains('.notif', 'Accordez-lui ses droits', 'Ses droits se règlent sur son serveur.');
+
+        // La notification mène à son profil, pas à l'administration.
+        $this->client->submit($this->client->getCrawler()->filter('.notif-open')->first()->form());
+        self::assertResponseRedirects('/@alice@remote.test');
     }
 
     public function testAccountsCreatedByTheAdministratorAreNotNotified(): void

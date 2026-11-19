@@ -111,9 +111,14 @@ final class NotificationController extends AbstractController
         if (\App\Core\Domain\Notification\NotificationType::FollowRequest === $notification->getType()) {
             return $this->redirectToRoute('app_follow_requests', status: Response::HTTP_SEE_OTHER);
         }
-        // Nouveau compte (administrateurs) : la liste des comptes, où lui accorder ses droits.
+        // Nouveau compte (administrateurs) : la liste des comptes, où lui accorder ses droits ; première connexion d'un
+        // compte Mastodon : son profil (ses droits se règlent sur son serveur).
         if (!$post instanceof \App\Core\Domain\Post\Post) {
-            return $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER);
+            $actor = $notification->getActor();
+
+            return $actor->isLocal()
+                ? $this->redirectToRoute('admin_accounts', status: Response::HTTP_SEE_OTHER)
+                : $this->redirectToRoute('app_profile', ['username' => $actor->getAcct()], Response::HTTP_SEE_OTHER);
         }
 
         return $this->redirectToRoute('app_post_show', [

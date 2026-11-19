@@ -37,4 +37,14 @@ interface PilotedActions
     public function follow(Account $follower, Account $following): bool;
 
     public function unfollow(Account $follower, Account $following): void;
+
+    /**
+     * Le compte piloté accepte la demande d'abonnement de ce compte.
+     */
+    public function acceptFollower(Account $account, Account $follower): void;
+
+    /**
+     * Le compte piloté refuse la demande d'abonnement de ce compte (pending), ou le retire de ses abonnés.
+     */
+    public function removeFollower(Account $account, Account $follower, bool $pending): void;
 }

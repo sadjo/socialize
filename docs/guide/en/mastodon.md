@@ -9,6 +9,10 @@ here**: *Se connecter avec Mastodon*, then choose your server and authorize acce
 - **Feed**: posts of the accounts you follow that the instance knows, local accounts included.
 - **Stories**: those of the local accounts you follow.
 - **Likes, comments and follows** go through your Mastodon server.
+- **Followers**: if your Mastodon account approves its followers itself, requests coming from here are accepted or
+  refused in *Demandes*, and a follower is removed from your followers list; your Mastodon server takes care of it.
+- **Notifications**: likes, comments, mentions and follow requests coming from here show up in *Notifications*, as for
+  a local account; your Mastodon app notifies you as well. Device notifications remain those of your Mastodon app.
 - **Posting**: photos and videos posted from Socialize go to your Mastodon account.
 - **Instagram import**: possible if an administrator allows it; the archive is posted to your Mastodon account.
 
