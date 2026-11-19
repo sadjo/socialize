@@ -57,7 +57,7 @@ final class ProfileFeedTest extends AppWebTestCase
         $next = $crawler->filter('#feed-more a')->attr('href');
         self::assertStringStartsWith('/@camille/publications?apres=', (string) $next);
 
-        $this->client->request('GET', (string) $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
+        $this->client->request('GET', (string) $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html', 'HTTP_X_SOCIALIZE_NEXT_PAGE' => '1']);
         self::assertSelectorTextContains('article.post:last-of-type', 'La toute première');
         self::assertSelectorCount(3, 'article.post');
     }

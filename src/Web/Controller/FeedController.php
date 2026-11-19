@@ -12,6 +12,7 @@ use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Web\Feed\CommentPreviews;
+use App\Web\Feed\NextPage;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -19,7 +20,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
-use Symfony\UX\Turbo\TurboBundle;
 
 final class FeedController extends AbstractController
 {
@@ -96,9 +96,7 @@ final class FeedController extends AbstractController
         ];
 
         // Page suivante, chargée au défilement (infinite_list_controller) : seulement les publications, en flux Turbo.
-        if (TurboBundle::STREAM_FORMAT === $request->getPreferredFormat()) {
-            $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-
+        if (NextPage::requested($request)) {
             return $this->render('feed/_page.stream.html.twig', $parameters);
         }
 

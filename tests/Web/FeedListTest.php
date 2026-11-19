@@ -15,7 +15,7 @@ use App\Tests\AppWebTestCase;
  */
 final class FeedListTest extends AppWebTestCase
 {
-    private const array STREAM = ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html'];
+    private const array STREAM = ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html', 'HTTP_X_SOCIALIZE_NEXT_PAGE' => '1'];
 
     public function testTheNextPageIsAppendedToASingleFlatList(): void
     {
@@ -41,6 +41,36 @@ final class FeedListTest extends AppWebTestCase
         self::assertSelectorCount(5, 'turbo-stream[action="before"] article.post');
         self::assertSelectorExists('turbo-stream[action="remove"][target="feed-more"]');
         self::assertSelectorNotExists('turbo-stream[action="replace"]');
+    }
+
+    /**
+     * Turbo envoie ses formulaires en acceptant les flux, et le navigateur garde cet en-tête en suivant la redirection :
+     * le fil ou le profil atteint ainsi doit être rendu en entier (sinon l'écran ne change pas après la connexion,
+     * « Suivre » ou « Accepter »). Seule la page suivante demandée par infinite_list_controller est un flux.
+     */
+    public function testAFormRedirectedByTurboToAListGetsTheFullPage(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $this->register('leo');
+        $this->publishMany($camille->getAccount(), 12);
+        $turbo = ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html, text/html, application/xhtml+xml'];
+
+        // « Suivre » un compte suggéré, depuis l'accueil.
+        $crawler = $this->client->request('GET', '/');
+        $form = $crawler->filter('form[action="/@leo/suivre"]')->form();
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), server: $turbo + ['HTTP_REFERER' => 'http://localhost/']);
+        self::assertResponseRedirects('http://localhost/');
+        $this->client->request('GET', '/', server: $turbo);
+        self::assertResponseHeaderSame('Content-Type', 'text/html; charset=UTF-8');
+        self::assertSelectorExists('.feed-col .feed > #feed-more');
+        self::assertSelectorNotExists('form[action="/@leo/suivre"]', 'Compte suivi : plus proposé.');
+
+        // Même chose pour les autres listes, page suivante comprise (lien suivi sans JavaScript).
+        $next = (string) $this->client->getCrawler()->filter('#feed-more a')->attr('href');
+        foreach (['/local', '/@camille', $next] as $url) {
+            $this->client->request('GET', $url, server: $turbo);
+            self::assertResponseHeaderSame('Content-Type', 'text/html; charset=UTF-8', $url);
+        }
     }
 
     public function testWithoutJavaScriptTheLinkOpensAFullPageStartingAtTheNextPost(): void

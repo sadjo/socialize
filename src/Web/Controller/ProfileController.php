@@ -20,13 +20,13 @@ use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\RemoteAccounts;
 use App\Federation\Infrastructure\FederationException;
 use App\Web\Feed\CommentPreviews;
+use App\Web\Feed\NextPage;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\UX\Turbo\TurboBundle;
 
 final class ProfileController extends AbstractController
 {
@@ -53,7 +53,7 @@ final class ProfileController extends AbstractController
         $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres') ?: null), self::PAGE_SIZE, $viewer);
 
         // Page suivante de la grille, chargée au défilement : seulement les vignettes, sans le reste du profil.
-        if ($this->wantsStream($request)) {
+        if (NextPage::requested($request)) {
             return $this->render('profile/_grid_page.stream.html.twig', ['account' => $account, 'page' => $page]);
         }
 
@@ -123,7 +123,7 @@ final class ProfileController extends AbstractController
             $commentPreviews->prime($page->posts);
             $parameters = $common + ['page' => $page, 'liked' => $likes->likedAmong($viewer, $page->posts)];
 
-            return $this->wantsStream($request)
+            return NextPage::requested($request)
                 ? $this->render('feed/_page.stream.html.twig', $parameters)
                 : $this->render('profile/feed.html.twig', $parameters + ['post' => null, 'newer' => [], 'has_more_newer' => false]);
         }
@@ -171,7 +171,7 @@ final class ProfileController extends AbstractController
             'open_post' => true,
         ];
 
-        if ($this->wantsStream($request)) {
+        if (NextPage::requested($request)) {
             return $this->render('profile/_grid_page.stream.html.twig', $parameters);
         }
 
@@ -315,19 +315,6 @@ final class ProfileController extends AbstractController
         }
 
         return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_profile', ['username' => $username]), Response::HTTP_SEE_OTHER);
-    }
-
-    /**
-     * Page suivante d'une liste demandée en flux Turbo (infinite_list_controller) : la réponse en prend le format.
-     */
-    private function wantsStream(Request $request): bool
-    {
-        if (TurboBundle::STREAM_FORMAT !== $request->getPreferredFormat()) {
-            return false;
-        }
-        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-
-        return true;
     }
 
     private function account(string $acct, bool $resolve = false): Account
