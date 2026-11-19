@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.35] - 2026-11-19
+
+Website in French, and why self-host.
+
+### Added
+
+- The website is available in French (`fr/`), with an FR / EN switch, hreflang links, and the guide and wiki in the
+  page's language (website)
+- A new illustrated, animated section before installation explains why to host your own photo and video network:
+  the journey of a photo (big platform or at home), four reasons, the fediverse, and security at home with what
+  Socialize does and what is up to you (website)
+
+### Changed
+
+- The install command moves from the top of the page to a band after that section (website)
+
 ## [0.9.34] - 2026-11-19
 
 Notification icons.
