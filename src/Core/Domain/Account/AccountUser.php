@@ -15,4 +15,14 @@ interface AccountUser extends UserInterface
     public function getAccount(): Account;
 
     public function isAdmin(): bool;
+
+    /** Apparence choisie par la personne (Réglages › Apparence). */
+    public function getTheme(): Theme;
+
+    public function chooseTheme(Theme $theme): void;
+
+    /** Filtre des médias dans les listes (Réglages › Apparence). */
+    public function getMediaFilter(): MediaFilter;
+
+    public function chooseMediaFilter(MediaFilter $filter): void;
 }

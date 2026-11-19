@@ -6,6 +6,8 @@ namespace App\Integration\Mastodon\Domain;
 
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Account\AccountUser;
+use App\Core\Domain\Account\MediaFilter;
+use App\Core\Domain\Account\Theme;
 use App\Core\Domain\Account\User;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonUserRepository;
 use Doctrine\DBAL\Types\Types;
@@ -55,6 +57,13 @@ class MastodonUser implements AccountUser
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $defaultVisibility = null;
 
+    /** Apparence choisie ici (Réglages › Apparence), comme pour un compte de l'instance. */
+    #[ORM\Column(length: 16, enumType: Theme::class, options: ['default' => 'auto'])]
+    private Theme $theme = Theme::Auto;
+
+    #[ORM\Column(length: 16, enumType: MediaFilter::class, options: ['default' => 'light'])]
+    private MediaFilter $mediaFilter = MediaFilter::Light;
+
     public function __construct(
         #[ORM\OneToOne]
         #[ORM\JoinColumn(unique: true, nullable: false, onDelete: 'CASCADE')]
@@ -75,6 +84,26 @@ class MastodonUser implements AccountUser
     public function getId(): Uuid
     {
         return $this->id;
+    }
+
+    public function getTheme(): Theme
+    {
+        return $this->theme;
+    }
+
+    public function chooseTheme(Theme $theme): void
+    {
+        $this->theme = $theme;
+    }
+
+    public function getMediaFilter(): MediaFilter
+    {
+        return $this->mediaFilter;
+    }
+
+    public function chooseMediaFilter(MediaFilter $filter): void
+    {
+        $this->mediaFilter = $filter;
     }
 
     public function getAccount(): Account

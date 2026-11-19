@@ -14,7 +14,8 @@
         <div class="sep"></div>
         {% if (is_granted('ROLE_PUBLISHER') or is_granted('ROLE_MASTODON')) and is_granted('ROLE_INSTAGRAM_IMPORTER') %}<a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>{% endif %}
         {% if mastodon %}
-            {# Compte Mastodon : il se règle sur son serveur. #}
+            {# Compte Mastodon : il se règle sur son serveur ; seule l'apparence se choisit ici. #}
+            <a class="nav{{ current_route == 'app_settings_appearance' ? ' on' }}" href="{{ path('app_settings_appearance') }}">{{ ui.icon('moon') }}<span class="lbl">Apparence</span></a>
             {% if me.profileUrl %}<a class="nav" href="{{ me.profileUrl }}" target="_blank" rel="noopener">{{ ui.icon('sliders') }}<span class="lbl">Mon compte sur {{ me.domain }}</span></a>{% endif %}
         {% else %}
             <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>

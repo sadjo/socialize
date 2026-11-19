@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Web\Controller;
 
 use App\Core\Application\Social\SocialActions;
+use App\Core\Domain\Account\AccountUser;
 use App\Core\Domain\Account\MediaFilter;
 use App\Core\Domain\Account\Theme;
 use App\Core\Domain\Account\User;
@@ -88,9 +89,10 @@ final class SettingsController extends AbstractController
     #[Route('/reglages/apparence', name: 'app_settings_appearance', methods: ['GET', 'POST'])]
     public function appearance(Request $request, EntityManagerInterface $em, PostRepository $posts): Response
     {
+        // Comptes de l'instance et personnes connectées avec Mastodon.
         $user = $this->getUser();
-        if (!$user instanceof User) {
-            throw $this->createAccessDeniedException('Réglage réservé aux comptes de cette instance.');
+        if (!$user instanceof AccountUser) {
+            throw $this->createAccessDeniedException('Connectez-vous pour choisir l’apparence.');
         }
         $form = $this->createForm(AppearanceSettingsType::class, ['theme' => $user->getTheme(), 'mediaFilter' => $user->getMediaFilter()]);
         $form->handleRequest($request);
