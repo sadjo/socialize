@@ -296,6 +296,20 @@ tr:last-child td{border-bottom:0}
 .act.saved .i{fill:currentColor}
 @keyframes pop{50%{transform:scale(1.3)}}
 .pbody{padding:2px 16px 16px;display:flex;flex-direction:column;gap:5px;font-size:.92rem}
+/* Publication texte (sans photo ni vidéo) : le texte à la place des médias, coupé après six lignes dans un fil. */
+.ptext{padding:2px 16px 6px;display:flex;flex-direction:column;gap:8px}
+.ptext-body{font-size:1.02rem;line-height:1.55;overflow-wrap:anywhere}
+.ptext:not(.full):not(.open) .ptext-body{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.ptext-more{align-self:flex-start;border:0;background:none;padding:0;color:var(--muted);font-weight:600;font-size:.88rem;cursor:pointer}
+.ptext-more:hover{color:var(--fg)}
+.ptext-cw{border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.ptext-cw summary{display:flex;gap:10px;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}
+.ptext-cw summary::-webkit-details-marker{display:none}
+.ptext-cw summary span{font-size:.85rem;font-weight:600;color:var(--accent)}
+.ptext-cw[open] summary span{display:none}
+.ptext-cw[open] .ptext-body{margin-top:10px}
+.pd-media.pd-text{place-items:start stretch;padding:24px 8px;background:var(--surface)}
+.pd-text .ptext-body{font-size:1.15rem}
 .pbody .meta{color:var(--muted);font-size:.86rem}
 .tag{color:var(--accent);font-weight:500}
 .link{color:var(--accent);text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
@@ -432,12 +446,22 @@ tr:last-child td{border-bottom:0}
 .ptabs button{display:flex;align-items:center;gap:7px;height:50px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border-top:2px solid transparent;margin-top:-1px}
 .ptabs button.on{color:var(--fg);border-top-color:var(--fg)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+/* Onglet « Textes » du profil : cartes compactes des publications texte, et nombre de chaque onglet. */
+.ptabs .n{font-weight:600;color:var(--faint);letter-spacing:0}
+.ptexts{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
+.tcard{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:18px;background:var(--surface);border:1px solid var(--line);color:var(--fg)}
+.tcard:hover{border-color:var(--faint);text-decoration:none}
+.tcard-text{margin:0;white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tcard-cw{margin:0;display:flex;gap:6px;align-items:center;color:var(--muted);font-weight:600}
+.tcard-foot{display:flex;gap:14px;align-items:center;color:var(--faint);font-size:.8rem}
+.tcard-foot span{display:inline-flex;gap:4px;align-items:center}
 /* Pages de la grille : vignettes ajoutées à la même grille (infinite_list_controller), sans cadres ni sous-grilles
    imbriqués ; le repère de fin occupe une ligne entière. */
 .grid3 > .more{grid-column:1/-1}
 .gt{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:6px;background:var(--surface-2)}
 .gt img,.gt video{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
 .gt:hover img{transform:scale(1.04)}
+.gt-text{position:absolute;inset:0;padding:10px;font-size:.78rem;line-height:1.35;color:var(--fg);overflow:hidden;display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;white-space:pre-line;overflow-wrap:anywhere}
 .gt .gi{position:absolute;z-index:1;top:8px;right:8px;color:var(--on-media);filter:drop-shadow(0 1px 3px oklch(0 0 0 / .6))}
 .gt .gh{position:absolute;z-index:1;inset:0;display:flex;align-items:center;justify-content:center;gap:18px;background:var(--media-shade);color:var(--on-media);font-weight:700;opacity:0;transition:opacity .2s}
 .gt:hover .gh{opacity:1}

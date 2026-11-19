@@ -6,9 +6,15 @@
 
 {% block content %}
 <div class="pd" style="max-height:none;margin:0 auto;animation:none" data-controller="like" id="post-{{ post.publicId }}">
-    <div class="pd-media">
-        {% if post.cover and post.cover.ready %}<div class="glow" style="background-image:url({{ media_url(post.cover, 'thumb') }})"></div>{% endif %}
-        {{ include('post/_media.html.twig', {media_width: '560px'}) }}
+    {% set text_post = post.media is empty %}
+    <div class="pd-media{{ text_post ? ' pd-text' }}">
+        {% if text_post %}
+            {# Publication texte : le texte en entier à la place des médias. #}
+            {{ include('post/_text.html.twig', {full: true}) }}
+        {% else %}
+            {% if post.cover and post.cover.ready %}<div class="glow" style="background-image:url({{ media_url(post.cover, 'thumb') }})"></div>{% endif %}
+            {{ include('post/_media.html.twig', {media_width: '560px'}) }}
+        {% endif %}
     </div>
     <div class="pd-side">
         <header class="ph">
@@ -26,13 +32,13 @@
         </header>
 
         <div class="cmts" id="commentaires">
-            {% if post.caption %}
+            {% if post.caption and not text_post %}
                 <div class="cmt">{{ ui.avatar(author, 32) }}<div class="t"><b>{{ author.username }}</b> {{ post.caption|rich_text(post.isImported()) }}<small><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time></small></div></div>
             {% endif %}
             <div class="cmts-list" id="post-{{ post.publicId }}-comments">
                 {% for comment in comments %}{{ include('comment/_comment.html.twig') }}{% endfor %}
             </div>
-            {% if not comments and not post.caption %}<p class="small" id="post-{{ post.publicId }}-no-comments">Aucun commentaire pour l’instant.</p>{% endif %}
+            {% if not comments and (not post.caption or text_post) %}<p class="small" id="post-{{ post.publicId }}-no-comments">Aucun commentaire pour l’instant.</p>{% endif %}
         </div>
 
         {{ include('post/_actions.html.twig') }}

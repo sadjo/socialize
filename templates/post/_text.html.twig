@@ -1,0 +1,15 @@
+{# Publication texte (sans photo ni vidéo) : le texte à la place des médias. Variables : post ; full en option (page
+   de la publication : texte entier). Dans un fil, il est coupé après six lignes, « Afficher plus » le déplie
+   (text_clamp_controller). Avec un avertissement de contenu, le texte attend qu'on l'affiche. #}
+{% set full = full|default(false) %}
+{% set body %}
+    <div class="ptext-body" data-text-clamp-target="body">{{ post.caption|rich_text(post.isImported()) }}</div>
+    {% if not full %}<button type="button" class="ptext-more" data-text-clamp-target="toggle" data-action="text-clamp#toggle" hidden>Afficher plus</button>{% endif %}
+{% endset %}
+<div class="ptext{{ full ? ' full' }}"{% if not full %} data-controller="text-clamp"{% endif %}>
+    {% if post.sensitive %}
+        <details class="ptext-cw"><summary><b>{{ post.contentWarning }}</b><span>Afficher</span></summary>{{ body }}</details>
+    {% else %}
+        {{ body }}
+    {% endif %}
+</div>

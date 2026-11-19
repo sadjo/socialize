@@ -7,6 +7,7 @@ namespace App\Core\Infrastructure\Doctrine;
 use App\Core\Application\Feed\Cursor;
 use App\Core\Application\Feed\TimelinePage;
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\PostSource;
 use App\Core\Domain\Post\Visibility;
@@ -123,13 +124,16 @@ final class PostRepository extends ServiceEntityRepository
      * Publications d'un profil, filtrées selon ce que le visiteur a le droit de voir.
      *
      * @param list<Visibility> $visible
+     * @param bool|null        $withMedia true : avec photos ou vidéos (onglet Photos) ; false : publications texte
+     *                                    (onglet Textes) ; null : toutes
      */
-    public function profileTimeline(Account $account, array $visible, ?Cursor $cursor, int $limit, ?Account $viewer = null): TimelinePage
+    public function profileTimeline(Account $account, array $visible, ?Cursor $cursor, int $limit, ?Account $viewer = null, ?bool $withMedia = null): TimelinePage
     {
         $qb = $this->base()
             ->where('p.account = :account')
             ->setParameter('account', $account->getId(), UuidType::NAME);
         $this->visibleTo($qb, $account, $visible, $viewer);
+        $this->withMedia($qb, $withMedia);
 
         return $this->page($qb, $cursor, $limit);
     }
@@ -166,9 +170,25 @@ final class PostRepository extends ServiceEntityRepository
     }
 
     /**
+     * Avec photos ou vidéos (true), sans (false : publications texte) ou toutes (null). Sous-requête EXISTS, portable.
+     */
+    private function withMedia(QueryBuilder $qb, ?bool $withMedia): void
+    {
+        if (null === $withMedia) {
+            return;
+        }
+        $exists = $this->getEntityManager()->createQueryBuilder()
+            ->select('1')
+            ->from(MediaAttachment::class, 'pm')
+            ->where('pm.post = p')
+            ->getDQL();
+        $qb->andWhere(($withMedia ? 'EXISTS' : 'NOT EXISTS').'('.$exists.')');
+    }
+
+    /**
      * @param list<Visibility> $visible
      */
-    public function countForProfile(Account $account, array $visible, ?Account $viewer = null): int
+    public function countForProfile(Account $account, array $visible, ?Account $viewer = null, ?bool $withMedia = null): int
     {
         $qb = $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
@@ -177,6 +197,7 @@ final class PostRepository extends ServiceEntityRepository
             ->andWhere('p.pending = false')
             ->setParameter('account', $account->getId(), UuidType::NAME);
         $this->visibleTo($qb, $account, $visible, $viewer);
+        $this->withMedia($qb, $withMedia);
 
         return (int) $qb->getQuery()
             ->getSingleScalarResult();

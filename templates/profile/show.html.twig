@@ -93,17 +93,19 @@
     {% if mastodon_owner %}{{ include('profile/_mastodon_publications.html.twig', {publications: mastodon_publications()}) }}{% endif %}
 
     <div>
-        {{ include('profile/_tabs.html.twig', {current: 'posts'}) }}
+        {{ include('profile/_tabs.html.twig', {current: tab}) }}
         {% if page.empty %}
             <div class="empty">
-                {{ ui.icon('image') }}
+                {{ ui.icon(tab == 'texts' ? 'list' : 'image') }}
                 {% if is_owner %}
-                    <b>Aucune publication pour l’instant</b>
-                    {% if is_granted('ROLE_PUBLISHER') %}<a class="btn pri" href="{{ path('app_compose') }}">Publier une première photo</a>{% endif %}
+                    <b>{{ tab == 'texts' ? 'Aucune publication texte pour l’instant' : 'Aucune photo ni vidéo pour l’instant' }}</b>
+                    {% if is_granted('ROLE_PUBLISHER') %}<a class="btn pri" href="{{ path('app_compose', tab == 'texts' ? {type: 'texte'} : {}) }}">{{ tab == 'texts' ? 'Écrire une première publication' : 'Publier une première photo' }}</a>{% endif %}
                 {% else %}
-                    <b>Aucune publication visible</b>
+                    <b>{{ tab == 'texts' ? 'Aucune publication texte visible' : 'Aucune photo ni vidéo visible' }}</b>
                 {% endif %}
             </div>
+        {% elseif tab == 'texts' %}
+            <div class="ptexts" data-controller="infinite-list">{{ include('profile/_texts_page.html.twig') }}</div>
         {% else %}
             <div class="grid3" data-controller="infinite-list">{{ include('profile/_grid_page.html.twig') }}</div>
         {% endif %}
