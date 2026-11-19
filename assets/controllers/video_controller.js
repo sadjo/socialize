@@ -5,9 +5,13 @@ import { SOUND_EVENT, playAlone, setSound, soundOn } from '../lib/sound.js';
  * Vidéo dans un fil, comme sur Instagram : l'affiche d'abord, lecture dès que la vidéo est bien
  * visible (une seule à la fois), bouton son en bas à gauche ; un clic l'ouvre dans la visionneuse (lightbox_controller).
  *
- * Le lecteur (<video>) n'existe que pendant que la vidéo est bien visible : créé à son arrivée, supprimé dès qu'elle
- * quitte l'écran ou que le carrousel passe à un autre média (l'affiche, une simple image, reste en place). Safari sur
- * iPhone laisse noires les vidéos au-delà de quelques lecteurs dans la page, et un fil en comptait plus d'une centaine.
+ * Le lecteur (<video>) n'existe que pendant que la vidéo est à l'écran : préparé quand elle arrive (25 % visible, le
+ * téléchargement commence), lancé quand elle est bien visible (60 %), supprimé dès qu'elle quitte l'écran ou que le
+ * carrousel passe à un autre média (l'affiche, une simple image, reste en place). Safari sur iPhone laisse noires les
+ * vidéos au-delà de quelques lecteurs dans la page, et un fil en comptait plus d'une centaine.
+ *
+ * Pas d'écran noir pendant le chargement : un lecteur se peint en noir tant qu'il n'a pas d'image. Il reste donc
+ * invisible au-dessus de l'affiche, et n'apparaît (classe « ready ») qu'à sa première image réellement affichée.
  * Créé ici, dans la page, le lecteur a aussi les règles de la page pour la lecture automatique muette (une vidéo
  * arrivée par une navigation Turbo garde sinon celles d'un document à part, et reste noire sur iPhone).
  *
@@ -15,6 +19,11 @@ import { SOUND_EVENT, playAlone, setSound, soundOn } from '../lib/sound.js';
  * qui a une musique, la vidéo reste muette : la musique remplace son son, comme sur Instagram.
  */
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+// Part visible de la vidéo : lecteur préparé (téléchargement), puis lancé. Marge pour l'arrondi des rapports mesurés.
+const PREPARE = 0.25;
+const PLAY = 0.6;
+const reached = (ratio, threshold) => ratio >= threshold - 0.01;
 
 /*
  * Arrête une vidéo et libère son décodeur : remise à l'état initial, sans rien retélécharger.
@@ -30,7 +39,7 @@ export function release(video) {
 
 // Avant la mise en cache d'une page par Turbo : lecteurs supprimés (la copie gardée ne joue rien).
 document.addEventListener('turbo:before-cache', () => {
-    document.querySelectorAll('.player video').forEach((video) => { release(video); video.remove(); });
+    document.querySelectorAll('.player video').forEach((video) => { video.closest('.player')?.classList.remove('ready'); release(video); video.remove(); });
 });
 
 export default class extends Controller {
@@ -39,7 +48,7 @@ export default class extends Controller {
 
     connect() {
         this.visible = false;
-        this.observer = new IntersectionObserver(([entry]) => this.visibilityChanged(entry), { threshold: 0.6 });
+        this.observer = new IntersectionObserver(([entry]) => this.visibilityChanged(entry), { threshold: [0, PREPARE, PLAY] });
         this.observer.observe(this.element);
         this.onSound = (event) => this.applySound(event.detail.on);
         window.addEventListener(SOUND_EVENT, this.onSound);
@@ -57,15 +66,21 @@ export default class extends Controller {
         return this.element.querySelector('video');
     }
 
-    // Bien visible (60 %) : lecteur créé et lancé ; sinon, supprimé.
+    // Hors de l'écran : lecteur supprimé ; qui arrive : préparé, en pause ; bien visible : lancé.
     visibilityChanged(entry) {
-        this.visible = entry.isIntersecting && this.element.isConnected;
-        if (!this.visible) {
+        const ratio = entry.isIntersecting && this.element.isConnected ? entry.intersectionRatio : 0;
+        this.visible = reached(ratio, PLAY);
+        if (!entry.isIntersecting || !this.element.isConnected) {
             this.destroy();
             this.render();
             return;
         }
-        if (!this.blocked) this.play();
+        if (this.visible) {
+            if (!this.blocked) this.play();
+            return;
+        }
+        this.video?.pause();
+        if (reached(ratio, PREPARE) && !this.video && !this.blocked) this.create();
     }
 
     /*
@@ -92,9 +107,7 @@ export default class extends Controller {
         video.preload = 'auto';
         video.setAttribute('muted', '');
         video.setAttribute('playsinline', '');
-        const poster = this.element.querySelector('img.poster');
-        const posterUrl = poster?.getAttribute('src') ?? poster?.dataset.src;
-        if (posterUrl) video.poster = posterUrl;
+        // Pas d'attribut poster : l'affiche, en dessous, reste visible tant que le lecteur n'a pas d'image.
         if (this.labelValue) video.setAttribute('aria-label', this.labelValue);
         const source = document.createElement('source');
         source.src = this.srcValue;
@@ -102,13 +115,33 @@ export default class extends Controller {
         video.append(source);
         video.addEventListener('play', this.onPlay);
         this.soundTarget.before(video);
+        this.revealOnFirstFrame(video);
         return video;
+    }
+
+    /*
+     * Lecteur montré à sa première image réellement affichée : requestVideoFrameCallback (Safari, Chrome), seul signal
+     * fiable sur iPhone, où « playing » arrive parfois avant l'image ; sinon, le temps de lecture qui avance (Firefox).
+     */
+    revealOnFirstFrame(video) {
+        const show = () => { if (video.isConnected) this.element.classList.add('ready'); };
+        if ('requestVideoFrameCallback' in video) {
+            video.requestVideoFrameCallback(show);
+            return;
+        }
+        const onTime = () => {
+            if (video.currentTime <= 0) return;
+            video.removeEventListener('timeupdate', onTime);
+            show();
+        };
+        video.addEventListener('timeupdate', onTime);
     }
 
     destroy() {
         const video = this.video;
         if (!video) return;
         video.removeEventListener('play', this.onPlay);
+        this.element.classList.remove('ready');
         release(video);
         video.remove();
     }
