@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.29] - 2026-11-19
+
+Videos on iPhone.
+
+### Fixed
+
+- Videos of the feed no longer stay black on iPhone: the page holds no video player any more, only the poster and the
+  address of the video; the player is created when the video is visible and removed as soon as it is not, so there is
+  never more than one at a time (Safari on iPhone left videos black beyond a few players, and three pages of the feed
+  held more than a hundred) (feed)
+
+### Changed
+
+- The media filter of lists is a translucent veil on videos too: no CSS filter left in lists (feed)
+
 ## [0.9.28] - 2026-11-19
 
 Screens refreshed after forms again.

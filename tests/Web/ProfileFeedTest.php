@@ -76,9 +76,11 @@ final class ProfileFeedTest extends AppWebTestCase
         $em->flush();
 
         $this->client->request('GET', '/p/'.$post->getPublicId());
-        self::assertSelectorExists('video[preload="metadata"]:not([poster]) source[src="https://remote.test/media/1.mp4#t=0.1"]');
+        // Sans affiche : le lecteur, créé à l'affichage, montre la première image (#t=0.1) ; type laissé au navigateur.
+        self::assertSelectorExists('.player[data-video-src-value="https://remote.test/media/1.mp4#t=0.1"]:not([data-video-type-value])');
+        self::assertSelectorNotExists('.player img.poster');
         $this->client->request('GET', '/p/'.$previewed->getPublicId());
-        self::assertSelectorExists('video[preload="none"][poster="https://remote.test/media/2.jpg"]');
+        self::assertSelectorExists('.player[data-video-src-value="https://remote.test/media/2.mp4"] img.poster[src="https://remote.test/media/2.jpg"]');
 
         $this->client->request('GET', '/@alice@remote.test');
         self::assertSelectorExists('a.gt video[src="https://remote.test/media/1.mp4#t=0.1"]');

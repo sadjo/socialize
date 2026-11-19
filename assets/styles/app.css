@@ -50,17 +50,16 @@
 
 /* Filtre des médias dans les listes (Réglages › Apparence, attribut data-media-filter de <html>) : adoucit,
    rapproche et assombrit légèrement les couleurs. Léger par défaut ; la page d'une publication, la visionneuse et les stories n'en ont pas.
-   Sur les photos, un voile gris translucide posé dessus (--media-veil) plutôt qu'un filtre CSS : un filtre fait de chaque
-   image une couche graphique à part, en pleine résolution, et ces couches s'accumulent au fil du défilement jusqu'à
-   épuiser la mémoire de Safari sur iPhone (médias noirs ou gris). Mélanger l'image à un gris réduit contraste et
-   saturation et l'assombrit dans les mêmes proportions que le filtre : rendu quasi identique, sans couche de plus.
-   Les vidéos, déjà dans leur propre couche, gardent le filtre. */
-:root{--media-filter:saturate(.92) contrast(.95) brightness(.97);--media-veil:rgb(84 84 84 / .08)}
-:root[data-media-filter="off"]{--media-filter:none;--media-veil:transparent}
-:root[data-media-filter="medium"]{--media-filter:saturate(.84) contrast(.92) brightness(.94);--media-veil:rgb(142 142 142 / .135)}
-:root[data-media-filter="strong"]{--media-filter:saturate(.74) contrast(.88) brightness(.9);--media-veil:rgb(66 66 66 / .21)}
-article.post .media .slide:not(.vid)::after,.gt:has(img)::after{content:"";position:absolute;inset:0;background:var(--media-veil);pointer-events:none}
-article.post .media .slide video,.gt video{filter:var(--media-filter)}
+   Un voile gris translucide posé sur les photos et les vidéos (--media-veil) plutôt qu'un filtre CSS : un filtre fait de
+   chaque image une couche graphique à part, en pleine résolution, et ces couches s'accumulent au fil du défilement
+   jusqu'à épuiser la mémoire de Safari sur iPhone (médias noirs ou gris). Mélanger l'image à un gris réduit contraste
+   et saturation et l'assombrit dans les mêmes proportions que l'ancien filtre (saturate, contrast, brightness) : rendu
+   quasi identique, sans couche de plus. */
+:root{--media-veil:rgb(84 84 84 / .08)}
+:root[data-media-filter="off"]{--media-veil:transparent}
+:root[data-media-filter="medium"]{--media-veil:rgb(142 142 142 / .135)}
+:root[data-media-filter="strong"]{--media-veil:rgb(66 66 66 / .21)}
+article.post .media .slide::after,.gt::after{content:"";position:absolute;inset:0;background:var(--media-veil);pointer-events:none}
 
 *{box-sizing:border-box}
 html,body{min-height:100%}
@@ -242,7 +241,9 @@ tr:last-child td{border-bottom:0}
 .slide img,.slide video{width:100%;height:100%;object-fit:cover;display:block}
 /* Vidéo façon Instagram : affiche, lecture muette à l'écran, bouton son en bas à gauche */
 .player{position:relative;height:100%}
-.player video{cursor:pointer}
+/* Lecteur créé par video_controller quand la vidéo est visible, posé sur son affiche. */
+.player video{position:absolute;inset:0;cursor:pointer}
+.player img.poster{cursor:pointer}
 .snd{position:absolute;left:12px;bottom:12px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--media-shade);color:var(--on-media);z-index:1}
 .snd .i{width:16px;height:16px}
 .player .snd .on,.player.muted .snd .off{display:block}

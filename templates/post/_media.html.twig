@@ -17,14 +17,18 @@
                  {%- if media.width and media.height %} data-lightbox-width="{{ media.width }}" data-lightbox-height="{{ media.height }}"{% endif %}
                  data-lightbox-alt="{{ media.altText ?? ((media.video ? 'Vidéo ' : 'Photo ') ~ loop.index ~ ' sur ' ~ count) }}"{% endif %}>
                 {% if media.ready and media.video %}
-                    {# Sans affiche (vidéo d'une instance qui n'en fournit pas), le navigateur montre la première image. #}
+                    {# Pas d'élément <video> dans la page : seulement l'affiche (chargée comme une photo du carrousel) et
+                       l'adresse de la vidéo. video_controller crée le lecteur quand la vidéo est bien visible et le
+                       supprime dès qu'elle ne l'est plus : Safari sur iPhone laisse noires les vidéos au-delà de
+                       quelques lecteurs dans la page, et un fil en comptait plus d'une centaine.
+                       Sans affiche (vidéo d'une instance qui n'en fournit pas), le lecteur montre la première image. #}
                     {% set poster = media_url(media, 'poster') %}
-                    <div class="player muted" data-controller="video">
-                        <video playsinline muted loop preload="{{ poster ? 'none' : 'metadata' }}"{% if poster %} poster="{{ poster }}"{% endif %} data-video-target="video"
-                               {% if media.altText %} aria-label="{{ media.altText }}"{% endif %}>
-                            {# Copie convertie : toujours un MP4 (H.264), quel que soit l'original (MOV d'iPhone…). Vidéo distante : type laissé au navigateur. #}
-                            <source src="{{ media_url(media, 'video') }}{{ poster ? '' : '#t=0.1' }}"{% if not media.isRemote() %} type="video/mp4"{% endif %}>
-                        </video>
+                    <div class="player muted" data-controller="video"
+                         data-video-src-value="{{ media_url(media, 'video') }}{{ poster ? '' : '#t=0.1' }}"
+                         {#- Copie convertie : toujours un MP4 (H.264), quel que soit l'original (MOV d'iPhone…). Vidéo distante : type laissé au navigateur. #}
+                         {%- if not media.isRemote() %} data-video-type-value="video/mp4"{% endif %}
+                         {%- if media.altText %} data-video-label-value="{{ media.altText }}"{% endif %}>
+                        {% if poster %}<img class="poster" {{ loop.first ? 'src' : 'data-src' }}="{{ poster }}" alt="" loading="lazy" decoding="async" draggable="false">{% endif %}
                         <button type="button" class="snd" data-video-target="sound" data-action="video#toggleSound" aria-label="Activer le son" aria-pressed="false">
                             {{- ui.icon('mute', 'off') }}{{ ui.icon('volume', 'on') -}}
                         </button>

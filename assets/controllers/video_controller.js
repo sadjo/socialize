@@ -5,48 +5,44 @@ import { SOUND_EVENT, playAlone, setSound, soundOn } from '../lib/sound.js';
  * Vidéo dans un fil, comme sur Instagram : l'affiche d'abord, lecture dès que la vidéo est bien
  * visible (une seule à la fois), bouton son en bas à gauche ; un clic l'ouvre dans la visionneuse (lightbox_controller).
  *
+ * Le lecteur (<video>) n'existe que pendant que la vidéo est bien visible : créé à son arrivée, supprimé dès qu'elle
+ * quitte l'écran ou que le carrousel passe à un autre média (l'affiche, une simple image, reste en place). Safari sur
+ * iPhone laisse noires les vidéos au-delà de quelques lecteurs dans la page, et un fil en comptait plus d'une centaine.
+ * Créé ici, dans la page, le lecteur a aussi les règles de la page pour la lecture automatique muette (une vidéo
+ * arrivée par une navigation Turbo garde sinon celles d'un document à part, et reste noire sur iPhone).
+ *
  * Le choix du son vaut pour toutes les vidéos et musiques (voir lib/sound.js). Dans une publication
  * qui a une musique, la vidéo reste muette : la musique remplace son son, comme sur Instagram.
  */
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 /*
- * Arrête une vidéo et libère son décodeur : remise à l'état initial (affiche), sans rien retélécharger.
+ * Arrête une vidéo et libère son décodeur : remise à l'état initial, sans rien retélécharger.
  * Safari (iPhone) garde sinon le décodeur d'une vidéo retirée de la page, et la suivante reste noire.
  */
 export function release(video) {
     video.pause();
+    video.removeAttribute('src');
+    video.querySelectorAll('source').forEach((source) => source.remove());
     video.preload = 'none';
     video.load();
 }
 
-// Avant la mise en cache d'une page par Turbo : vidéos remises à zéro (la copie gardée ne joue rien).
+// Avant la mise en cache d'une page par Turbo : lecteurs supprimés (la copie gardée ne joue rien).
 document.addEventListener('turbo:before-cache', () => {
-    document.querySelectorAll('.player video').forEach(release);
+    document.querySelectorAll('.player video').forEach((video) => { release(video); video.remove(); });
 });
 
 export default class extends Controller {
-    static targets = ['video', 'sound'];
+    static targets = ['sound'];
+    static values = { src: String, type: String, label: String };
 
     connect() {
-        // Navigation Turbo : la page arrive d'un document à part (sans fenêtre), dont Safari sur iPhone garde les
-        // règles pour la vidéo (lecture seulement après un geste, chargement jamais lancé : elle reste noire ou
-        // figée). Une copie créée dans la page a les règles de la page : lecture automatique muette permise.
-        // Première vidéo de la page (en haut du fil, d'une publication) : préchargée dès l'affichage, elle démarre
-        // sans attendre son téléchargement. Les suivantes ne chargent rien avant d'être lues.
-        const first = document.querySelector('.player video') === this.videoTarget;
-        const fresh = this.videoTarget.cloneNode(true);
-        fresh.muted = true;
-        if (first) fresh.preload = 'auto';
-        this.videoTarget.replaceWith(fresh);
-        // Sélection de la source relancée (WebKit ne la fait pas seul ici).
-        fresh.load();
         this.visible = false;
         this.observer = new IntersectionObserver(([entry]) => this.visibilityChanged(entry), { threshold: 0.6 });
-        this.observer.observe(this.videoTarget);
+        this.observer.observe(this.element);
         this.onSound = (event) => this.applySound(event.detail.on);
         window.addEventListener(SOUND_EVENT, this.onSound);
-        this.videoTarget.addEventListener('play', this.onPlay);
         this.render();
     }
 
@@ -54,22 +50,32 @@ export default class extends Controller {
         this.visible = false;
         this.observer.disconnect();
         window.removeEventListener(SOUND_EVENT, this.onSound);
-        this.videoTarget.removeEventListener('play', this.onPlay);
-        release(this.videoTarget);
+        this.destroy();
     }
 
+    get video() {
+        return this.element.querySelector('video');
+    }
+
+    // Bien visible (60 %) : lecteur créé et lancé ; sinon, supprimé.
     visibilityChanged(entry) {
-        this.visible = entry.isIntersecting && this.videoTarget.isConnected;
+        this.visible = entry.isIntersecting && this.element.isConnected;
         if (!this.visible) {
-            this.videoTarget.pause();
+            this.destroy();
+            this.render();
             return;
         }
-        // Pas de lecture automatique derrière un avertissement de contenu ou si l'utilisateur limite les animations.
-        if (reducedMotion.matches || this.element.closest('.media')?.querySelector('.cw-veil')) return;
-        // Copie de la page en cache affichée par Turbo le temps du chargement : elle va être remplacée, rien n'y joue
-        // (une vidéo lancée là continuerait hors de la page et priverait la vraie du décodeur sur iPhone).
-        if (document.documentElement.hasAttribute('data-turbo-preview')) return;
-        this.play();
+        if (!this.blocked) this.play();
+    }
+
+    /*
+     * Pas de lecture automatique derrière un avertissement de contenu ou si l'utilisateur limite les animations, ni
+     * dans la copie de la page en cache affichée par Turbo le temps du chargement (elle va être remplacée).
+     */
+    get blocked() {
+        return reducedMotion.matches
+            || this.element.closest('.media')?.querySelector('.cw-veil') !== null
+            || document.documentElement.hasAttribute('data-turbo-preview');
     }
 
     // Publication avec musique : la vidéo reste muette.
@@ -77,8 +83,38 @@ export default class extends Controller {
         return this.element.closest('.media')?.hasAttribute('data-music') ?? false;
     }
 
+    create() {
+        const video = document.createElement('video');
+        video.muted = true;
+        video.defaultMuted = true;
+        video.playsInline = true;
+        video.loop = true;
+        video.preload = 'auto';
+        video.setAttribute('muted', '');
+        video.setAttribute('playsinline', '');
+        const poster = this.element.querySelector('img.poster');
+        const posterUrl = poster?.getAttribute('src') ?? poster?.dataset.src;
+        if (posterUrl) video.poster = posterUrl;
+        if (this.labelValue) video.setAttribute('aria-label', this.labelValue);
+        const source = document.createElement('source');
+        source.src = this.srcValue;
+        if (this.typeValue) source.type = this.typeValue;
+        video.append(source);
+        video.addEventListener('play', this.onPlay);
+        this.soundTarget.before(video);
+        return video;
+    }
+
+    destroy() {
+        const video = this.video;
+        if (!video) return;
+        video.removeEventListener('play', this.onPlay);
+        release(video);
+        video.remove();
+    }
+
     play() {
-        const video = this.videoTarget;
+        const video = this.video ?? this.create();
         video.muted = this.silent || !soundOn();
         this.render();
         video.play().catch((error) => {
@@ -92,23 +128,23 @@ export default class extends Controller {
     }
 
     // Une seule publication à la fois : les vidéos et musiques des autres se mettent en pause.
-    onPlay = () => playAlone(this.videoTarget);
+    onPlay = (event) => playAlone(event.target);
 
     toggleSound(event) {
         event.stopPropagation();
-        setSound(this.videoTarget.muted);
+        setSound(this.video ? this.video.muted : !soundOn());
     }
 
     // Choix du son fait sur n'importe quelle vidéo : appliqué à celle-ci si elle joue.
     applySound(on) {
-        const video = this.videoTarget;
-        video.muted = this.silent || !on;
-        if (on && this.visible && video.paused) this.play();
+        const video = this.video;
+        if (video) video.muted = this.silent || !on;
+        if (on && this.visible && !this.blocked && (!video || video.paused)) this.play();
         this.render();
     }
 
     render() {
-        const muted = this.videoTarget.muted;
+        const muted = this.video ? this.video.muted : (this.silent || !soundOn());
         this.element.classList.toggle('muted', muted);
         this.soundTarget.setAttribute('aria-pressed', String(!muted));
         this.soundTarget.setAttribute('aria-label', muted ? 'Activer le son' : 'Couper le son');
