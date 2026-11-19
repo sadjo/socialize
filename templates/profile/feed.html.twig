@@ -10,14 +10,15 @@
             <a class="ib" href="{{ path('app_profile', {username: account.acct}) }}" aria-label="Retour au profil">{{ ui.icon('left') }}</a>
             <div><b>Publications</b><small>@{{ account.acct }}</small></div>
         </header>
-        <div class="feed">
+        <div class="feed" data-controller="infinite-list">
             {% if has_more_newer %}
                 <div class="more"><a class="btn" href="{{ path('app_profile_feed', {username: account.acct, depuis: (newer|first).publicId, _fragment: 'post-' ~ (newer|first).publicId}) }}">Voir les publications plus récentes</a></div>
             {% endif %}
             {% for post in newer %}
                 {{ include('post/_card.html.twig') }}
             {% endfor %}
-            {{ include('post/_card.html.twig') }}
+            {# Publication ouverte ; absente sur une page suivante ouverte sans JavaScript (?apres=). #}
+            {% if post %}{{ include('post/_card.html.twig') }}{% endif %}
             {{ include('feed/_page.html.twig') }}
         </div>
     </div>

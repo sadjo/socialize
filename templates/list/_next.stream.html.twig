@@ -1,0 +1,12 @@
+{# Suite d'une liste : les éléments, insérés avant le repère de fin, puis le repère suivant (ou rien en fin de liste).
+   Variables : list_id, items (HTML des éléments), next_url. #}
+<turbo-stream action="before" target="{{ list_id }}-more">
+    <template>{{ items|raw }}</template>
+</turbo-stream>
+{% if next_url %}
+    <turbo-stream action="replace" target="{{ list_id }}-more">
+        <template>{{ include('list/_more.html.twig') }}</template>
+    </turbo-stream>
+{% else %}
+    <turbo-stream action="remove" target="{{ list_id }}-more"></turbo-stream>
+{% endif %}

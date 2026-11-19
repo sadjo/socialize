@@ -21,7 +21,7 @@
                 <span>Archivez une publication depuis son menu « … » pour la retirer de votre profil sans la supprimer.</span>
             </div>
         {% else %}
-            <div class="grid3">{{ include('profile/_grid_page.html.twig') }}</div>
+            <div class="grid3" data-controller="infinite-list">{{ include('profile/_grid_page.html.twig') }}</div>
         {% endif %}
     </div>
 </div>

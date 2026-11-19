@@ -175,13 +175,13 @@ final class SocialTest extends AppWebTestCase
 
         $crawler = $this->client->request('GET', '/local');
         self::assertSelectorCount(10, 'article.post');
-        $next = $crawler->filter('turbo-frame[loading="lazy"]')->attr('src');
+        $next = $crawler->filter('#feed-more a')->attr('href');
         self::assertNotNull($next);
 
-        $this->client->request('GET', $next);
+        $this->client->request('GET', $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
         self::assertResponseIsSuccessful();
         self::assertSelectorCount(2, 'article.post');
-        self::assertSelectorNotExists('turbo-frame[loading="lazy"]');
+        self::assertSelectorExists('turbo-stream[action="remove"][target="feed-more"]', 'Fin du fil : plus de repère.');
     }
 
     private function publish(\App\Core\Domain\Account\Account $author, string $caption, Visibility $visibility): Post

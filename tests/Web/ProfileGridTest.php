@@ -8,8 +8,9 @@ use App\Media\Application\PostComposer;
 use App\Tests\AppWebTestCase;
 
 /**
- * Grille du profil : pages chargées au défilement, sans sous-grilles imbriquées (WebKit en doublait le coût à chaque
- * page, jusqu'à bloquer le défilement sur iPhone au-delà de quelques centaines de publications).
+ * Grille du profil : pages chargées au défilement dans une seule grille plate, sans cadres ni sous-grilles imbriqués
+ * (WebKit en doublait le coût à chaque page, jusqu'à bloquer le défilement sur iPhone au-delà de quelques centaines de
+ * publications).
  */
 final class ProfileGridTest extends AppWebTestCase
 {
@@ -22,17 +23,26 @@ final class ProfileGridTest extends AppWebTestCase
         }
 
         $crawler = $this->client->request('GET', '/@camille');
-        self::assertCount(24, $crawler->filter('.grid3 .gt'));
-        $next = $crawler->filter('.grid3 turbo-frame turbo-frame[loading="lazy"]');
-        self::assertCount(1, $next, 'Page suivante chargée au défilement.');
+        self::assertCount(24, $crawler->filter('.grid3[data-controller="infinite-list"] > .gt'));
+        self::assertSelectorNotExists('.grid3 turbo-frame', 'Plus de cadres Turbo dans la grille.');
+        $next = $crawler->filter('.grid3 > #grid-more[data-infinite-list-target="more"] a');
+        self::assertCount(1, $next, 'Repère de la page suivante, en fin de grille.');
 
-        $this->client->request('GET', (string) $next->attr('src'));
+        // Suite en flux Turbo : seulement les vignettes, insérées avant le repère, qui disparaît en fin de grille.
+        $this->client->request('GET', (string) $next->attr('href'), server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
         self::assertResponseIsSuccessful();
-        self::assertSelectorCount(2, '.gt');
-        self::assertSelectorNotExists('turbo-frame turbo-frame', 'Dernière page.');
+        self::assertResponseHeaderSame('Content-Type', 'text/vnd.turbo-stream.html; charset=UTF-8');
+        self::assertSelectorCount(2, 'turbo-stream[action="before"][target="grid-more"] .gt');
+        self::assertSelectorExists('turbo-stream[action="remove"][target="grid-more"]');
+        self::assertSelectorNotExists('.grid3', 'Pas le reste du profil.');
+
+        // Sans JavaScript, le lien ouvre le profil, grille commencée à la suite.
+        $this->client->request('GET', (string) $next->attr('href'));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorCount(2, '.grid3 > .gt');
+        self::assertSelectorNotExists('#grid-more');
 
         $css = (string) file_get_contents(\dirname(__DIR__, 2).'/assets/styles/app.css');
-        self::assertStringContainsString('.grid3 turbo-frame{display:contents}', $css, 'Cadres chargés effacés de la mise en page.');
         self::assertStringNotContainsString('subgrid', $css, 'Pas de sous-grilles imbriquées.');
     }
 }

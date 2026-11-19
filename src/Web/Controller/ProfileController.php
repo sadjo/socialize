@@ -26,6 +26,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\UX\Turbo\TurboBundle;
 
 final class ProfileController extends AbstractController
 {
@@ -51,6 +52,11 @@ final class ProfileController extends AbstractController
         $visible = $access->visibleFor($account, $viewer);
         $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres') ?: null), self::PAGE_SIZE, $viewer);
 
+        // Page suivante de la grille, chargée au défilement : seulement les vignettes, sans le reste du profil.
+        if ($this->wantsStream($request)) {
+            return $this->render('profile/_grid_page.stream.html.twig', ['account' => $account, 'page' => $page]);
+        }
+
         $isOwner = $viewer instanceof Account && $viewer->getId()->equals($account->getId());
         $parameters = [
             'account' => $account,
@@ -73,10 +79,6 @@ final class ProfileController extends AbstractController
                 'following' => $follows->countFollowing($account),
             ],
         ];
-
-        if ($request->query->has('apres')) {
-            return $this->render('profile/_grid_page.html.twig', $parameters);
-        }
 
         return $this->render('profile/show.html.twig', $parameters);
     }
@@ -114,12 +116,16 @@ final class ProfileController extends AbstractController
         $visible = $access->visibleFor($account, $viewer);
         $common = ['account' => $account, 'route' => 'app_profile_feed', 'route_params' => ['username' => $account->getAcct()]];
 
-        // Suite du fil (publications plus anciennes), chargée dans un cadre Turbo.
+        // Suite du fil (publications plus anciennes) : chargée au défilement en flux Turbo ; sans JavaScript, page
+        // complète qui commence à la suite.
         if ($request->query->has('apres')) {
             $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres')), self::FEED_PAGE_SIZE, $viewer);
             $commentPreviews->prime($page->posts);
+            $parameters = $common + ['page' => $page, 'liked' => $likes->likedAmong($viewer, $page->posts)];
 
-            return $this->render('feed/_page.html.twig', $common + ['page' => $page, 'liked' => $likes->likedAmong($viewer, $page->posts)]);
+            return $this->wantsStream($request)
+                ? $this->render('feed/_page.stream.html.twig', $parameters)
+                : $this->render('profile/feed.html.twig', $parameters + ['post' => null, 'newer' => [], 'has_more_newer' => false]);
         }
 
         $post = $posts->findByPublicId($request->query->getString('depuis'));
@@ -165,8 +171,8 @@ final class ProfileController extends AbstractController
             'open_post' => true,
         ];
 
-        if ($request->query->has('apres')) {
-            return $this->render('profile/_grid_page.html.twig', $parameters);
+        if ($this->wantsStream($request)) {
+            return $this->render('profile/_grid_page.stream.html.twig', $parameters);
         }
 
         return $this->render('profile/archives.html.twig', $parameters);
@@ -309,6 +315,19 @@ final class ProfileController extends AbstractController
         }
 
         return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_profile', ['username' => $username]), Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Page suivante d'une liste demandée en flux Turbo (infinite_list_controller) : la réponse en prend le format.
+     */
+    private function wantsStream(Request $request): bool
+    {
+        if (TurboBundle::STREAM_FORMAT !== $request->getPreferredFormat()) {
+            return false;
+        }
+        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+
+        return true;
     }
 
     private function account(string $acct, bool $resolve = false): Account

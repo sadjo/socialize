@@ -1,28 +1,4 @@
-{% import '_macros.html.twig' as ui %}
-{# Variables : account, page ; grid_route (page suivante) et open_post (lien direct vers la publication) en option #}
-{% set grid_route = grid_route|default('app_profile') %}
-{% set frame_id = 'grid-page-' ~ (app.request.query.get('apres') ?? 'first')|replace({'.': '-'}) %}
-<turbo-frame id="{{ frame_id }}" target="_top">
-    {% for post in page.posts %}
-        {% set cover = post.cover %}
-        <a class="gt" href="{{ open_post|default(false) ? path('app_post_show', {id: post.publicId}) : path('app_profile_feed', {username: account.acct, depuis: post.publicId, _fragment: 'post-' ~ post.publicId}) }}" aria-label="Ouvrir la publication{{ post.caption ? ' : ' ~ post.caption|slice(0, 80) }}">
-            {% set thumb = cover and cover.ready ? media_url(cover, 'thumb') : null %}
-            {% if thumb %}
-                {# Vignette en plusieurs tailles : une case fait environ un tiers de la largeur (310 px sur ordinateur). #}
-                {% set srcset = media_srcset(cover, 'thumb') %}
-                <img src="{{ thumb }}"{% if srcset %} srcset="{{ srcset }}" sizes="(max-width: 767px) 34vw, 310px"{% endif %} alt="{{ cover.altText }}" loading="lazy" decoding="async">
-            {% elseif cover and cover.ready and cover.video %}
-                {# Vidéo distante sans vignette : première image de la vidéo. #}
-                <video src="{{ media_url(cover, 'video') }}#t=0.1" muted playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video>
-            {% else %}
-                <span class="processing skel">{{ ui.icon('reel') }}</span>
-            {% endif %}
-            {% if post.media|length > 1 %}<span class="gi">{{ ui.icon('stack', 'sm') }}</span>{% elseif post.hasVideo %}<span class="gi">{{ ui.icon('reel', 'sm') }}</span>{% endif %}
-            <span class="gh"><span>{{ ui.icon('heart') }}{{ post.likesCount }}</span><span>{{ ui.icon('comment') }}{{ post.commentsCount }}</span></span>
-        </a>
-    {% endfor %}
-    {% if page.next %}
-        {% set next = page.next.toString %}
-        <turbo-frame id="grid-page-{{ next|replace({'.': '-'}) }}" src="{{ path(grid_route, {username: account.acct, apres: next}) }}" loading="lazy" target="_top"></turbo-frame>
-    {% endif %}
-</turbo-frame>
+{# Une page de la grille, suivie du repère qui chargera la suivante (list/_more.html.twig).
+   Variables : account, page ; grid_route (page suivante) et open_post (lien direct vers la publication) en option. #}
+{{ include('profile/_grid_items.html.twig') }}
+{{ include('list/_more.html.twig', {list_id: 'grid', next_url: page.next ? path(grid_route|default('app_profile'), {username: account.acct, apres: page.next.toString}) : null}) }}

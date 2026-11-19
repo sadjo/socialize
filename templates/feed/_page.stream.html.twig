@@ -1,0 +1,3 @@
+{# Page suivante du fil, chargée au défilement (infinite_list_controller). #}
+{% set items %}{% for post in page.posts %}{{ include('post/_card.html.twig') }}{% endfor %}{% endset %}
+{{ include('list/_next.stream.html.twig', {list_id: 'feed', items: items, next_url: page.next ? path(route, (route_params|default({}))|merge({apres: page.next.toString})) : null}) }}

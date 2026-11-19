@@ -1,0 +1,95 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Web;
+
+use App\Core\Domain\Account\Account;
+use App\Core\Domain\Post\Visibility;
+use App\Media\Application\PostComposer;
+use App\Tests\AppWebTestCase;
+
+/**
+ * Listes de publications (fils) : une seule liste plate, la suite chargée au défilement en flux Turbo
+ * (infinite_list_controller), et un affichage qui ménage la mémoire graphique de Safari sur iPhone.
+ */
+final class FeedListTest extends AppWebTestCase
+{
+    private const array STREAM = ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html'];
+
+    public function testTheNextPageIsAppendedToASingleFlatList(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->publishMany($camille, 25);
+
+        $crawler = $this->client->request('GET', '/local');
+        self::assertSelectorCount(10, '.feed[data-controller="infinite-list"] > article.post', 'Publications directement dans la liste.');
+        self::assertSelectorNotExists('.feed turbo-frame', 'Plus de cadres Turbo imbriqués page dans page.');
+        $more = $crawler->filter('.feed > #feed-more[data-infinite-list-target="more"]:last-child a');
+        self::assertCount(1, $more, 'Repère de fin, dernier élément de la liste.');
+
+        // Deuxième page : dix publications insérées avant le repère, puis le repère de la troisième.
+        $this->client->request('GET', (string) $more->attr('href'), server: self::STREAM);
+        self::assertResponseHeaderSame('Content-Type', 'text/vnd.turbo-stream.html; charset=UTF-8');
+        self::assertSelectorCount(10, 'turbo-stream[action="before"][target="feed-more"] article.post');
+        $third = $this->client->getCrawler()->filter('turbo-stream[action="replace"][target="feed-more"] #feed-more a')->attr('href');
+        self::assertStringStartsWith('/local?apres=', (string) $third);
+        self::assertSelectorNotExists('.rail', 'Seulement les publications : ni suggestions ni reste de la page.');
+
+        // Dernière page : le repère est retiré.
+        $this->client->request('GET', (string) $third, server: self::STREAM);
+        self::assertSelectorCount(5, 'turbo-stream[action="before"] article.post');
+        self::assertSelectorExists('turbo-stream[action="remove"][target="feed-more"]');
+        self::assertSelectorNotExists('turbo-stream[action="replace"]');
+    }
+
+    public function testWithoutJavaScriptTheLinkOpensAFullPageStartingAtTheNextPost(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->publishMany($camille, 12);
+
+        $crawler = $this->client->request('GET', '/local');
+        $this->client->request('GET', (string) $crawler->filter('#feed-more a')->attr('href'));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.feed-col', 'Page complète.');
+        self::assertSelectorCount(2, 'article.post');
+        self::assertSelectorTextContains('article.post', 'Photo 2');
+
+        // Fil d'un profil : même chose, sans publication ouverte.
+        $crawler = $this->client->request('GET', '/@camille');
+        $first = $crawler->filter('.grid3 > .gt')->first()->attr('href');
+        $crawler = $this->client->request('GET', (string) $first);
+        $this->client->request('GET', (string) $crawler->filter('#feed-more a')->attr('href'));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorCount(1, 'article.post');
+        self::assertSelectorTextContains('article.post', 'Photo 1');
+    }
+
+    /**
+     * Mémoire graphique : un filtre CSS ou un flou d'arrière-plan fait de chaque élément une couche à part ; sur les
+     * photos des listes, un voile translucide remplace le filtre, et les boutons posés sur les médias n'ont plus de flou.
+     */
+    public function testListPhotosAreSoftenedByAVeilRatherThanACssFilter(): void
+    {
+        $css = (string) file_get_contents(\dirname(__DIR__, 2).'/assets/styles/app.css');
+
+        self::assertStringNotContainsString('.slide img,article.post .media .slide video,.gt img', $css, 'Pas de filtre sur chaque photo.');
+        self::assertStringContainsString('article.post .media .slide:not(.vid)::after,.gt:has(img)::after{content:"";position:absolute;inset:0;background:var(--media-veil);pointer-events:none}', $css);
+        foreach (['off' => 'transparent', 'medium' => 'rgb(142 142 142 / .135)', 'strong' => 'rgb(66 66 66 / .21)'] as $level => $veil) {
+            self::assertStringContainsString(':root[data-media-filter="'.$level.'"]{--media-filter:', $css);
+            self::assertStringContainsString('--media-veil:'.$veil.'}', $css);
+        }
+        foreach (['.snd{', '.cnt{', '.nb{'] as $button) {
+            $rule = substr($css, (int) strpos($css, $button), (int) strpos(substr($css, (int) strpos($css, $button)), '}'));
+            self::assertStringNotContainsString('backdrop-filter', $rule, $button.' sans flou d’arrière-plan.');
+        }
+    }
+
+    private function publishMany(Account $author, int $count): void
+    {
+        $composer = self::getContainer()->get(PostComposer::class);
+        for ($i = 1; $i <= $count; ++$i) {
+            $composer->publish($author, 'Photo '.$i, [['file' => $this->jpeg(40, 50), 'alt' => null]], Visibility::Public);
+        }
+    }
+}

@@ -49,12 +49,18 @@
   color-scheme:dark}
 
 /* Filtre des médias dans les listes (Réglages › Apparence, attribut data-media-filter de <html>) : adoucit,
-   rapproche et assombrit légèrement les couleurs. Léger par défaut ; la page d'une publication, la visionneuse et les stories n'en ont pas. */
-:root{--media-filter:saturate(.92) contrast(.95) brightness(.97)}
-:root[data-media-filter="off"]{--media-filter:none}
-:root[data-media-filter="medium"]{--media-filter:saturate(.84) contrast(.92) brightness(.94)}
-:root[data-media-filter="strong"]{--media-filter:saturate(.74) contrast(.88) brightness(.9)}
-article.post .media .slide img,article.post .media .slide video,.gt img,.gt video{filter:var(--media-filter)}
+   rapproche et assombrit légèrement les couleurs. Léger par défaut ; la page d'une publication, la visionneuse et les stories n'en ont pas.
+   Sur les photos, un voile gris translucide posé dessus (--media-veil) plutôt qu'un filtre CSS : un filtre fait de chaque
+   image une couche graphique à part, en pleine résolution, et ces couches s'accumulent au fil du défilement jusqu'à
+   épuiser la mémoire de Safari sur iPhone (médias noirs ou gris). Mélanger l'image à un gris réduit contraste et
+   saturation et l'assombrit dans les mêmes proportions que le filtre : rendu quasi identique, sans couche de plus.
+   Les vidéos, déjà dans leur propre couche, gardent le filtre. */
+:root{--media-filter:saturate(.92) contrast(.95) brightness(.97);--media-veil:rgb(84 84 84 / .08)}
+:root[data-media-filter="off"]{--media-filter:none;--media-veil:transparent}
+:root[data-media-filter="medium"]{--media-filter:saturate(.84) contrast(.92) brightness(.94);--media-veil:rgb(142 142 142 / .135)}
+:root[data-media-filter="strong"]{--media-filter:saturate(.74) contrast(.88) brightness(.9);--media-veil:rgb(66 66 66 / .21)}
+article.post .media .slide:not(.vid)::after,.gt:has(img)::after{content:"";position:absolute;inset:0;background:var(--media-veil);pointer-events:none}
+article.post .media .slide video,.gt video{filter:var(--media-filter)}
 
 *{box-sizing:border-box}
 html,body{min-height:100%}
@@ -195,8 +201,6 @@ tr:last-child td{border-bottom:0}
 .home{display:grid;grid-template-columns:minmax(0,480px) 300px;gap:56px;justify-content:center}
 .feed-col{min-width:0;display:flex;flex-direction:column;gap:14px}
 .feed{--feed-gap:22px;display:flex;flex-direction:column;gap:var(--feed-gap)}
-/* Les pages du fil sont des cadres Turbo imbriqués : l'écart s'applique aussi entre leurs publications. */
-.feed turbo-frame{display:flex;flex-direction:column;gap:var(--feed-gap)}
 .rail{display:flex;flex-direction:column;gap:18px;padding-top:8px;position:sticky;top:28px;align-self:start}
 @media (max-width:1199px){.home{grid-template-columns:minmax(0,500px)}.rail{display:none}}
 /* Fil sur mobile : publications bord à bord, sans cadre, pour un défilement plus fluide */
@@ -239,7 +243,7 @@ tr:last-child td{border-bottom:0}
 /* Vidéo façon Instagram : affiche, lecture muette à l'écran, bouton son en bas à gauche */
 .player{position:relative;height:100%}
 .player video{cursor:pointer}
-.snd{position:absolute;left:12px;bottom:12px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--media-shade);color:var(--on-media);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:1}
+.snd{position:absolute;left:12px;bottom:12px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--media-shade);color:var(--on-media);z-index:1}
 .snd .i{width:16px;height:16px}
 .player .snd .on,.player.muted .snd .off{display:block}
 .player .snd .off,.player.muted .snd .on{display:none}
@@ -250,8 +254,10 @@ tr:last-child td{border-bottom:0}
 .music-snd .off,.media.music-on .music-snd .on{display:block}
 .music-credit a{color:inherit}
 .music-credit .i{vertical-align:-2px}
-.cnt{position:absolute;top:12px;right:12px;padding:3px 9px;border-radius:10px;font-size:.75rem;font-weight:700;background:var(--media-shade);color:var(--on-media);backdrop-filter:blur(8px)}
-.nb{position:absolute;top:50%;translate:0 -50%;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--glass);backdrop-filter:blur(10px);color:var(--fg);opacity:0;transition:opacity .2s}
+/* Boutons posés sur les médias : fond sombre translucide, sans flou d'arrière-plan (une couche graphique de plus par
+   publication, coûteuse dans un long fil sur iPhone). */
+.cnt{position:absolute;top:12px;right:12px;padding:3px 9px;border-radius:10px;font-size:.75rem;font-weight:700;background:var(--media-shade);color:var(--on-media)}
+.nb{position:absolute;top:50%;translate:0 -50%;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--glass);color:var(--fg);opacity:0;transition:opacity .2s}
 .media:hover .nb,.media:focus-within .nb{opacity:1}
 .nb.prev{left:10px}.nb.next{right:10px}
 /* Position dans le carrousel : sous le média, pas dessus. */
@@ -268,7 +274,7 @@ tr:last-child td{border-bottom:0}
 .cw-veil{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;background:oklch(0.15 0.02 285 / .35);backdrop-filter:blur(34px);-webkit-backdrop-filter:blur(34px);color:var(--on-media);z-index:2}
 .cw-veil b{display:block;font-family:var(--font-display);font-size:1.05rem;margin:6px 0 4px}
 .cw-veil .btn{margin-top:12px;background:var(--media-shade);color:var(--on-media);border-color:oklch(1 0 0 / .25)}
-.vid .play{position:absolute;inset:0;margin:auto;width:68px;height:68px;border-radius:50%;display:grid;place-items:center;background:var(--media-shade);backdrop-filter:blur(10px);color:var(--on-media);transition:opacity .3s,transform .2s}
+.vid .play{position:absolute;inset:0;margin:auto;width:68px;height:68px;border-radius:50%;display:grid;place-items:center;background:var(--media-shade);color:var(--on-media);transition:opacity .3s,transform .2s}
 .vid .play .i{width:30px;height:30px;fill:currentColor;margin-left:4px}
 .vid .vbar{position:absolute;left:14px;right:14px;bottom:14px;height:3px;border-radius:2px;background:oklch(1 0 0 / .3);overflow:hidden}
 .vid .vbar span{display:block;height:100%;width:0;background:var(--on-media)}
@@ -422,18 +428,14 @@ tr:last-child td{border-bottom:0}
 .ptabs button{display:flex;align-items:center;gap:7px;height:50px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border-top:2px solid transparent;margin-top:-1px}
 .ptabs button.on{color:var(--fg);border-top-color:var(--fg)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
-/* Pages de la grille (cadres Turbo) : même grille, et une boîte visible pour le chargement au défilement. */
-/* Pages de la grille : chaque page est un cadre imbriqué dans la précédente. Chargés, ces cadres s'effacent
-   (display:contents) et leurs vignettes rejoignent une seule grille : des sous-grilles imbriquées coûtaient à WebKit
-   (Safari, navigateurs sur iPhone) un calcul qui doublait à chaque page, jusqu'à bloquer le défilement. Seul le cadre
-   suivant, pas encore chargé, garde une boîte pour être vu par le chargement paresseux. */
-.grid3 turbo-frame{display:contents}
-.grid3 turbo-frame[src]:not([complete]){display:block;grid-column:1/-1;min-height:1px}
+/* Pages de la grille : vignettes ajoutées à la même grille (infinite_list_controller), sans cadres ni sous-grilles
+   imbriqués ; le repère de fin occupe une ligne entière. */
+.grid3 > .more{grid-column:1/-1}
 .gt{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:6px;background:var(--surface-2)}
 .gt img,.gt video{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
 .gt:hover img{transform:scale(1.04)}
-.gt .gi{position:absolute;top:8px;right:8px;color:var(--on-media);filter:drop-shadow(0 1px 3px oklch(0 0 0 / .6))}
-.gt .gh{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:18px;background:var(--media-shade);color:var(--on-media);font-weight:700;opacity:0;transition:opacity .2s}
+.gt .gi{position:absolute;z-index:1;top:8px;right:8px;color:var(--on-media);filter:drop-shadow(0 1px 3px oklch(0 0 0 / .6))}
+.gt .gh{position:absolute;z-index:1;inset:0;display:flex;align-items:center;justify-content:center;gap:18px;background:var(--media-shade);color:var(--on-media);font-weight:700;opacity:0;transition:opacity .2s}
 .gt:hover .gh{opacity:1}
 .gt .gh span{display:flex;gap:6px;align-items:center}
 .gt .gh .i{fill:currentColor;stroke:none;width:20px;height:20px}
@@ -613,6 +615,7 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 .empty{padding:40px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:10px;border:1px dashed var(--line);border-radius:var(--r-card)}
 .empty .i{width:40px;height:40px;color:var(--accent)}
 .more{display:flex;justify-content:center;padding:8px}
+.more[aria-busy] .btn{opacity:.6;pointer-events:none}
 /* Fil d'un profil : en-tête de retour, publication visée sous la barre du haut */
 .pf-head{display:flex;align-items:center;gap:10px;padding:2px 0}
 .pf-head b{display:block;font-family:var(--font-display)}

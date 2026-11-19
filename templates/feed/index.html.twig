@@ -22,7 +22,7 @@
         {# Barre des fils : sur les fils Local et Fédéré seulement, pas sur l'écran d'accueil. #}
         {% if tab in ['local', 'federated'] %}{{ include('feed/_tabs.html.twig') }}{% endif %}
         {% if tab in ['local', 'federated'] %}{{ include('search/_form.html.twig') }}{% endif %}
-        <div class="feed">
+        <div class="feed" data-controller="infinite-list">
             {% if page.empty %}
                 <div class="empty">
                     {{ ui.icon('image') }}

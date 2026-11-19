@@ -54,10 +54,10 @@ final class ProfileFeedTest extends AppWebTestCase
 
         $crawler = $this->client->request('GET', '/@camille/publications?depuis='.$last->getPublicId());
         self::assertCount(11, $crawler->filter('article.post'), 'La publication ouverte et 10 plus anciennes.');
-        $next = $crawler->filter('turbo-frame[loading="lazy"]')->attr('src');
+        $next = $crawler->filter('#feed-more a')->attr('href');
         self::assertStringStartsWith('/@camille/publications?apres=', (string) $next);
 
-        $this->client->request('GET', (string) $next);
+        $this->client->request('GET', (string) $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
         self::assertSelectorTextContains('article.post:last-of-type', 'La toute première');
         self::assertSelectorCount(3, 'article.post');
     }
