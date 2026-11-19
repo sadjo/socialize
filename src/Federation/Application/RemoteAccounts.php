@@ -127,6 +127,8 @@ final readonly class RemoteAccounts
             now: $this->clock->now(),
             coverUrl: Json::id($image, 'url'),
         );
+        // Compte verrouillé (Mastodon) : ses nouveaux abonnés attendent son accord, demandé ici s'il y est connecté.
+        $account->requireFollowApproval(true === ($actor['manuallyApprovesFollowers'] ?? false));
         $this->em->flush();
 
         return $account;

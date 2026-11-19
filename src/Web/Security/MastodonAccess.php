@@ -14,23 +14,30 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
  * Ce qu'une personne connectée avec Mastodon peut faire ici : lire (fils, profils, publications, stories), marquer
- * une story comme vue, aimer, commenter, suivre, publier sur son compte Mastodon, et y importer son archive Instagram
- * si un administrateur le lui a permis. Le reste (publier, réglages, notifications, import, administration) lui est fermé :
- * son compte se gère sur son serveur.
+ * une story comme vue, aimer, commenter, suivre, accepter, refuser ou retirer ses abonnés, lire ses notifications,
+ * publier sur son compte Mastodon, et y importer son archive Instagram si un administrateur le lui a permis. Le reste
+ * (publier ici, réglages, notifications sur l'appareil, import, administration) lui est fermé : son compte se gère sur
+ * son serveur.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 4)]
 final readonly class MastodonAccess
 {
     /** Pages fermées (préfixes de noms de routes). */
     private const array CLOSED = [
-        'admin_', 'app_settings', 'app_compose', 'app_import', 'app_notification', 'app_push_', 'app_music_', 'app_immich_',
+        'admin_', 'app_settings', 'app_compose', 'app_import', 'app_push_', 'app_music_', 'app_immich_',
         'app_synology_photos_', 'app_story_new', 'app_story_manage', 'app_story_archive', 'app_post_edit', 'app_instagram_', 'app_post_instagram',
     ];
 
-    /** Seules actions permises (routes en POST) : J'aime, commentaires et abonnements passent par son serveur. */
+    /**
+     * Seules actions permises (routes en POST) : J'aime, commentaires, abonnements et abonnés passent par son serveur ;
+     * ses notifications se lisent, se marquent et se suppriment ici.
+     */
     private const array ACTIONS = [
         'app_story_seen', 'app_login', 'app_mastodon_login',
         'app_post_like', 'app_post_comment', 'app_comment_delete', 'app_profile_follow', 'app_profile_unfollow',
+        'app_follow_request_accept', 'app_profile_remove_follower',
+        'app_notification_open', 'app_notification_toggle', 'app_notification_delete',
+        'app_notifications_read_all', 'app_notifications_delete_all',
         'app_mastodon_compose', 'app_post_delete',
     ];
 

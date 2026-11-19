@@ -165,6 +165,8 @@ final class FakeMastodon
             'POST' === $method && (bool) preg_match('#^/api/v1/accounts/([^/]+)/(un)?follow$#', $path, $m) => '' === ($m[2] ?? '')
                 ? $this->json(['id' => $m[1], 'following' => self::$followAccepted, 'requested' => !self::$followAccepted])
                 : $this->json(['id' => $m[1], 'following' => false, 'requested' => false]),
+            'POST' === $method && (bool) preg_match('#^/api/v1/follow_requests/([^/]+)/(authorize|reject)$#', $path, $m) => $this->json(['id' => $m[1], 'followed_by' => 'authorize' === $m[2]]),
+            'POST' === $method && (bool) preg_match('#^/api/v1/accounts/([^/]+)/remove_from_followers$#', $path, $m) => $this->json(['id' => $m[1], 'followed_by' => false]),
             default => $this->json(['error' => 'Record not found'], 404),
         };
     }

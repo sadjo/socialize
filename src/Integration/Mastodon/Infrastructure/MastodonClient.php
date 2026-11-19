@@ -315,6 +315,24 @@ final readonly class MastodonClient
     }
 
     /**
+     * Demande d'abonnement reçue par le compte : acceptée (authorize) ou refusée (reject).
+     *
+     * @param 'authorize'|'reject' $action
+     */
+    public function answerFollowRequest(string $domain, #[\SensitiveParameter] string $token, string $accountId, string $action): void
+    {
+        $this->json('POST', $domain, '/api/v1/follow_requests/'.rawurlencode($accountId).'/'.$action, $token);
+    }
+
+    /**
+     * Retire ce compte des abonnés du compte connecté.
+     */
+    public function removeFromFollowers(string $domain, #[\SensitiveParameter] string $token, string $accountId): void
+    {
+        $this->json('POST', $domain, '/api/v1/accounts/'.rawurlencode($accountId).'/remove_from_followers', $token);
+    }
+
+    /**
      * Révoque le jeton (déconnexion). Un échec n'empêche pas la déconnexion.
      */
     public function revoke(string $domain, string $clientId, #[\SensitiveParameter] string $clientSecret, #[\SensitiveParameter] string $token): void

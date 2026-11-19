@@ -77,20 +77,25 @@ final class MastodonLoginTest extends AppWebTestCase
         self::getContainer()->get(MessageBusInterface::class)->dispatch(new RefreshMastodonAccounts());
         self::assertCount(2, self::getContainer()->get(PostRepository::class)->findBy(['account' => $user->getAccount()]));
 
-        // Connecté : son profil est celui de son compte Mastodon ; ni notifications ni réglages ici.
+        // Connecté : son profil est celui de son compte Mastodon ; ses notifications, mais pas de réglages ici.
         $this->client->request('GET', '/');
         self::assertSelectorExists('.side a[href="/@alice@remote.test"]');
-        self::assertSelectorNotExists('.side a[href="/notifications"]');
+        self::assertSelectorExists('.side a[href="/notifications"]');
         self::assertSelectorNotExists('.side a[href="/reglages"]');
         self::assertSelectorExists('.side a[href="https://remote.test/@alice"]');
         $this->client->request('GET', '/@alice@remote.test');
         self::assertResponseIsSuccessful();
 
         // Ce qui se gère sur son serveur, ou n'existe pas pour lui, est fermé.
-        foreach (['/reglages', '/publier', '/stories/nouvelle', '/notifications', '/import', '/admin/comptes'] as $page) {
+        foreach (['/reglages', '/publier', '/stories/nouvelle', '/import', '/admin/comptes'] as $page) {
             $this->client->request('GET', $page);
             self::assertResponseStatusCodeSame(403, $page);
         }
+        // Ses notifications se lisent ici, mais pas de notifications sur l'appareil : son application Mastodon s'en charge.
+        $this->client->request('GET', '/notifications');
+        self::assertResponseIsSuccessful();
+        $this->client->request('POST', '/notifications');
+        self::assertResponseStatusCodeSame(403, 'Choix des notifications sur l’appareil fermé.');
 
         // Une seconde connexion réutilise l'application enregistrée sur le serveur.
         $this->client->request('GET', '/deconnexion');

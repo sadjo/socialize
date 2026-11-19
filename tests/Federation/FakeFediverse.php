@@ -35,6 +35,9 @@ final class FakeFediverse
      */
     public static array $outbox = [];
 
+    /** @var array<string, mixed> champs ajoutés à l'acteur d'alice (ex. manuallyApprovesFollowers) */
+    public static array $actorExtra = [];
+
     /**
      * @param array<string, mixed> $options
      */
@@ -117,6 +120,7 @@ final class FakeFediverse
             'icon' => ['type' => 'Image', 'url' => 'https://remote.test/avatars/alice.png'],
             'image' => ['type' => 'Image', 'url' => 'https://remote.test/headers/alice.png'],
             'publicKey' => ['id' => self::ALICE.'#main-key', 'owner' => self::ALICE, 'publicKeyPem' => self::keys()['public']],
+            ...self::$actorExtra,
         ];
     }
 

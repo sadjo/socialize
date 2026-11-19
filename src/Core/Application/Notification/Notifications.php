@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Application\Notification;
 
+use App\Core\Application\Account\PilotedAccounts;
 use App\Core\Application\Post\Mentions;
 use App\Core\Application\Post\PostAccess;
 use App\Core\Domain\Account\Account;
@@ -25,9 +26,10 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
- * Notifications des comptes locaux : « J'aime » et commentaires reçus sur leurs publications, venus d'ici ou du
- * fédivers (jamais pour ses propres actions) ; mentions dans une légende ; demandes d'abonnement à valider ; nouveaux
- * comptes, pour les administrateurs. Lues ou non lues, supprimées une à une ou toutes ensemble.
+ * Notifications des comptes gérés ici (comptes locaux et comptes Mastodon qui s'y connectent) : « J'aime » et
+ * commentaires reçus sur leurs publications, venus d'ici ou du fédivers (jamais pour ses propres actions) ; mentions
+ * dans une légende ; demandes d'abonnement à valider ; nouveaux comptes, pour les administrateurs. Lues ou non lues,
+ * supprimées une à une ou toutes ensemble.
  */
 final readonly class Notifications
 {
@@ -39,6 +41,7 @@ final readonly class Notifications
         private UserRepository $users,
         private Mentions $mentions,
         private PostAccess $access,
+        private PilotedAccounts $piloted,
     ) {
     }
 
@@ -87,7 +90,7 @@ final readonly class Notifications
         $now = $this->clock->now();
         $added = false;
         foreach ($mentioned as $account) {
-            if (!$account->isLocal() || $account->getId()->equals($author->getId()) || !$this->access->canView($post, $account)
+            if (!$this->managedHere($account) || $account->getId()->equals($author->getId()) || !$this->access->canView($post, $account)
                 || $this->notifications->findOneBy(['recipient' => $account, 'post' => $post, 'type' => NotificationType::Mention]) instanceof Notification) {
                 continue;
             }
@@ -121,7 +124,7 @@ final readonly class Notifications
     {
         $follow = $event->follow;
         $account = $follow->getFollowing();
-        if ($follow->isAccepted() || !$account->isLocal() || !$account->manuallyApprovesFollowers()) {
+        if ($follow->isAccepted() || !$account->manuallyApprovesFollowers() || !$this->managedHere($account)) {
             return;
         }
         $this->em->persist(new Notification($account, $follow->getFollower(), NotificationType::FollowRequest, null, null, $this->clock->now()));
@@ -251,6 +254,14 @@ final readonly class Notifications
     {
         $author = $post->getAccount();
 
-        return $author->isLocal() && !$author->getId()->equals($actor->getId()) ? $author : null;
+        return !$author->getId()->equals($actor->getId()) && $this->managedHere($author) ? $author : null;
+    }
+
+    /**
+     * Compte qui lit ses notifications ici : compte local, ou compte Mastodon qui s'y connecte (piloté).
+     */
+    private function managedHere(Account $account): bool
+    {
+        return $account->isLocal() || $this->piloted->isPiloted($account);
     }
 }

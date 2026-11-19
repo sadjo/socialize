@@ -6,7 +6,8 @@
 d'abonnement. Une notification ouvre la publication ou la page concernée et se marque lue ; elle peut aussi être
 marquée non lue ou supprimée, une à une ou toutes ensemble.
 
-Les administrateurs sont aussi prévenus des nouveaux comptes.
+Les administrateurs sont aussi prévenus des nouveaux comptes : la notification mène à l’administration, pour accorder
+ses droits au compte, ou au profil d’un compte Mastodon qui se connecte pour la première fois.
 
 ## Sur cet appareil
 

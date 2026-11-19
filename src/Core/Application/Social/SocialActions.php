@@ -88,6 +88,10 @@ final readonly class SocialActions
         if (!$follow instanceof Follow || $follow->isAccepted()) {
             return false;
         }
+        // Compte Mastodon connecté ici : la demande s'accepte sur son serveur, qui prévient l'abonné par la fédération.
+        if (!$account->isLocal()) {
+            $this->piloted->acceptFollower($account, $follower);
+        }
         $follow->accept();
         $this->em->flush();
         $this->events->dispatch(new FollowRequestAccepted($follow));
@@ -117,6 +121,10 @@ final readonly class SocialActions
     {
         $follow = $this->follows->findBetween($follower, $account);
         if ($follow instanceof Follow) {
+            // Compte Mastodon connecté ici : refus ou retrait sur son serveur, qui prévient l'abonné par la fédération.
+            if (!$account->isLocal()) {
+                $this->piloted->removeFollower($account, $follower, !$follow->isAccepted());
+            }
             $apUri = $follow->getApUri();
             $this->em->remove($follow);
             $this->em->flush();
