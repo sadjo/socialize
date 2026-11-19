@@ -21,3 +21,4 @@ parameters:
             paths:
                 - tests/Federation/FederationTest.php
                 - tests/Admin/DeleteAccountTest.php
+                - tests/Integration/MastodonInteractionsTest.php

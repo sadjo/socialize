@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Core\Domain\Account\Account;
+use App\Core\Domain\Notification\NotificationType;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\Comment;
@@ -13,6 +14,7 @@ use App\Core\Domain\Social\FollowState;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Core\Infrastructure\Doctrine\CommentRepository;
 use App\Core\Infrastructure\Doctrine\FollowRepository;
+use App\Core\Infrastructure\Doctrine\NotificationRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\ApUrls;
 use App\Federation\Application\InboxProcessor;
@@ -158,6 +160,36 @@ final class MastodonInteractionsTest extends AppWebTestCase
         $this->client->submit($crawler->selectButton('Abonné · Ne plus suivre')->form());
         self::assertCount(1, FakeMastodon::requestsTo('POST', '/api/v1/accounts/'.FakeMastodon::idOf($actor).'/unfollow'));
         self::assertNull(self::getContainer()->get(FollowRepository::class)->findBetween($this->alice(), $this->camille()));
+    }
+
+    /**
+     * Compte d'ici qui valide lui-même ses abonnés : l'abonnement d'un compte Mastodon connecté ici attend son accord,
+     * comme celui d'un compte d'ici (notification de la demande), et l'Accept ne part qu'à son acceptation.
+     */
+    public function testFollowingAnAccountThatApprovesItsFollowersWaitsForItsApproval(): void
+    {
+        $this->publish('Bonjour', Visibility::Public);
+        $camille = $this->camille();
+        $camille->requireFollowApproval(true);
+        self::getContainer()->get('doctrine')->getManager()->flush();
+        $this->connect();
+
+        $crawler = $this->client->request('GET', '/@camille');
+        $this->client->submit($crawler->selectButton('Suivre')->form());
+        $follow = self::getContainer()->get(FollowRepository::class)->findBetween($this->alice(), $this->camille());
+        self::assertInstanceOf(Follow::class, $follow);
+        self::assertSame(FollowState::Pending, $follow->getState(), 'En attente de l’accord de camille.');
+        self::assertSame(1, self::getContainer()->get(NotificationRepository::class)->count(['recipient' => $this->camille(), 'type' => NotificationType::FollowRequest]));
+
+        // L'activité Follow fédérée par son serveur arrive ensuite : la demande reste en attente, sans Accept.
+        $actor = self::getContainer()->get(ApUrls::class)->actor($this->camille());
+        self::getContainer()->get(InboxProcessor::class)->process([
+            'id' => 'https://remote.test/users/alice#follows/1', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => $actor,
+        ], $this->alice());
+        self::assertFalse(self::getContainer()->get(FollowRepository::class)->findBetween($this->alice(), $this->camille())?->isAccepted());
+        $fediverse = self::getContainer()->get(FakeFediverse::class);
+        self::assertInstanceOf(FakeFediverse::class, $fediverse);
+        self::assertSame([], $fediverse->delivered('Accept'), 'Pas d’Accept avant son accord.');
     }
 
     private function publish(string $caption, Visibility $visibility): Post
