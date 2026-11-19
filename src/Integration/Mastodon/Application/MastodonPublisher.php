@@ -70,8 +70,9 @@ final readonly class MastodonPublisher
         $limits = $this->limits($user);
         $text = trim($text);
         $spoiler = null !== $spoiler && '' !== trim($spoiler) ? trim($spoiler) : null;
-        if ([] === $media) {
-            throw new MastodonException('Ajoutez au moins une photo ou une vidéo.');
+        // Sans photo ni vidéo : message texte, qui doit alors avoir un texte.
+        if ([] === $media && '' === $text) {
+            throw new MastodonException('Écrivez un texte ou ajoutez une photo ou une vidéo.');
         }
         if (\count($media) > $limits->maxMedia) {
             throw new MastodonException(\sprintf('%s accepte %d médias au plus par publication.', $domain, $limits->maxMedia));

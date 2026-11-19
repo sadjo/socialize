@@ -51,7 +51,8 @@ final readonly class LibraryPublisher
      */
     public function publishPost(Account $author, array $order, array $files, array $alts, string $caption, Visibility $visibility, ?string $contentWarning, ?string $location, ?MusicChoice $music = null, array $audienceGroups = [], array $crosspost = []): Post
     {
-        $items = $this->resolve($author, $order, $files, Post::MAX_MEDIA);
+        // Sans média : publication texte (PostComposer vérifie qu'elle a un texte).
+        $items = [] === $order && [] === $files ? [] : $this->resolve($author, $order, $files, Post::MAX_MEDIA);
         try {
             $post = $this->posts->publish(
                 $author,

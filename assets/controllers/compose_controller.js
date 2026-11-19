@@ -11,9 +11,11 @@ import { MediaViewer, tileEntry } from '../lib/media_viewer.js';
  *   un média d'une photothèque).
  * Le champ fichier est reconstruit à chaque changement, dans l'ordre choisi.
  * La loupe d'un aperçu ouvre les médias choisis en grand, dans leur ordre (MediaViewer).
+ * Onglets « Photos et vidéos » / « Texte » (publication) : l'onglet Texte masque les médias, la musique et la
+ * publication sur Instagram, et met le texte en avant ; le choix part dans un champ caché (kind).
  */
 export default class extends Controller {
-    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'librarySource'];
+    static targets = ['input', 'previews', 'caption', 'counter', 'drop', 'submit', 'order', 'empty', 'location', 'sourceTab', 'deviceSource', 'librarySource', 'kind', 'kindTab', 'mediaOnly'];
     static values = {
         max: { type: Number, default: 20 },
         altName: { type: String, default: '' },
@@ -49,6 +51,37 @@ export default class extends Controller {
 
         this.count();
         this.render();
+    }
+
+    /* Onglets « Photos et vidéos » / « Texte » : liens (?type=…) qui basculent ici sans recharger la page. */
+    kind(event) {
+        event.preventDefault();
+        this.setKind(event.params.kind);
+    }
+
+    setKind(kind) {
+        if (!this.hasKindTarget) return;
+        const text = kind === 'text';
+        this.kindTarget.value = text ? 'text' : 'media';
+        this.kindTabTargets.forEach((tab) => {
+            const on = tab.dataset.composeKindParam === this.kindTarget.value;
+            tab.classList.toggle('on', on);
+            tab.setAttribute('aria-selected', String(on));
+        });
+        this.mediaOnlyTargets.forEach((element) => { element.hidden = text; });
+        this.element.closest('.compose')?.classList.toggle('compose-text', text);
+        if (this.hasCaptionTarget) {
+            const caption = this.captionTarget;
+            const label = caption.labels?.[0];
+            if (label) label.textContent = text ? caption.dataset.textLabel : caption.dataset.mediaLabel;
+            caption.placeholder = text ? caption.dataset.textPlaceholder : caption.dataset.mediaPlaceholder;
+            caption.rows = text ? 8 : 5;
+            if (text) caption.focus();
+        }
+        // Onglet gardé si la page est rechargée.
+        const url = new URL(window.location.href);
+        url.searchParams.set('type', text ? 'texte' : 'medias');
+        window.history.replaceState(window.history.state, '', url);
     }
 
     /* Onglets « Appareil », « Immich », « Synology Photos ». */

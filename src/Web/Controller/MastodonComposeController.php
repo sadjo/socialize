@@ -7,6 +7,7 @@ namespace App\Web\Controller;
 use App\Integration\Mastodon\Application\MastodonException;
 use App\Integration\Mastodon\Application\MastodonPublisher;
 use App\Integration\Mastodon\Domain\MastodonUser;
+use App\Web\Form\ComposeKind;
 use App\Web\Form\MastodonComposeType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -30,14 +31,17 @@ final class MastodonComposeController extends AbstractController
         \assert($user instanceof MastodonUser);
         $limits = $publisher->limits($user);
         $default = $user->getDefaultVisibility();
-        $form = $this->createForm(MastodonComposeType::class, options: ['limits' => $limits, 'default_visibility' => \in_array($default, ['unlisted', 'private'], true) ? $default : 'public']);
+        $kind = ComposeKind::fromQuery($request->query->getString('type') ?: null);
+        $form = $this->createForm(MastodonComposeType::class, options: ['limits' => $limits, 'default_visibility' => \in_array($default, ['unlisted', 'private'], true) ? $default : 'public', 'kind' => $kind]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, visibility: 'public'|'unlisted'|'private', contentWarning: ?string} $data */
+            /** @var array{kind: string, media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, visibility: 'public'|'unlisted'|'private', contentWarning: ?string} $data */
             $data = $form->getData();
+            // Onglet « Texte » : message sans média.
+            $text = ComposeKind::TEXT === $data['kind'];
             $alts = ComposeSources::altTexts($data['altTexts']);
-            $order = ComposeSources::order($data['order']) ?: array_map(static fn (int $i): string => 'n-'.$i, array_keys($data['media']));
+            $order = $text ? [] : (ComposeSources::order($data['order']) ?: array_map(static fn (int $i): string => 'n-'.$i, array_keys($data['media'])));
             $media = [];
             foreach ($order as $token) {
                 if (preg_match('/^n-(\d+)$/', $token, $m) && isset($data['media'][(int) $m[1]])) {
@@ -46,6 +50,9 @@ final class MastodonComposeController extends AbstractController
             }
 
             try {
+                if (!$text && [] === $media) {
+                    throw new MastodonException('Ajoutez au moins une photo ou une vidéo, ou choisissez l’onglet « Texte ».');
+                }
                 $publisher->publish($user, $media, $data['caption'] ?? '', $data['visibility'], $data['contentWarning']);
                 $this->addFlash('success', \sprintf('Publication envoyée sur %s : elle paraîtra sur votre profil dès que votre serveur l’aura publiée.', $user->getAccount()->getDomain()));
 
@@ -55,6 +62,6 @@ final class MastodonComposeController extends AbstractController
             }
         }
 
-        return $this->render('compose/mastodon.html.twig', ['form' => $form, 'limits' => $limits, 'domain' => $user->getAccount()->getDomain()]);
+        return $this->render('compose/mastodon.html.twig', ['form' => $form, 'kind' => $form->get('kind')->getData() ?? $kind, 'limits' => $limits, 'domain' => $user->getAccount()->getDomain()]);
     }
 }

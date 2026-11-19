@@ -34,6 +34,9 @@ final class MastodonComposeType extends AbstractType
     {
         /** @var MastodonLimits $limits */
         $limits = $options['limits'];
+        /** @var string $kind */
+        $kind = $options['kind'];
+        ComposeKind::addTo($builder, $kind);
         $builder
             // Ordre des médias : « n-<i> » pour le i-ème fichier choisi (rempli par le contrôleur compose).
             ->add('order', HiddenType::class, [
@@ -56,9 +59,10 @@ final class MastodonComposeType extends AbstractType
                 'required' => false,
             ])
             ->add('caption', TextareaType::class, [
-                'label' => 'Texte',
+                'label' => ComposeKind::captionLabel($kind, 'Texte'),
                 'required' => false,
-                'attr' => ['rows' => 5, 'maxlength' => $limits->maxCharacters, 'placeholder' => 'Écrivez un texte… #hashtags, @mentions et ig:@comptes Instagram acceptés', 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', ['full' => 1])],
+                'attr' => ['maxlength' => $limits->maxCharacters, 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', ['full' => 1])]
+                    + ComposeKind::captionAttr($kind, 'Texte', 'Écrivez un texte… #hashtags, @mentions et ig:@comptes Instagram acceptés'),
                 'constraints' => [new Assert\Length(max: $limits->maxCharacters)],
             ])
             ->add('visibility', ChoiceType::class, [
@@ -83,6 +87,8 @@ final class MastodonComposeType extends AbstractType
         $resolver->setRequired('limits');
         $resolver->setAllowedTypes('limits', MastodonLimits::class);
         $resolver->setDefault('default_visibility', 'public');
+        $resolver->setDefault('kind', ComposeKind::MEDIA);
+        $resolver->setAllowedValues('kind', [ComposeKind::MEDIA, ComposeKind::TEXT]);
         $resolver->setAllowedValues('default_visibility', ['public', 'unlisted', 'private']);
     }
 }

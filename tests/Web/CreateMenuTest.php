@@ -23,9 +23,10 @@ final class CreateMenuTest extends AppWebTestCase
 
         $menu = $crawler->filter('#create-menu[popover]');
         self::assertCount(1, $menu);
-        self::assertSame(['/publier', '/stories/nouvelle'], $menu->filter('a.opt')->each(static fn ($a): ?string => $a->attr('href')));
+        self::assertSame(['/publier', '/publier?type=texte', '/stories/nouvelle'], $menu->filter('a.opt')->each(static fn ($a): ?string => $a->attr('href')));
         self::assertStringContainsString('Publication', $menu->filter('a.opt')->eq(0)->text());
-        self::assertStringContainsString('Story', $menu->filter('a.opt')->eq(1)->text());
+        self::assertStringContainsString('Texte', $menu->filter('a.opt')->eq(1)->text());
+        self::assertStringContainsString('Story', $menu->filter('a.opt')->eq(2)->text());
 
         $this->client->request('GET', '/stories/nouvelle');
         self::assertResponseIsSuccessful();

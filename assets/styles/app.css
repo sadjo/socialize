@@ -1116,3 +1116,11 @@ textarea.mention-input::selection{color:transparent;background:var(--accent-soft
 .sv-ig .mi{margin:0;flex:none}
 a.sv-ig{text-decoration:underline;text-underline-offset:2px}
 .sv-ig.failed{color:oklch(0.85 0.12 30)}
+
+/* Nouvelle publication : onglets « Photos et vidéos » / « Texte » ; en mode texte, une seule colonne, le texte en avant. */
+.kind-tabs{display:flex;gap:4px;padding:4px;border-radius:14px;background:var(--surface-2);align-self:flex-start;margin-bottom:14px;max-width:100%}
+.kind-tabs a{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;color:var(--muted);font-weight:600;font-size:.9rem}
+.kind-tabs a:hover{color:var(--fg);text-decoration:none}
+.kind-tabs a.on{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px oklch(0 0 0 / .18)}
+.compose-text .compose-grid{grid-template-columns:minmax(0,1fr);max-width:680px}
+.compose-text textarea{font-size:1.02rem;line-height:1.55}

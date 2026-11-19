@@ -78,6 +78,25 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(1, $this->list($this->json(), 'orderedItems'), 'La boîte d’envoi ne montre que les publications publiques.');
     }
 
+    /**
+     * Publication texte d'un compte d'ici : une Note sans pièce jointe, comme un message Mastodon.
+     */
+    public function testALocalTextPostIsDeliveredAsANoteWithoutAttachment(): void
+    {
+        $camille = $this->register('camille')->getAccount();
+        $this->inbox('/users/camille/inbox', ['id' => FakeFediverse::ALICE.'#follows/1', 'type' => 'Follow', 'actor' => FakeFediverse::ALICE, 'object' => 'http://localhost/users/camille']);
+
+        self::getContainer()->get(PostComposer::class)->publish($this->reloadAccount($camille), 'Un texte sans photo', []);
+
+        $create = $this->fediverse()->delivered('Create');
+        self::assertCount(1, $create);
+        self::assertSame('Note', $this->dig($create, 0, 'object', 'type'));
+        self::assertSame([], $this->dig($create, 0, 'object', 'attachment'));
+        $content = $this->dig($create, 0, 'object', 'content');
+        self::assertIsString($content);
+        self::assertStringContainsString('Un texte sans photo', $content);
+    }
+
     public function testARemoteFollowIsAcceptedAndReceivesNewPosts(): void
     {
         $camille = $this->register('camille')->getAccount();

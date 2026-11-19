@@ -47,8 +47,14 @@ final readonly class PostComposer
         array $audienceGroups = [],
         array $crosspost = [],
     ): Post {
+        // Sans photo ni vidéo : publication texte, qui doit alors avoir un texte ; ni musique ni publication sur
+        // Instagram (qui n'accepte que des médias).
         if ([] === $uploads) {
-            throw new MediaProcessingException('Ajoutez au moins une photo ou une vidéo.');
+            if ('' === trim($caption)) {
+                throw new MediaProcessingException('Écrivez un texte ou ajoutez une photo ou une vidéo.');
+            }
+            $music = null;
+            $crosspost = [];
         }
 
         $post = new Post($author, $caption, $visibility, $contentWarning, $location);

@@ -86,10 +86,41 @@ final class PublishTest extends AppWebTestCase
         $this->login($this->register('camille'));
 
         $this->client->request('GET', '/publier');
+        self::assertSelectorExists('.kind-tabs a.on[href="?type=medias"]');
         $this->client->submitForm('Publier', ['compose_post[caption]' => 'Sans photo']);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('.field-errors', 'Ajoutez au moins une photo ou une vidéo.');
+        self::assertSelectorTextContains('.field-errors', 'Ajoutez au moins une photo ou une vidéo, ou choisissez l’onglet « Texte »');
+    }
+
+    /**
+     * Onglet « Texte » : publication sans photo ni vidéo, ni musique, ni Instagram ; un texte vide est refusé.
+     */
+    public function testATextOnlyPostIsPublished(): void
+    {
+        $this->login($this->register('camille'));
+
+        $this->client->request('GET', '/publier?type=texte');
+        self::assertSelectorExists('.compose.compose-text .kind-tabs a.on[href="?type=texte"][aria-selected="true"]');
+        self::assertSelectorExists('section.picker[data-compose-target="mediaOnly"][hidden]');
+        self::assertSelectorTextContains('label[for="compose_post_caption"]', 'Votre texte');
+        self::assertSelectorExists('input[name="compose_post[kind]"][value="text"]');
+
+        $this->client->submitForm('Publier', ['compose_post[caption]' => '   ']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('.field-errors', 'Écrivez un texte ou ajoutez une photo ou une vidéo.');
+
+        $this->client->request('GET', '/publier?type=texte');
+        $this->client->submitForm('Publier', ['compose_post[caption]' => "Premier texte\nsur deux lignes"]);
+        $post = $this->onlyPost();
+        self::assertResponseRedirects('/p/'.$post->getPublicId());
+        self::assertCount(0, $post->getMedia());
+        self::assertSame("Premier texte\nsur deux lignes", $post->getCaption());
+        self::assertNull($post->getMusic());
+
+        // Le menu « Créer » mène directement à l'onglet Texte.
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('#create-menu a[href="/publier?type=texte"]');
     }
 
     public function testAVideoIsTranscodedInTheBackground(): void
