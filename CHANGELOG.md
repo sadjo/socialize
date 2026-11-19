@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.34] - 2026-11-19
+
+Notification icons.
+
+### Changed
+
+- Notifications are marked as read with an eye icon (also on "mark all as read"), and back as unread with a
+  crossed-out eye (notifications)
+
 ## [0.9.33] - 2026-11-19
 
 Appearance for Mastodon accounts.
