@@ -1,0 +1,16 @@
+{# Aperçu du premier lien d'une publication texte : site, titre, description, et son image copiée ici (sinon une icône
+   de lien). Variables : preview (LinkPreview) ; compact en option (onglet « Textes » du profil : une seule ligne). #}
+{% import '_macros.html.twig' as ui %}
+{% if compact|default(false) %}
+    <span class="lpv-chip">{{ ui.icon('link', 'xs') }}<span>{{ preview.siteName }}{% if preview.title %} · {{ preview.title }}{% endif %}</span></span>
+{% else %}
+    {% set image = link_preview_image(preview) %}
+    <a class="lpv" href="{{ preview.url }}" target="_blank" rel="noopener nofollow ugc">
+        <span class="lpv-img{{ image ? '' : ' none' }}">{% if image %}<img src="{{ image }}" alt="" loading="lazy" decoding="async">{% else %}{{ ui.icon('link') }}{% endif %}</span>
+        <span class="lpv-t">
+            <span class="lpv-site">{{ preview.siteName }}</span>
+            {% if preview.title %}<b>{{ preview.title }}</b>{% endif %}
+            {% if preview.description %}<small>{{ preview.description }}</small>{% endif %}
+        </span>
+    </a>
+{% endif %}

@@ -1,0 +1,3 @@
+{# Une page de l'onglet « Textes », suivie du repère qui chargera la suivante (list/_more.html.twig). Variables : account, page. #}
+{{ include('profile/_texts_items.html.twig') }}
+{{ include('list/_more.html.twig', {list_id: 'texts', next_url: page.next ? path('app_profile_texts', {username: account.acct, apres: page.next.toString}) : null}) }}

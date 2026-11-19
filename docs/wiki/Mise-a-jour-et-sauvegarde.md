@@ -21,6 +21,9 @@ existants : `docker compose exec app php bin/console app:media:complete-sizes`.
 Depuis la v0.9.25, les images reçues du fédivers sont copiées sur l'instance (en plusieurs tailles, comme les
 vôtres). Pour celles reçues avant, lancez une fois : `docker compose exec app php bin/console app:media:cache-remote`.
 
+Depuis la v0.9.37, les publications texte montrent un aperçu de leur premier lien. Pour celles déjà présentes, lancez
+une fois : `docker compose exec app php bin/console app:link-previews:fetch`.
+
 Pour figer une version, remplacez `latest` par une étiquette dans `compose.yaml`
 (`image: ghcr.io/sadjo/socialize:v0.9.15`), ou relancez le script d'installation avec `--version vX.Y.Z`.
 

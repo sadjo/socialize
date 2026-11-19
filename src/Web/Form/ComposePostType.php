@@ -30,6 +30,9 @@ final class ComposePostType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        /** @var string $kind */
+        $kind = $options['kind'];
+        ComposeKind::addTo($builder, $kind);
         $builder
             // Ordre des médias : « n-<i> » pour le i-ème fichier de l'appareil, « i-<id> » pour un média Immich, « s-<espace>-<id> » pour Synology Photos.
             ->add('order', HiddenType::class, [
@@ -62,9 +65,10 @@ final class ComposePostType extends AbstractType
                 'required' => false,
             ])
             ->add('caption', TextareaType::class, [
-                'label' => 'Légende',
+                'label' => ComposeKind::captionLabel($kind, 'Légende'),
                 'required' => false,
-                'attr' => ['rows' => 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'placeholder' => 'Écrivez une légende… #hashtags, @mentions et ig:@comptes Instagram acceptés', 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', [])],
+                'attr' => ['maxlength' => Post::MAX_CAPTION_LENGTH, 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', [])]
+                    + ComposeKind::captionAttr($kind, 'Légende', 'Écrivez une légende… #hashtags, @mentions et ig:@comptes Instagram acceptés'),
                 'constraints' => [new Assert\Length(max: Post::MAX_CAPTION_LENGTH)],
             ])
             ->add('location', TextType::class, [
@@ -99,7 +103,8 @@ final class ComposePostType extends AbstractType
     public function configureOptions(\Symfony\Component\OptionsResolver\OptionsResolver $resolver): void
     {
         // Groupes d'abonnés du compte (visibilité « Groupes »).
-        $resolver->setDefaults(['groups' => []]);
+        $resolver->setDefaults(['groups' => [], 'kind' => ComposeKind::MEDIA]);
+        $resolver->setAllowedValues('kind', [ComposeKind::MEDIA, ComposeKind::TEXT]);
         $resolver->setAllowedTypes('groups', 'array');
         CrosspostField::configure($resolver);
     }

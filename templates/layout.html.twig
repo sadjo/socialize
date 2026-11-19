@@ -80,6 +80,7 @@
     <div class="sheet">
         <header><b id="create-title">Créer</b><button type="button" class="ib" popovertarget="create-menu" popovertargetaction="hide" aria-label="Fermer">{{ ui.icon('x') }}</button></header>
         <a class="opt" href="{{ path('app_compose') }}">{{ ui.icon('image') }}<span>Publication<small>Photos et vidéos, dans le fil et sur votre profil</small></span></a>
+        <a class="opt" href="{{ path('app_compose', {type: 'texte'}) }}">{{ ui.icon('list') }}<span>Texte<small>Une publication sans photo ni vidéo</small></span></a>
         <a class="opt" href="{{ path('app_story_new') }}">{{ ui.icon('reel') }}<span>Story<small>Visible 24 heures</small></span></a>
     </div>
 </div>

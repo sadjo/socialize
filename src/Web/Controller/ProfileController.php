@@ -18,6 +18,7 @@ use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\RemoteAccounts;
+use App\Federation\Application\RemoteHistory;
 use App\Federation\Infrastructure\FederationException;
 use App\Web\Feed\CommentPreviews;
 use App\Web\Feed\NextPage;
@@ -44,23 +45,49 @@ final class ProfileController extends AbstractController
     ) {
     }
 
+    /**
+     * Profil, avec deux onglets : « Photos » (grille des publications avec média) et « Textes » (publications texte).
+     * Sans onglet dans l'adresse, celui qui a le plus de publications est ouvert.
+     *
+     * @param 'photos'|'texts'|null $tab
+     */
     #[Route('/@{username}', name: 'app_profile', requirements: ['username' => self::ACCT], methods: ['GET'])]
-    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access, StoryFeed $stories, HighlightRepository $highlights, NetworkAccess $network): Response
+    #[Route('/@{username}/photos', name: 'app_profile_photos', requirements: ['username' => self::ACCT], defaults: ['tab' => 'photos'], methods: ['GET'])]
+    #[Route('/@{username}/textes', name: 'app_profile_texts', requirements: ['username' => self::ACCT], defaults: ['tab' => 'texts'], methods: ['GET'])]
+    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access, StoryFeed $stories, HighlightRepository $highlights, NetworkAccess $network, RemoteHistory $history, ?string $tab = null): Response
     {
         $account = $this->account($username, resolve: true);
         $viewer = $this->currentAccount->get();
         $visible = $access->visibleFor($account, $viewer);
-        $page = $posts->profileTimeline($account, $visible, Cursor::fromString($request->query->getString('apres') ?: null), self::PAGE_SIZE, $viewer);
+        $cursor = Cursor::fromString($request->query->getString('apres') ?: null);
 
-        // Page suivante de la grille, chargée au défilement : seulement les vignettes, sans le reste du profil.
+        // Page suivante d'un onglet, chargée au défilement : seulement ses éléments, sans le reste du profil.
         if (NextPage::requested($request)) {
-            return $this->render('profile/_grid_page.stream.html.twig', ['account' => $account, 'page' => $page]);
+            $texts = 'texts' === $tab;
+            $page = $posts->profileTimeline($account, $visible, $cursor, self::PAGE_SIZE, $viewer, withMedia: !$texts);
+
+            return $this->render($texts ? 'profile/_texts_page.stream.html.twig' : 'profile/_grid_page.stream.html.twig', ['account' => $account, 'page' => $page, 'grid_route' => 'app_profile_photos']);
         }
 
+        // Compte du fédivers : ses publications récentes et ses compteurs, relus au plus une fois par jour.
+        $history->refreshIfStale($account);
+
+        $tabCounts = [
+            'photos' => $posts->countForProfile($account, $visible, $viewer, withMedia: true),
+            'texts' => $posts->countForProfile($account, $visible, $viewer, withMedia: false),
+        ];
+        $tab ??= $tabCounts['texts'] > $tabCounts['photos'] ? 'texts' : 'photos';
+        $page = $posts->profileTimeline($account, $visible, $cursor, self::PAGE_SIZE, $viewer, withMedia: 'photos' === $tab);
+
         $isOwner = $viewer instanceof Account && $viewer->getId()->equals($account->getId());
+        // Compte du fédivers dont l'instance a donné ses nombres : ceux-là, plus justes que ce que l'on connaît ici.
+        $remote = !$account->isLocal() && null !== $account->getRemotePostsCount();
         $parameters = [
             'account' => $account,
             'page' => $page,
+            'tab' => $tab,
+            'tab_counts' => $tabCounts,
+            'grid_route' => 'app_profile_photos',
             'is_owner' => $isOwner,
             // Publications de l'auteur en attente de la conversion de leurs vidéos (bloc « En préparation »).
             'pending_posts' => $isOwner ? $posts->pendingOf($account) : [],
@@ -74,9 +101,10 @@ final class ProfileController extends AbstractController
             )),
             'pending_requests' => $isOwner ? $follows->countPendingRequests($account) : 0,
             'stats' => [
-                'posts' => $posts->countForProfile($account, $visible, $viewer),
-                'followers' => $follows->countFollowers($account),
-                'following' => $follows->countFollowing($account),
+                'posts' => $remote ? $account->getRemotePostsCount() : $tabCounts['photos'] + $tabCounts['texts'],
+                'followers' => $remote ? ($account->getRemoteFollowersCount() ?? $follows->countFollowers($account)) : $follows->countFollowers($account),
+                'following' => $remote ? ($account->getRemoteFollowingCount() ?? $follows->countFollowing($account)) : $follows->countFollowing($account),
+                'remote' => $remote,
             ],
         ];
 

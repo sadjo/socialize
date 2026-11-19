@@ -14,6 +14,7 @@ use App\Integration\Openverse\Application\MusicLibrary;
 use App\Integration\Openverse\Application\OpenverseException;
 use App\Media\Application\Library\LibraryPublisher;
 use App\Media\Application\MediaProcessingException;
+use App\Web\Form\ComposeKind;
 use App\Web\Form\ComposePostType;
 use App\Web\Form\CrosspostField;
 use App\Web\Security\CurrentAccount;
@@ -32,26 +33,34 @@ final class ComposeController extends AbstractController
     public function __invoke(Request $request, LibraryPublisher $publisher, CurrentAccount $currentAccount, ComposeSources $sources, MusicLibrary $music, AudienceGroups $groups, InstagramConnections $instagram): Response
     {
         $instagramConnection = $instagram->usable($currentAccount->require());
-        $form = $this->createForm(ComposePostType::class, options: ['groups' => $groups->of($currentAccount->require()), 'instagram' => $instagramConnection]);
+        $kind = ComposeKind::fromQuery($request->query->getString('type') ?: null);
+        $form = $this->createForm(ComposePostType::class, options: ['groups' => $groups->of($currentAccount->require()), 'instagram' => $instagramConnection, 'kind' => $kind]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<AudienceGroup>, crosspostInstagram?: bool} $data */
+            /** @var array{kind: string, media: list<UploadedFile>, order: ?string, altTexts: array<int|string, ?string>, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<AudienceGroup>, crosspostInstagram?: bool} $data */
             $data = $form->getData();
+            // Onglet « Texte » : publication texte, sans média, ni musique, ni Instagram.
+            $text = ComposeKind::TEXT === $data['kind'];
+            $order = $text ? [] : ComposeSources::order($data['order']);
+            $files = $text ? [] : $data['media'];
 
             try {
+                if (!$text && [] === $order && [] === $files) {
+                    throw new MediaProcessingException('Ajoutez au moins une photo ou une vidéo, ou choisissez l’onglet « Texte ».');
+                }
                 $post = $publisher->publishPost(
                     $currentAccount->require(),
-                    ComposeSources::order($data['order']),
-                    $data['media'],
+                    $order,
+                    $files,
                     ComposeSources::altTexts($data['altTexts']),
                     $data['caption'] ?? '',
                     $data['visibility'],
                     $data['contentWarning'],
                     $data['location'],
-                    $music->choice($data['music']['track'], (int) $data['music']['start']),
+                    $text ? null : $music->choice($data['music']['track'], (int) $data['music']['start']),
                     Visibility::Groups === $data['visibility'] ? $data['audienceGroups'] : [],
-                    true === ($data[CrosspostField::NAME] ?? false) ? [CrosspostTarget::Instagram] : [],
+                    !$text && true === ($data[CrosspostField::NAME] ?? false) ? [CrosspostTarget::Instagram] : [],
                 );
                 if ($post->isPending()) {
                     // Vidéo en conversion : la publication attend sur le profil, avec la progression.
@@ -63,12 +72,12 @@ final class ComposeController extends AbstractController
 
                 return $this->redirectToRoute('app_post_show', ['id' => $post->getPublicId()], Response::HTTP_SEE_OTHER);
             } catch (MediaProcessingException $e) {
-                $form->get('media')->addError(new FormError($e->getMessage()));
+                $form->get($text ? 'caption' : 'media')->addError(new FormError($e->getMessage()));
             } catch (OpenverseException $e) {
                 $form->addError(new FormError($e->getMessage()));
             }
         }
 
-        return $this->render('compose/new.html.twig', ['form' => $form, 'instagram' => $instagramConnection, 'crosspost_defaults' => CrosspostField::defaults($instagramConnection, false)] + $sources->forCurrentAccount());
+        return $this->render('compose/new.html.twig', ['form' => $form, 'kind' => $form->get('kind')->getData() ?? $kind, 'instagram' => $instagramConnection, 'crosspost_defaults' => CrosspostField::defaults($instagramConnection, false)] + $sources->forCurrentAccount());
     }
 }

@@ -40,6 +40,7 @@ printf '%s' 'S3cret!' | docker compose exec -T app php bin/console app:user:crea
 | Commande | Rôle |
 | --- | --- |
 | `app:media:complete-sizes` | Fabrique les tailles manquantes (images 640/960 px, vignettes 240/360/720 px, affiches de vidéos) des médias publiés par d'anciennes versions. Relançable sans effet |
+| `app:link-previews:fetch` | Demande aux tâches de fond (file `federation`) les aperçus de liens des publications texte présentes avant la v0.9.37. Relançable sans effet |
 | `app:media:cache-remote` | Demande aux tâches de fond (file `media`) les copies locales des images et affiches de vidéos reçues du fédivers avant la v0.9.25, ou dont la copie a échoué. Relançable sans effet |
 
 ## Développement

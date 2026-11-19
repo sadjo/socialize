@@ -68,7 +68,7 @@
                 <div class="bio"><b>{{ account.displayName }}</b>{% if account.bio %}<br>{{ account.bio|rich_text }}{% endif %}</div>
                 <span class="handle">{{ ui.icon('globe', 'xs') }}{{ handle(account, local_domain) }}</span>
                 {% if not account.local %}
-                    <p class="small">Compte de <b>{{ account.domain }}</b>. Seules les publications reçues par cette instance sont affichées{% if account.profileUrl %} · <a class="lnk" href="{{ account.profileUrl }}" target="_blank" rel="noopener nofollow">voir le profil sur son instance</a>{% endif %}.</p>
+                    <p class="small">Compte de <b>{{ account.domain }}</b>. Ses publications récentes sont récupérées ici ; l’historique complet reste sur son instance{% if account.profileUrl %} · <a class="lnk" href="{{ account.profileUrl }}" target="_blank" rel="noopener nofollow">voir le profil sur son instance</a>{% endif %}.</p>
                 {% endif %}
             </div>
         {% endif %}
@@ -93,17 +93,19 @@
     {% if mastodon_owner %}{{ include('profile/_mastodon_publications.html.twig', {publications: mastodon_publications()}) }}{% endif %}
 
     <div>
-        {{ include('profile/_tabs.html.twig', {current: 'posts'}) }}
+        {{ include('profile/_tabs.html.twig', {current: tab}) }}
         {% if page.empty %}
             <div class="empty">
-                {{ ui.icon('image') }}
+                {{ ui.icon(tab == 'texts' ? 'list' : 'image') }}
                 {% if is_owner %}
-                    <b>Aucune publication pour l’instant</b>
-                    {% if is_granted('ROLE_PUBLISHER') %}<a class="btn pri" href="{{ path('app_compose') }}">Publier une première photo</a>{% endif %}
+                    <b>{{ tab == 'texts' ? 'Aucune publication texte pour l’instant' : 'Aucune photo ni vidéo pour l’instant' }}</b>
+                    {% if is_granted('ROLE_PUBLISHER') %}<a class="btn pri" href="{{ path('app_compose', tab == 'texts' ? {type: 'texte'} : {}) }}">{{ tab == 'texts' ? 'Écrire une première publication' : 'Publier une première photo' }}</a>{% endif %}
                 {% else %}
-                    <b>Aucune publication visible</b>
+                    <b>{{ tab == 'texts' ? 'Aucune publication texte visible' : 'Aucune photo ni vidéo visible' }}</b>
                 {% endif %}
             </div>
+        {% elseif tab == 'texts' %}
+            <div class="ptexts" data-controller="infinite-list">{{ include('profile/_texts_page.html.twig') }}</div>
         {% else %}
             <div class="grid3" data-controller="infinite-list">{{ include('profile/_grid_page.html.twig') }}</div>
         {% endif %}
@@ -115,7 +117,12 @@
 {% block stats %}
 <div class="stats num">
     <span><b>{{ stats.posts|format_number(locale: 'fr') }}</b> publication{{ stats.posts > 1 ? 's' }}</span>
-    {% if can_view_network %}
+    {% if stats.remote|default(false) %}
+        {# Compte du fédivers : nombres donnés par son instance (les listes d'ici ne connaissent que ses liens avec cette instance). #}
+        <span><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</span>
+        <span><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</span>
+        <span class="stats-src">{{ ui.icon('globe', 'xs') }}chiffres de {{ account.domain }}</span>
+    {% elseif can_view_network %}
         <a href="{{ path('app_profile_followers', {username: account.acct}) }}"><b>{{ stats.followers|format_number(locale: 'fr') }}</b> abonné{{ stats.followers > 1 ? 's' }}</a>
         <a href="{{ path('app_profile_following', {username: account.acct}) }}"><b>{{ stats.following|format_number(locale: 'fr') }}</b> abonnement{{ stats.following > 1 ? 's' }}</a>
     {% else %}

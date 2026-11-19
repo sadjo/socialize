@@ -8,6 +8,7 @@ use App\Core\Domain\Account\Account;
 use App\Core\Infrastructure\Doctrine\AccountRepository;
 use App\Federation\Infrastructure\FederationClient;
 use App\Federation\Infrastructure\FederationException;
+use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -16,7 +17,8 @@ use Symfony\Component\Uid\Uuid;
 
 /**
  * Historique d'un compte distant : lit son outbox (du plus récent au plus ancien) et importe
- * ses publications des six derniers mois, dans la limite des 50 dernières.
+ * ses publications des six derniers mois, dans la limite des 50 dernières, avec ou sans média.
+ * Relève aussi ses nombres d'abonnés, d'abonnements et de publications (totalItems de ses collections).
  */
 #[AsMessageHandler]
 #[WithMonologChannel('federation')]
@@ -33,6 +35,7 @@ final readonly class BackfillAccountHandler
         private InboxProcessor $inbox,
         private ClockInterface $clock,
         private LoggerInterface $logger,
+        private EntityManagerInterface $em,
     ) {
     }
 
@@ -49,6 +52,37 @@ final readonly class BackfillAccountHandler
         } catch (FederationException $e) {
             $this->logger->notice('Historique non récupéré', ['actor' => $account->getApUri(), 'reason' => $e->getMessage()]);
         }
+        $account->markBackfilled($this->clock->now());
+        $this->em->flush();
+    }
+
+    /**
+     * Nombres donnés par l'instance du compte : abonnés et abonnements (collections de son acteur), publications
+     * (outbox). Une collection illisible ou sans totalItems laisse le nombre inconnu.
+     *
+     * @param array<string, mixed> $outbox
+     */
+    private function readCounts(Account $account, array $outbox): void
+    {
+        $signer = $this->signer->instance();
+        $total = static fn (array $collection): ?int => \is_int($collection['totalItems'] ?? null) && $collection['totalItems'] >= 0 ? $collection['totalItems'] : null;
+        $count = function (?string $url) use ($signer, $total): ?int {
+            if (null === $url) {
+                return null;
+            }
+            try {
+                return $total($this->client->getJson($url, $signer));
+            } catch (FederationException) {
+                return null;
+            }
+        };
+        try {
+            $actor = $this->client->getJson((string) $account->getApUri(), $signer);
+        } catch (FederationException) {
+            $actor = [];
+        }
+        $account->updateRemoteCounts($count(Json::id($actor, 'followers')), $count(Json::id($actor, 'following')), $total($outbox));
+        $this->em->flush();
     }
 
     /**
@@ -62,6 +96,7 @@ final readonly class BackfillAccountHandler
         $since = $this->clock->now()->modify(self::MAX_AGE);
 
         $outbox = $this->client->getJson((string) $account->getOutboxUrl(), $signer);
+        $this->readCounts($account, $outbox);
         // La première page est soit incluse dans la collection, soit à télécharger.
         $page = Json::object($outbox, 'first') ?? (null !== Json::id($outbox, 'first') ? $this->client->getJson(Json::id($outbox, 'first'), $signer) : $outbox);
 
@@ -79,7 +114,7 @@ final readonly class BackfillAccountHandler
                     return $seen; // l'outbox est triée du plus récent au plus ancien
                 }
 
-                $this->inbox->process(['type' => 'Create', 'actor' => $account->getApUri(), 'object' => $note], $account);
+                $this->inbox->importFromHistory($note, $account);
                 if (++$seen >= self::MAX_POSTS) {
                     return $seen;
                 }

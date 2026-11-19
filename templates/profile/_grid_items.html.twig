@@ -4,7 +4,10 @@
     {% set cover = post.cover %}
     <a class="gt" href="{{ open_post|default(false) ? path('app_post_show', {id: post.publicId}) : path('app_profile_feed', {username: account.acct, depuis: post.publicId, _fragment: 'post-' ~ post.publicId}) }}" aria-label="Ouvrir la publication{{ post.caption ? ' : ' ~ post.caption|slice(0, 80) }}">
         {% set thumb = cover and cover.ready ? media_url(cover, 'thumb') : null %}
-        {% if thumb %}
+        {% if post.media is empty %}
+            {# Publication texte (archives) : le début du texte en guise de vignette. #}
+            <span class="gt-text">{{ post.caption|slice(0, 160) }}</span>
+        {% elseif thumb %}
             {# Vignette en plusieurs tailles : une case fait environ un tiers de la largeur (310 px sur ordinateur). #}
             {% set srcset = media_srcset(cover, 'thumb') %}
             <img src="{{ thumb }}"{% if srcset %} srcset="{{ srcset }}" sizes="(max-width: 767px) 34vw, 310px"{% endif %} alt="{{ cover.altText }}" loading="lazy" decoding="async">

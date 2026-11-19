@@ -36,7 +36,7 @@ final class MastodonPublishTest extends AppWebTestCase
         self::assertSelectorExists('.side a[href="/publier/mastodon"]');
 
         $crawler = $this->client->request('GET', '/publier/mastodon');
-        self::assertSelectorTextContains('.page-h', 'jusqu’à 4 photos ou vidéos et 500 caractères');
+        self::assertSelectorTextContains('.page-h', 'jusqu’à 4 photos ou vidéos, ou un texte seul, et 500 caractères');
         self::assertSelectorNotExists('.src-tabs', 'Ni Immich ni Synology Photos pour un compte Mastodon.');
         $this->submit($crawler, [$this->jpeg(400, 500, 'phare.jpg'), $this->jpeg(500, 400, 'plage.jpg')], [
             'order' => 'n-1,n-0',
@@ -82,8 +82,31 @@ final class MastodonPublishTest extends AppWebTestCase
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('.field-errors, .form-errors', '1 médias au plus');
 
+        // Onglet Photos sans média : refusé, avec l'onglet Texte comme solution.
         $this->submit($this->client->request('GET', '/publier/mastodon'), [], ['caption' => 'Sans photo']);
-        self::assertSelectorTextContains('.form-errors', 'Ajoutez au moins une photo ou une vidéo.');
+        self::assertSelectorTextContains('.form-errors', 'Ajoutez au moins une photo ou une vidéo, ou choisissez l’onglet « Texte »');
+        self::assertSame([], FakeMastodon::$media);
+    }
+
+    /**
+     * Onglet « Texte » : message sans média, envoyé tel quel à son serveur ; un texte vide est refusé.
+     */
+    public function testATextOnlyPostIsPublishedOnTheMastodonAccount(): void
+    {
+        $this->connect();
+        $crawler = $this->client->request('GET', '/publier/mastodon?type=texte');
+        self::assertSelectorExists('.kind-tabs a.on[href="?type=texte"]');
+        self::assertSelectorExists('section.picker[hidden]');
+        self::assertSelectorTextContains('label[for="mastodon_compose_caption"]', 'Votre texte');
+
+        $this->submit($crawler, [$this->jpeg()], ['kind' => 'text', 'caption' => '']);
+        self::assertSelectorTextContains('.form-errors', 'Écrivez un texte ou ajoutez une photo ou une vidéo.');
+
+        $this->submit($this->client->request('GET', '/publier/mastodon?type=texte'), [$this->jpeg()], ['kind' => 'text', 'caption' => 'Juste un texte']);
+        self::assertResponseRedirects();
+        $status = FakeMastodon::requestsTo('POST', '/api/v1/statuses')[0]['body'] ?? [];
+        self::assertSame('Juste un texte', $status['status'] ?? null);
+        self::assertEmpty($status['media_ids'] ?? [], 'Aucun média envoyé, même choisi avant de passer à l’onglet Texte.');
         self::assertSame([], FakeMastodon::$media);
     }
 

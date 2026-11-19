@@ -7,6 +7,18 @@
 - **Local** : les publications publiques des comptes de cette instance ;
 - **Fédéré** : les publications publiques reçues du fédivers, venues des comptes que suivent les personnes d'ici.
 
+## Publications texte
+
+Les publications sans photo ni vidéo, d'ici ou du fédivers, s'affichent dans le fil comme les autres : le texte à la
+place des médias, coupé après six lignes (*Afficher plus* le déplie), avec l'aperçu de leur premier lien. Avec un
+avertissement de contenu, le texte attend qu'on choisisse de l'afficher.
+
+Sur un profil, deux onglets : **Photos**, la grille des publications avec médias, et **Textes**, la liste des
+publications texte, chacun avec son nombre. Le profil s'ouvre sur celui qui en a le plus.
+
+Le profil d'un compte du fédivers montre ses publications récentes, même si personne ne le suit encore ici, et les
+nombres d'abonnés, d'abonnements et de publications donnés par son instance.
+
 ## J'aime et commentaires
 
 - **J'aime** avec le cœur ou un double appui sur le média ; le compteur montre qui a aimé.

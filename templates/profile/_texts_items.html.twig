@@ -1,0 +1,13 @@
+{% import '_macros.html.twig' as ui %}
+{# Publications texte d'une page de l'onglet « Textes » : cartes compactes, menant à la publication. Variables : page. #}
+{% for post in page.posts %}
+    <a class="tcard" href="{{ path('app_post_show', {id: post.publicId}) }}" aria-label="Ouvrir la publication : {{ post.caption|slice(0, 80) }}">
+        {% if post.sensitive %}
+            <p class="tcard-cw">{{ ui.icon('eye', 'xs') }}{{ post.contentWarning }}</p>
+        {% else %}
+            <p class="tcard-text">{{ post.caption }}</p>
+            {% if post.linkPreview %}{{ include('post/_link_preview.html.twig', {preview: post.linkPreview, compact: true}) }}{% endif %}
+        {% endif %}
+        <span class="tcard-foot num"><time datetime="{{ post.publishedAt|date('c') }}">{{ post.publishedAt|ago }}</time><span>{{ ui.icon('heart', 'xs') }}{{ post.likesCount }}</span><span>{{ ui.icon('comment', 'xs') }}{{ post.commentsCount }}</span></span>
+    </a>
+{% endfor %}

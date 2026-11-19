@@ -4,13 +4,16 @@
 {% block title %}Nouvelle publication · Socialize{% endblock %}
 
 {% block content %}
-<div class="compose">
-    <div class="page-h"><div class="grow"><h1>Nouvelle publication{{ ui.help('publier', 'créer-une-publication', 'la publication') }}</h1><p>Jusqu’à 20 photos ou vidéos. Les originaux et leurs métadonnées sont conservés ; les copies publiques ne contiennent pas votre position GPS.</p></div></div>
+{# Onglet « Photos et vidéos » ou « Texte » (kind) : les parties propres aux médias sont masquées pour un texte. #}
+{% set text = kind == 'text' %}
+<div class="compose{{ text ? ' compose-text' }}">
+    <div class="page-h"><div class="grow"><h1>Nouvelle publication{{ ui.help('publier', 'créer-une-publication', 'la publication') }}</h1><p>Jusqu’à 20 photos ou vidéos, ou un texte seul. Les originaux et leurs métadonnées sont conservés ; les copies publiques ne contiennent pas votre position GPS.</p></div></div>
 
     {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 20, 'data-compose-alt-name-value': 'compose_post[altTexts][__key__]'}}) }}
         {{ form_errors(form) }}
+        {{ include('compose/_kind.html.twig', {field: form.kind}) }}
         <div class="compose-grid">
-            <section class="card picker">
+            <section class="card picker" data-compose-target="mediaOnly"{% if text %} hidden{% endif %}>
                 {{ include('compose/_sources.html.twig', {drop_label: 'Choisissez vos photos et vidéos', drop_hint: 'JPEG, HEIC, PNG, WebP, AVIF, MP4, MOV, WebM · 50 Mo par photo, 500 Mo par vidéo'}) }}
                 {{ form_widget(form.media) }}
                 {{ form_widget(form.order) }}
@@ -26,8 +29,10 @@
                 {{ form_row(form.location, {attr: {'data-compose-target': 'location'}}) }}
                 {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Avec le lien, ici seulement', followers: 'Vos abonnés, ici et dans le fédivers', groups: 'Vos groupes d’abonnés, ici seulement', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
-                {{ include('compose/_music.html.twig', {field: form.music}) }}
-                {{ include('compose/_crosspost.html.twig', {visibility_field: 'visibility'}) }}
+                <div data-compose-target="mediaOnly"{% if text %} hidden{% endif %}>
+                    {{ include('compose/_music.html.twig', {field: form.music}) }}
+                    {{ include('compose/_crosspost.html.twig', {visibility_field: 'visibility'}) }}
+                </div>
                 <button class="btn pri" data-compose-target="submit">Publier</button>
             </section>
         </div>

@@ -1,7 +1,10 @@
-{# Onglets du profil. Variables : account, is_owner, current ('posts' ou 'archives') #}
+{# Onglets du profil. Variables : account, is_owner, current ('photos', 'texts' ou 'archives') ; tab_counts en option
+   (nombre de publications avec média et de publications texte). #}
 {% import '_macros.html.twig' as ui %}
 <nav class="ptabs" aria-label="Contenu du profil">
-    <a href="{{ path('app_profile', {username: account.acct}) }}" class="{{ current == 'posts' ? 'on' }}"{{ current == 'posts' ? ' aria-current="page"' }}>{{ ui.icon('grid', 'xs') }}Publications</a>
+    {% for key, item in {photos: {route: 'app_profile_photos', icon: 'grid', label: 'Photos'}, texts: {route: 'app_profile_texts', icon: 'list', label: 'Textes'}} %}
+        <a href="{{ path(item.route, {username: account.acct}) }}" class="{{ current == key ? 'on' }}"{{ current == key ? ' aria-current="page"' }}>{{ ui.icon(item.icon, 'xs') }}{{ item.label }}{% if tab_counts is defined %} <span class="n num">{{ tab_counts[key]|format_number(locale: 'fr') }}</span>{% endif %}</a>
+    {% endfor %}
     {% if is_owner %}
         <a href="{{ path('app_profile_archives', {username: account.acct}) }}" class="{{ current == 'archives' ? 'on' }}"{{ current == 'archives' ? ' aria-current="page"' }} title="Visible uniquement par vous">{{ ui.icon('album', 'xs') }}Archives</a>
     {% endif %}

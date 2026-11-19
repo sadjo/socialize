@@ -6,6 +6,18 @@
 - **Local**: public posts of the accounts of this instance;
 - **Fédéré** (federated): public posts received from the fediverse, from accounts followed by people here.
 
+## Text posts
+
+Posts without photo or video, from here or from the fediverse, show in the feed like the others: the text in place of
+the media, cut after six lines (*Afficher plus* expands it), with a preview of their first link. With a content
+warning, the text waits until someone chooses to show it.
+
+On a profile, two tabs: **Photos**, the grid of posts with media, and **Textes**, the list of text posts, each with
+its count. The profile opens on the one with more posts.
+
+The profile of a fediverse account shows its recent posts, even if nobody follows it here yet, and the follower,
+following and post counts given by its instance.
+
 ## Likes and comments
 
 - **Like** with the heart or a double tap on the media; the counter shows who liked.

@@ -109,7 +109,8 @@ final class SettingsController extends AbstractController
         }
 
         $account = $user->getAccount();
-        $samples = $posts->profileTimeline($account, Visibility::cases(), null, self::FILTER_SAMPLES, $account)->posts;
+        // Échantillons du filtre des médias : publications avec photo ou vidéo.
+        $samples = $posts->profileTimeline($account, Visibility::cases(), null, self::FILTER_SAMPLES, $account, withMedia: true)->posts;
 
         return $this->render('settings/appearance.html.twig', ['form' => $form, 'account' => $account, 'samples' => $samples]);
     }

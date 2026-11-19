@@ -1,0 +1,11 @@
+{# Onglets « Photos et vidéos » / « Texte » d'une nouvelle publication (compose_controller) ; sans JavaScript, des
+   liens qui rechargent la page sur l'onglet choisi. Variables : field (champ caché kind, « media » ou « text »). #}
+{% import '_macros.html.twig' as ui %}
+{% set kind = field.vars.value == 'text' ? 'text' : 'media' %}
+<div class="kind-tabs" role="tablist" aria-label="Type de publication">
+    {% for key, tab in {media: {type: 'medias', icon: 'image', label: 'Photos et vidéos'}, text: {type: 'texte', icon: 'list', label: 'Texte'}} %}
+        <a role="tab" href="?type={{ tab.type }}" class="{{ kind == key ? 'on' }}" aria-selected="{{ kind == key ? 'true' : 'false' }}"
+           data-compose-target="kindTab" data-action="compose#kind" data-compose-kind-param="{{ key }}">{{ ui.icon(tab.icon, 'xs') }}{{ tab.label }}</a>
+    {% endfor %}
+</div>
+{{ form_widget(field) }}

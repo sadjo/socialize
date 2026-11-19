@@ -57,6 +57,7 @@ final readonly class InboxProcessor
         private EventDispatcherInterface $events,
         private MediaIngestor $ingestor,
         private AccountFilesCleaner $accountFiles,
+        private LinkPreviews $linkPreviews,
     ) {
     }
 
@@ -214,9 +215,24 @@ final readonly class InboxProcessor
     }
 
     /**
+     * Publication lue dans l'historique (outbox) d'un compte distant : gardée même si personne ne le suit ici, pour
+     * que son profil montre ses publications récentes (BackfillAccountHandler).
+     *
+     * @param array<string, mixed> $note
+     */
+    public function importFromHistory(array $note, Account $actor): void
+    {
+        try {
+            $this->create(['type' => 'Create', 'actor' => $actor->getApUri(), 'object' => $note], $actor, fromHistory: true);
+        } catch (FederationException $e) {
+            $this->logger->notice('Publication de l’historique non importée', ['actor' => $actor->getApUri(), 'reason' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * @param array<string, mixed> $activity
      */
-    private function create(array $activity, Account $actor): void
+    private function create(array $activity, Account $actor, bool $fromHistory = false): void
     {
         $note = Json::object($activity, 'object');
         if (null === $note || 'Note' !== Json::string($note, 'type') && 'Image' !== Json::string($note, 'type')) {
@@ -239,19 +255,21 @@ final readonly class InboxProcessor
 
         $visibility = $this->visibility($note);
         // Seules les publications des comptes suivis, qui mentionnent un compte local, ou pilotés d'ici (connexion
-        // Mastodon : son profil) sont gardées.
-        if (!$visibility instanceof Visibility || (!$this->follows->hasLocalFollower($actor) && !$this->mentionsLocal($note) && !$this->piloted->isPiloted($actor))) {
+        // Mastodon : son profil) sont gardées ; et celles de l'historique d'un profil ouvert ici.
+        if (!$visibility instanceof Visibility || (!$fromHistory && !$this->follows->hasLocalFollower($actor) && !$this->mentionsLocal($note) && !$this->piloted->isPiloted($actor))) {
             return;
         }
 
+        // Avec photos ou vidéos, ou texte seul (publication texte) ; un message vide sans média est ignoré.
         $attachments = $this->attachments($note);
-        if ([] === $attachments) {
-            return; // Socialize est un réseau photo : les messages sans image ni vidéo sont ignorés.
+        $text = HtmlText::toText(Json::string($note, 'content'));
+        if ([] === $attachments && '' === trim($text)) {
+            return;
         }
 
         $post = Post::federated(
             $actor,
-            HtmlText::toText(Json::string($note, 'content')),
+            $text,
             $visibility,
             (bool) ($note['sensitive'] ?? false) ? (Json::string($note, 'summary') ?? 'Contenu sensible') : Json::string($note, 'summary'),
             $id,
@@ -269,6 +287,8 @@ final readonly class InboxProcessor
                 $this->bus->dispatch(new CacheRemoteMedia($media->getId()->toRfc4122()));
             }
         }
+        // Publication texte : aperçu de son premier lien.
+        $this->linkPreviews->refresh($post);
         $this->notifications->mentioned($post, $this->mentionedLocals($note));
     }
 
@@ -336,6 +356,7 @@ final readonly class InboxProcessor
             if (null !== $post && $post->getAccount()->getId()->equals($actor->getId())) {
                 $post->updateFederated(HtmlText::toText(Json::string($object, 'content')), Json::string($object, 'summary'));
                 $this->em->flush();
+                $this->linkPreviews->refresh($post);
             }
         }
     }
@@ -362,6 +383,7 @@ final readonly class InboxProcessor
             foreach ($post->getMedia() as $media) {
                 $this->ingestor->delete($media);
             }
+            $this->linkPreviews->removeImage($post);
             $this->em->remove($post);
             $this->em->flush();
 

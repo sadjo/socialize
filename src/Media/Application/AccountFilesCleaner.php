@@ -7,6 +7,7 @@ namespace App\Media\Application;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountDeleting;
 use App\Core\Domain\Media\MediaAttachment;
+use App\Core\Domain\Post\Post;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\FilesystemOperator;
@@ -44,7 +45,11 @@ final readonly class AccountFilesCleaner
         foreach ($media as $attachment) {
             $this->ingestor->delete($attachment);
         }
-        foreach (ProfileImages::filesOf($account) as $path) {
+        // Copies des images d'aperçu de liens de ses publications texte.
+        /** @var list<string> $previews */
+        $previews = $this->em->createQuery('SELECT p.previewImage FROM '.Post::class.' p WHERE p.account = :account AND p.previewImage IS NOT NULL')
+            ->setParameter('account', $account->getId(), UuidType::NAME)->getSingleColumnResult();
+        foreach ([...ProfileImages::filesOf($account), ...$previews] as $path) {
             try {
                 $this->derivativesStorage->delete($path);
             } catch (FilesystemException) {

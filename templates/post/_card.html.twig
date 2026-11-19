@@ -15,10 +15,12 @@
         </div>
         {{ include('post/_menu.html.twig', {in_feed: true}) }}
     </header>
-    {{ include('post/_media.html.twig') }}
+    {# Publication texte (sans média) : le texte à la place des médias, et pas répété en légende. #}
+    {% set text_post = post.media is empty %}
+    {{ include(text_post ? 'post/_text.html.twig' : 'post/_media.html.twig') }}
     {{ include('post/_actions.html.twig') }}
     <div class="pbody">
-        {% if post.caption %}<div><b>{{ author.username }}</b> {{ post.caption|rich_text(post.isImported()) }}</div>{% endif %}
+        {% if post.caption and not text_post %}<div><b>{{ author.username }}</b> {{ post.caption|rich_text(post.isImported()) }}</div>{% endif %}
         {% set preview = post.commentsCount ? recent_comments(post, 2) : [] %}
         {% if post.commentsCount > preview|length %}<a class="meta" href="{{ path('app_post_show', {id: post.publicId, _fragment: 'commentaires'}) }}">Voir les {{ post.commentsCount }} commentaires</a>{% endif %}
         <div class="cprev" id="post-{{ post.publicId }}-comments">
