@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+use Symfony\UX\Turbo\TurboBundle;
 
 final class FeedController extends AbstractController
 {
@@ -49,12 +50,12 @@ final class FeedController extends AbstractController
             ]);
         }
         if (!$viewer instanceof \App\Core\Domain\Account\Account) {
-            return $this->renderFeed($request, 'welcome', $this->posts->localTimeline($this->cursor($request), self::PAGE_SIZE), [
+            return $this->renderFeed($request, 'welcome', $this->posts->localTimeline($this->cursor($request), self::PAGE_SIZE), static fn (): array => [
                 'registration_open' => $registration->isOpen(),
             ]);
         }
 
-        return $this->renderFeed($request, 'home', $this->posts->homeTimeline($viewer, $this->cursor($request), self::PAGE_SIZE), [
+        return $this->renderFeed($request, 'home', $this->posts->homeTimeline($viewer, $this->cursor($request), self::PAGE_SIZE), static fn (): array => [
             'suggestions' => $accounts->suggestionsFor($viewer),
             'story_groups' => $stories->barFor($viewer),
         ]);
@@ -65,7 +66,7 @@ final class FeedController extends AbstractController
     {
         $viewer = $this->currentAccount->get();
 
-        return $this->renderFeed($request, 'local', $this->posts->localTimeline($this->cursor($request), self::PAGE_SIZE), [
+        return $this->renderFeed($request, 'local', $this->posts->localTimeline($this->cursor($request), self::PAGE_SIZE), static fn (): array => [
             'suggestions' => $viewer instanceof \App\Core\Domain\Account\Account ? $accounts->suggestionsFor($viewer) : [],
         ]);
     }
@@ -75,15 +76,16 @@ final class FeedController extends AbstractController
     {
         $viewer = $this->currentAccount->get();
 
-        return $this->renderFeed($request, 'federated', $this->posts->federatedTimeline($this->cursor($request), self::PAGE_SIZE), [
+        return $this->renderFeed($request, 'federated', $this->posts->federatedTimeline($this->cursor($request), self::PAGE_SIZE), static fn (): array => [
             'suggestions' => $viewer instanceof \App\Core\Domain\Account\Account ? $accounts->suggestionsFor($viewer) : [],
         ]);
     }
 
     /**
-     * @param array<string, mixed> $extra
+     * @param \Closure(): array<string, mixed> $extra blocs autour du fil (suggestions, stories…), calculés pour une
+     *                                                page complète seulement
      */
-    private function renderFeed(Request $request, string $tab, TimelinePage $page, array $extra = []): Response
+    private function renderFeed(Request $request, string $tab, TimelinePage $page, \Closure $extra): Response
     {
         $this->commentPreviews->prime($page->posts);
         $parameters = [
@@ -91,15 +93,16 @@ final class FeedController extends AbstractController
             'page' => $page,
             'liked' => $this->likes->likedAmong($this->currentAccount->get(), $page->posts),
             'route' => $request->attributes->getString('_route'),
-            ...$extra,
         ];
 
-        // Pages suivantes : seulement la liste, chargée dans un cadre Turbo.
-        if ($request->query->has('apres')) {
-            return $this->render('feed/_page.html.twig', $parameters);
+        // Page suivante, chargée au défilement (infinite_list_controller) : seulement les publications, en flux Turbo.
+        if (TurboBundle::STREAM_FORMAT === $request->getPreferredFormat()) {
+            $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+
+            return $this->render('feed/_page.stream.html.twig', $parameters);
         }
 
-        return $this->render('feed/index.html.twig', $parameters);
+        return $this->render('feed/index.html.twig', $parameters + $extra());
     }
 
     private function cursor(Request $request): ?Cursor

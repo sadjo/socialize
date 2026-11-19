@@ -1,0 +1,2 @@
+{# Page suivante de la grille, chargée au défilement (infinite_list_controller). #}
+{{ include('list/_next.stream.html.twig', {list_id: 'grid', items: include('profile/_grid_items.html.twig'), next_url: page.next ? path(grid_route|default('app_profile'), {username: account.acct, apres: page.next.toString}) : null}) }}

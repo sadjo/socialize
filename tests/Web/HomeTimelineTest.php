@@ -34,10 +34,10 @@ final class HomeTimelineTest extends AppWebTestCase
         self::assertSelectorCount(10, 'article.post', 'Première page : dix publications.');
         self::assertSelectorTextNotContains('main', 'Zoé, non suivie');
 
-        // Page suivante, chargée par le cadre Turbo : la onzième publication, la plus ancienne (la sienne).
-        $next = $crawler->filter('turbo-frame[loading="lazy"][src*="apres="]')->attr('src');
+        // Page suivante, chargée au défilement en flux Turbo : la onzième publication, la plus ancienne (la sienne).
+        $next = $crawler->filter('#feed-more a[href*="apres="]')->attr('href');
         self::assertNotNull($next);
-        $this->client->request('GET', $next);
+        $this->client->request('GET', $next, server: ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
         self::assertSelectorCount(1, 'article.post');
         self::assertSelectorTextContains('article.post', 'Les miennes, même réservées aux abonnés');
     }

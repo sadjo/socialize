@@ -1,0 +1,7 @@
+{# Repère de fin de liste : infinite_list_controller charge la suite à son approche (flux Turbo, inséré juste avant
+   lui) ; sans JavaScript, le lien ouvre la page suivante. Variables : list_id, next_url (null en fin de liste). #}
+{% if next_url %}
+    <div class="more" id="{{ list_id }}-more" data-infinite-list-target="more">
+        <a class="btn" href="{{ next_url }}" data-turbo="false" data-action="infinite-list#load">Charger la suite</a>
+    </div>
+{% endif %}

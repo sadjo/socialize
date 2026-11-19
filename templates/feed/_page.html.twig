@@ -1,15 +1,6 @@
-{# Une page du fil, et le cadre Turbo qui chargera la suivante. #}
-{% set frame_id = 'feed-page-' ~ (app.request.query.get('apres') ?? 'first')|replace({'.': '-'}) %}
-{# target="_top" : les liens des publications ouvrent une nouvelle page, pas le contenu dans le cadre. #}
-<turbo-frame id="{{ frame_id }}" target="_top">
-    {% for post in page.posts %}
-        {{ include('post/_card.html.twig') }}
-    {% endfor %}
-    {% if page.next %}
-        {% set next = page.next.toString %}
-        {% set next_url = path(route, (route_params|default({}))|merge({apres: next})) %}
-        <turbo-frame id="feed-page-{{ next|replace({'.': '-'}) }}" src="{{ next_url }}" loading="lazy" target="_top">
-            <div class="more"><a class="btn" href="{{ next_url }}">Charger la suite</a></div>
-        </turbo-frame>
-    {% endif %}
-</turbo-frame>
+{# Une page du fil, suivie du repère qui chargera la suivante (list/_more.html.twig). Variables : page, route,
+   route_params en option. #}
+{% for post in page.posts %}
+    {{ include('post/_card.html.twig') }}
+{% endfor %}
+{{ include('list/_more.html.twig', {list_id: 'feed', next_url: page.next ? path(route, (route_params|default({}))|merge({apres: page.next.toString})) : null}) }}
