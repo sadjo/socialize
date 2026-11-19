@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.30] - 2026-11-19
+
+Mastodon accounts: followers and notifications.
+
+### Added
+
+- A Mastodon account signed in here accepts or refuses follow requests coming from here, and removes followers,
+  through its Mastodon server, which tells the follower over federation (Mastodon)
+- Mastodon accounts signed in here get the same notifications as local accounts (likes, comments, mentions, follow
+  requests) and find them in the menu; device notifications remain those of their Mastodon app (notifications)
+
+### Changed
+
+- The "approves followers" setting of remote accounts is read from their actor (manuallyApprovesFollowers); an Accept
+  or Reject received from the followed account clears the notification of the request (federation)
+- The administrators' notification of a first Mastodon sign-in leads to the account's profile, without asking to
+  grant rights (administration)
+
 ## [0.9.29] - 2026-11-19
 
 Videos on iPhone.
