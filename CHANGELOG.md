@@ -7,6 +7,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.37] - 2026-11-20
+
+Text posts.
+
+### Added
+
+- Text posts: the compose page has two tabs, "Photos et vidéos" and "Texte"; a text post has no photo or video, music
+  or Instagram crosspost, and federates as an ordinary message. Also from the Mastodon compose page (posts)
+- Text posts in the feed (text in place of the media, cut after six lines with "Afficher plus") and on their page;
+  profiles have a "Photos" tab and a "Textes" tab, each with its count (feed, profile)
+- Preview of the first link of a text post: site, title, description and image, read in the background through the
+  client that refuses private network addresses; the image is copied to the instance. New command
+  `app:link-previews:fetch` for text posts already present (posts)
+- The profile of a fediverse account shows its recent posts even without followers here, and the follower, following
+  and post counts given by its instance (federation)
+
+### Changed
+
+- Fediverse messages without photo or video are now kept as text posts; replies and boosts are still ignored
+  (federation)
+
 ## [0.9.36] - 2026-11-19
 
 Lighter container registry.
