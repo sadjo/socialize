@@ -402,6 +402,7 @@ tr:last-child td{border-bottom:0}
 .prof-i h1{font-size:1.4rem}
 .handle{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:.82rem;color:var(--muted);padding:4px 10px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .stats{display:flex;gap:28px;flex-wrap:wrap}
+.stats .stats-src{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;color:var(--faint);align-self:center}
 .stats b{font-family:var(--font-display);font-size:1.05rem}
 .stats a:hover{text-decoration:underline}
 .ptabs a{display:flex;align-items:center;gap:7px;height:50px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border-top:2px solid transparent;margin-top:-1px}

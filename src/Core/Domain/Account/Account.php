@@ -87,6 +87,20 @@ class Account
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $fetchedAt = null;
 
+    /** Compte distant : dernière lecture de son historique (outbox), à l'ouverture de son profil ou à l'abonnement. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $backfilledAt = null;
+
+    /** Compte distant : nombres publiés par son instance (collections followers, following, outbox) ; null si inconnus. */
+    #[ORM\Column(nullable: true)]
+    private ?int $remoteFollowersCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $remoteFollowingCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $remotePostsCount = null;
+
     /** Listes des abonnés et abonnements réservées au titulaire et à ses abonnés. */
     #[ORM\Column(options: ['default' => false])]
     private bool $networkHidden = false;
@@ -310,6 +324,41 @@ class Account
     public function getFetchedAt(): ?\DateTimeImmutable
     {
         return $this->fetchedAt;
+    }
+
+    public function getBackfilledAt(): ?\DateTimeImmutable
+    {
+        return $this->backfilledAt;
+    }
+
+    public function markBackfilled(\DateTimeImmutable $now): void
+    {
+        $this->backfilledAt = $now;
+    }
+
+    /**
+     * Compte distant : nombres d'abonnés, d'abonnements et de publications donnés par son instance (null si inconnus).
+     */
+    public function updateRemoteCounts(?int $followers, ?int $following, ?int $posts): void
+    {
+        $this->remoteFollowersCount = $followers;
+        $this->remoteFollowingCount = $following;
+        $this->remotePostsCount = $posts;
+    }
+
+    public function getRemoteFollowersCount(): ?int
+    {
+        return $this->remoteFollowersCount;
+    }
+
+    public function getRemoteFollowingCount(): ?int
+    {
+        return $this->remoteFollowingCount;
+    }
+
+    public function getRemotePostsCount(): ?int
+    {
+        return $this->remotePostsCount;
     }
 
     /**

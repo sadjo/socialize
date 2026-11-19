@@ -851,6 +851,53 @@ final class FederationTest extends AppWebTestCase
         self::assertCount(2, $this->fediverse()->delivered('Create'), 'Rien ne sort pour une publication privée (seule la publication publique et le commentaire sont partis).');
     }
 
+    /**
+     * Publications texte du fédivers : une Note sans image ni vidéo est gardée, une Note vide sans média ignorée.
+     */
+    public function testATextNoteFromAFollowedAccountIsKeptAndAnEmptyOneIgnored(): void
+    {
+        $this->followAlice();
+        $create = fn (string $id, string $content): array => ['id' => $id.'/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE, 'object' => $this->remoteNote($id, $content, withImage: false)];
+
+        $this->inbox('/users/camille/inbox', $create('https://remote.test/notes/t1', '<p>Bonjour le fédivers</p>'));
+        self::assertResponseStatusCodeSame(202);
+        $this->inbox('/users/camille/inbox', $create('https://remote.test/notes/t2', '<p></p>'));
+
+        $posts = self::getContainer()->get(PostRepository::class);
+        $text = $posts->findOneBy(['apUri' => 'https://remote.test/notes/t1']);
+        self::assertNotNull($text);
+        self::assertSame('Bonjour le fédivers', $text->getCaption());
+        self::assertCount(0, $text->getMedia());
+        self::assertNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/t2']), 'Rien à afficher : ignorée.');
+    }
+
+    /**
+     * Profil d'un compte du fédivers ouvert ici, même sans abonnement : son historique récent est récupéré et ses
+     * nombres d'abonnés, d'abonnements et de publications sont ceux de son instance ; au plus une fois par jour.
+     */
+    public function testOpeningARemoteProfileReadsItsHistoryAndCountsOncePerDay(): void
+    {
+        FakeFediverse::$outbox = [[
+            'id' => 'https://remote.test/notes/h1/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE,
+            'object' => ['published' => new \DateTimeImmutable('-1 day')->format(\DATE_ATOM)] + $this->remoteNote('https://remote.test/notes/h1', '<p>Un texte récent</p>', withImage: false),
+        ]];
+        $this->login($this->register('camille'));
+
+        $this->client->request('GET', '/@alice@remote.test');
+        self::assertResponseIsSuccessful();
+        self::assertNotNull(self::getContainer()->get(PostRepository::class)->findOneBy(['apUri' => 'https://remote.test/notes/h1']), 'Historique lu sans abonnement.');
+        self::assertSelectorTextContains('.stats', '1 publication');
+        self::assertSelectorTextContains('.stats', '12 abonnés');
+        self::assertSelectorTextContains('.stats', '26 abonnements');
+        self::assertSelectorTextContains('.stats .stats-src', 'chiffres de remote.test');
+        $reads = \count(array_filter(FakeFediverse::$reads, static fn (string $path): bool => '/users/alice/outbox' === $path));
+        self::assertGreaterThan(0, $reads);
+
+        // Rouvert le même jour : rien n'est relu.
+        $this->client->request('GET', '/@alice@remote.test');
+        self::assertCount($reads, array_filter(FakeFediverse::$reads, static fn (string $path): bool => '/users/alice/outbox' === $path));
+    }
+
     public function testFollowingARemoteAccountImportsItsRecentHistory(): void
     {
         $create = fn (string $id, string $published, ?string $inReplyTo = null, bool $withImage = true): array => [
@@ -877,7 +924,10 @@ final class FederationTest extends AppWebTestCase
         self::assertNotNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/recent']));
         self::assertNotNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/p30']), 'Les pages suivantes de l’outbox sont lues.');
         self::assertNull($posts->findOneBy(['apUri' => 'https://remote.test/notes/old']), 'Rien au-delà de six mois.');
-        self::assertSame(31, $posts->count([]), 'Ni partages, ni réponses, ni messages sans photo.');
+        self::assertSame(32, $posts->count([]), 'Ni partages, ni réponses ; les messages sans photo sont gardés (publications texte).');
+        $text = $posts->findOneBy(['apUri' => 'https://remote.test/notes/text']);
+        self::assertNotNull($text);
+        self::assertCount(0, $text->getMedia(), 'Publication texte, sans média.');
 
         $this->client->request('GET', '/@alice@remote.test');
         self::assertSelectorExists('a.gt[href*="/publications?depuis="]');
@@ -944,6 +994,7 @@ final class FederationTest extends AppWebTestCase
     protected function tearDown(): void
     {
         FakeFediverse::$outbox = [];
+        FakeFediverse::$reads = [];
         parent::tearDown();
     }
 

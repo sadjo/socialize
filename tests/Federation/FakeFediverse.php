@@ -38,12 +38,18 @@ final class FakeFediverse
     /** @var array<string, mixed> champs ajoutés à l'acteur d'alice (ex. manuallyApprovesFollowers) */
     public static array $actorExtra = [];
 
+    /** @var list<string> chemins lus (GET), dans l'ordre */
+    public static array $reads = [];
+
     /**
      * @param array<string, mixed> $options
      */
     public function __invoke(string $method, string $url, array $options = []): ResponseInterface
     {
         $path = (string) parse_url($url, \PHP_URL_PATH);
+        if ('GET' === $method) {
+            self::$reads[] = $path;
+        }
 
         if ('POST' === $method) {
             $headers = [];
@@ -73,6 +79,13 @@ final class FakeFediverse
         }
         if ('/users/alice' === $path) {
             return $this->json(self::actor());
+        }
+        // Collections d'abonnés et d'abonnements : seulement leur nombre, comme Mastodon pour un visiteur.
+        if ('/users/alice/followers' === $path) {
+            return $this->json(['id' => self::ALICE.'/followers', 'type' => 'OrderedCollection', 'totalItems' => 12]);
+        }
+        if ('/users/alice/following' === $path) {
+            return $this->json(['id' => self::ALICE.'/following', 'type' => 'OrderedCollection', 'totalItems' => 26]);
         }
         if ('/users/alice/outbox' === $path) {
             // Comme Mastodon : la collection renvoie vers sa première page, paginée par 20.
@@ -115,6 +128,8 @@ final class FakeFediverse
             'summary' => '<p>Photographe de nuit <a href="https://remote.test/tags/astro">#astro</a></p>',
             'inbox' => self::ALICE.'/inbox',
             'outbox' => self::ALICE.'/outbox',
+            'followers' => self::ALICE.'/followers',
+            'following' => self::ALICE.'/following',
             'url' => 'https://remote.test/@alice',
             'endpoints' => ['sharedInbox' => 'https://remote.test/inbox'],
             'icon' => ['type' => 'Image', 'url' => 'https://remote.test/avatars/alice.png'],

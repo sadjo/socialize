@@ -18,6 +18,7 @@ use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Federation\Application\RemoteAccounts;
+use App\Federation\Application\RemoteHistory;
 use App\Federation\Infrastructure\FederationException;
 use App\Web\Feed\CommentPreviews;
 use App\Web\Feed\NextPage;
@@ -45,7 +46,7 @@ final class ProfileController extends AbstractController
     }
 
     #[Route('/@{username}', name: 'app_profile', requirements: ['username' => self::ACCT], methods: ['GET'])]
-    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access, StoryFeed $stories, HighlightRepository $highlights, NetworkAccess $network): Response
+    public function show(string $username, Request $request, PostRepository $posts, FollowRepository $follows, PostAccess $access, StoryFeed $stories, HighlightRepository $highlights, NetworkAccess $network, RemoteHistory $history): Response
     {
         $account = $this->account($username, resolve: true);
         $viewer = $this->currentAccount->get();
@@ -57,7 +58,12 @@ final class ProfileController extends AbstractController
             return $this->render('profile/_grid_page.stream.html.twig', ['account' => $account, 'page' => $page]);
         }
 
+        // Compte du fédivers : ses publications récentes et ses compteurs, relus au plus une fois par jour.
+        $history->refreshIfStale($account);
+
         $isOwner = $viewer instanceof Account && $viewer->getId()->equals($account->getId());
+        // Compte du fédivers dont l'instance a donné ses nombres : ceux-là, plus justes que ce que l'on connaît ici.
+        $remote = !$account->isLocal() && null !== $account->getRemotePostsCount();
         $parameters = [
             'account' => $account,
             'page' => $page,
@@ -74,9 +80,10 @@ final class ProfileController extends AbstractController
             )),
             'pending_requests' => $isOwner ? $follows->countPendingRequests($account) : 0,
             'stats' => [
-                'posts' => $posts->countForProfile($account, $visible, $viewer),
-                'followers' => $follows->countFollowers($account),
-                'following' => $follows->countFollowing($account),
+                'posts' => $remote ? $account->getRemotePostsCount() : $posts->countForProfile($account, $visible, $viewer),
+                'followers' => $remote ? ($account->getRemoteFollowersCount() ?? $follows->countFollowers($account)) : $follows->countFollowers($account),
+                'following' => $remote ? ($account->getRemoteFollowingCount() ?? $follows->countFollowing($account)) : $follows->countFollowing($account),
+                'remote' => $remote,
             ],
         ];
 
