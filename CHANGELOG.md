@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.36] - 2026-11-19
+
+Lighter container registry.
+
+### Changed
+
+- Container images are published without provenance attestations: each release now leaves only the tagged index and
+  the amd64 and arm64 images in the registry (release)
+
 ## [0.9.35] - 2026-11-19
 
 Website in French, and why self-host.
