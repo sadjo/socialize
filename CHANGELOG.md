@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.28] - 2026-11-19
+
+Screens refreshed after forms again.
+
+### Fixed
+
+- After signing in, following a suggested account or accepting a follow request, the screen stayed unchanged: the
+  feed and the profile answered the redirected form with the "next page" stream instead of the page. The next page is
+  now requested with its own header, and every other request gets the full page (feed, profile)
+
 ## [0.9.27] - 2026-11-19
 
 Reliable post lists on mobile.
