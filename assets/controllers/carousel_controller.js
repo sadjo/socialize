@@ -1,14 +1,13 @@
 import { Controller } from '@hotwired/stimulus';
-import { release } from './video_controller.js';
 
 /*
  * Carrousel des médias d'une publication : boutons (masqués aux extrémités), points cliquables et balayage tactile.
  *
  * Mémoire : le fil s'allonge sans fin. Safari sur iPhone cesse d'afficher les images (cadres gris) quand trop de photos
  * décodées restent dans la page. Seules la photo affichée et ses voisines sont chargées (les autres attendent dans
- * data-src / data-srcset), et une publication éloignée de l'écran (plus de deux écrans) libère ses images et ses
- * vidéos (affiche comprise), rechargées à son approche : la vidéo retrouve son affiche et son préchargement, et sa
- * source est resélectionnée (sinon WebKit la laisse noire au retour).
+ * data-src / data-srcset), et une publication éloignée de l'écran (plus de deux écrans) libère ses images (affiches
+ * des vidéos comprises), rechargées à son approche. Les lecteurs vidéo, eux, n'existent que le temps où la vidéo est
+ * bien visible (video_controller).
  */
 const FAR = '200% 0px';
 
@@ -64,26 +63,14 @@ export default class extends Controller {
             if (img.dataset.srcset) { img.srcset = img.dataset.srcset; delete img.dataset.srcset; }
             if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; }
         });
-        this.element.querySelectorAll('.player video[data-preload]').forEach((video) => {
-            if (video.dataset.poster) { video.setAttribute('poster', video.dataset.poster); delete video.dataset.poster; }
-            video.preload = video.dataset.preload;
-            delete video.dataset.preload;
-            video.load();
-        });
     }
 
-    // Publication loin de l'écran : images rendues au navigateur (adresses gardées pour revenir), vidéos libérées.
+    // Publication loin de l'écran : images rendues au navigateur (adresses gardées pour revenir).
     unload() {
         this.element.querySelectorAll('.slide img[src]').forEach((img) => {
             if (img.srcset) { img.dataset.srcset = img.srcset; img.removeAttribute('srcset'); }
             img.dataset.src = img.getAttribute('src');
             img.removeAttribute('src');
-        });
-        this.element.querySelectorAll('.player video:not([data-preload])').forEach((video) => {
-            video.dataset.preload = video.preload;
-            const poster = video.getAttribute('poster');
-            if (poster) { video.dataset.poster = poster; video.removeAttribute('poster'); }
-            release(video);
         });
     }
 

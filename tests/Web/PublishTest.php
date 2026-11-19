@@ -130,7 +130,7 @@ final class PublishTest extends AppWebTestCase
         unlink($copy);
 
         $this->client->request('GET', '/p/'.$this->onlyPost()->getPublicId());
-        self::assertSelectorExists('video source[type="video/mp4"]');
+        self::assertSelectorExists('.player[data-video-type-value="video/mp4"][data-video-src-value$="-video.mp4"]');
 
         // Pour le fédivers : la vidéo est accompagnée de son affiche, que Mastodon utilise comme vignette.
         $this->client->request('GET', '/p/'.$this->onlyPost()->getPublicId(), server: ['HTTP_ACCEPT' => 'application/activity+json']);
@@ -160,8 +160,8 @@ final class PublishTest extends AppWebTestCase
 
         // Chrome et Firefox ne lisent pas une source annoncée en QuickTime : la copie est un MP4 et doit l'être aussi.
         $this->client->request('GET', '/p/'.$post->getPublicId());
-        self::assertSelectorExists('video source[type="video/mp4"][src$="-video.mp4"]');
-        self::assertSelectorNotExists('video source[type="video/quicktime"]');
+        self::assertSelectorExists('.player[data-video-type-value="video/mp4"][data-video-src-value$="-video.mp4"]');
+        self::assertSelectorNotExists('.player[data-video-type-value="video/quicktime"]');
     }
 
     public function testPublishingAVideoQueuesItsTranscoding(): void
