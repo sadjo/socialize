@@ -15,9 +15,9 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 /**
  * Ce qu'une personne connectée avec Mastodon peut faire ici : lire (fils, profils, publications, stories), marquer
  * une story comme vue, aimer, commenter, suivre, accepter, refuser ou retirer ses abonnés, lire ses notifications,
- * publier sur son compte Mastodon, et y importer son archive Instagram si un administrateur le lui a permis. Le reste
- * (publier ici, réglages, notifications sur l'appareil, import, administration) lui est fermé : son compte se gère sur
- * son serveur.
+ * choisir l'apparence, publier sur son compte Mastodon, et y importer son archive Instagram si un administrateur le lui
+ * a permis. Le reste (publier ici, autres réglages, notifications sur l'appareil, import, administration) lui est
+ * fermé : son compte se gère sur son serveur.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 4)]
 final readonly class MastodonAccess
@@ -38,8 +38,11 @@ final readonly class MastodonAccess
         'app_follow_request_accept', 'app_profile_remove_follower',
         'app_notification_open', 'app_notification_toggle', 'app_notification_delete',
         'app_notifications_read_all', 'app_notifications_delete_all',
-        'app_mastodon_compose', 'app_post_delete',
+        'app_mastodon_compose', 'app_post_delete', 'app_settings_appearance',
     ];
+
+    /** Pages ouvertes malgré leur préfixe fermé : l'apparence se choisit ici. */
+    private const array OPEN = ['app_settings_appearance'];
 
     public function __construct(
         private Security $security,
@@ -57,7 +60,7 @@ final readonly class MastodonAccess
         if (str_starts_with($route, 'app_import') && $this->security->isGranted(User::ROLE_INSTAGRAM_IMPORTER)) {
             return;
         }
-        $closed = array_any(self::CLOSED, static fn (string $prefix): bool => str_starts_with($route, $prefix))
+        $closed = (!\in_array($route, self::OPEN, true) && array_any(self::CLOSED, static fn (string $prefix): bool => str_starts_with($route, $prefix)))
             || (!$request->isMethodSafe() && !\in_array($route, self::ACTIONS, true));
         if ($closed) {
             throw new AccessDeniedException('Votre compte Mastodon se gère sur votre serveur : cette action n’est pas disponible ici.');

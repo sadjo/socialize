@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.33] - 2026-11-19
+
+Appearance for Mastodon accounts.
+
+### Added
+
+- People signed in with Mastodon choose their theme and media filter here, in *Apparence* (menu), like local
+  accounts; their other settings stay on their server (settings)
+
+### Fixed
+
+- The website image under the install command is no longer squashed on mobile (website)
+
 ## [0.9.32] - 2026-11-19
 
 Follower approval for Mastodon accounts.

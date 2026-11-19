@@ -14,6 +14,8 @@ ici** : *Se connecter avec Mastodon*, puis elle choisit son serveur et autorise 
 - **Notifications** : « J'aime », commentaires, mentions et demandes d'abonnement venus d'ici apparaissent dans
   *Notifications*, comme pour un compte d'ici ; votre application Mastodon vous prévient aussi. Les notifications
   sur l'appareil restent celles de votre application Mastodon.
+- **Apparence** : thème et filtre des médias se choisissent ici, dans *Apparence* (menu) ; les autres réglages
+  restent sur votre serveur Mastodon.
 - **Publier** : les photos et vidéos publiées depuis Socialize partent sur votre compte Mastodon.
 - **Import Instagram** : possible si un administrateur l'autorise ; l'archive est publiée sur votre compte Mastodon.
 
