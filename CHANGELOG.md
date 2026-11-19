@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.31] - 2026-11-19
+
+No black screen before videos.
+
+### Fixed
+
+- A feed video no longer shows a black screen while it loads: the player stays invisible over the poster and appears
+  at its first frame actually displayed (feed)
+
+### Changed
+
+- The video player is prepared as soon as the video is 25% visible, so loading starts earlier; it still plays at 60%
+  and is removed off screen, one or two players at most (feed)
+
 ## [0.9.30] - 2026-11-19
 
 Mastodon accounts: followers and notifications.

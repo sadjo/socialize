@@ -121,6 +121,12 @@ final class FeedListTest extends AppWebTestCase
         self::assertSelectorCount(2, '.slide.vid .player[data-controller="video"]');
         self::assertSelectorExists('.player[data-video-src-value="https://remote.test/media/1.mp4"][data-video-label-value="Vidéo 1"] img.poster[src="https://remote.test/media/1.jpg"]');
         self::assertSelectorExists('.player[data-video-src-value="https://remote.test/media/2.mp4"] img.poster[data-src="https://remote.test/media/2.jpg"]:not([src])');
+
+        // Pas d'écran noir pendant le chargement : le lecteur, posé sur l'affiche, reste invisible jusqu'à sa première
+        // image (classe « ready » ajoutée par video_controller).
+        $css = (string) file_get_contents(\dirname(__DIR__, 2).'/assets/styles/app.css');
+        self::assertStringContainsString('.player video{position:absolute;inset:0;cursor:pointer;opacity:0;transition:opacity .15s}', $css);
+        self::assertStringContainsString('.player.ready video{opacity:1}', $css);
     }
 
     /**
