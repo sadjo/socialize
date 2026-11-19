@@ -91,8 +91,9 @@ final readonly class MastodonActions implements PilotedActions
     public function follow(Account $follower, Account $following): bool
     {
         return $this->run($follower, fn (string $domain, string $token): bool => $this->client->follow($domain, $token, $this->account($domain, $token, $following))
-            // Un compte d'ici accepte tout abonnement : l'acceptation arrive aussitôt par la fédération.
-            || $following->isLocal());
+            // Un compte d'ici accepte l'abonnement aussitôt (l'Accept arrive par la fédération), sauf s'il valide lui-même
+            // ses abonnés : la demande attend alors son accord, comme celle d'un compte d'ici.
+            || ($following->isLocal() && !$following->manuallyApprovesFollowers()));
     }
 
     public function unfollow(Account $follower, Account $following): void
