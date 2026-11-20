@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.39] - 2026-11-20
+
+Sending a post already online to Instagram.
+
+### Added
+
+- A post already online and never sent can go to Instagram afterwards: "Publier sur Instagram" in its ⋯ menu (feed,
+  profile, post page), or the "Publier aussi sur Instagram" box of the edit page, unticked by default; with a video
+  just added, sending waits until it is ready. The manual share becomes "Partager manuellement vers Instagram" (posts)
+
+### Fixed
+
+- Text posts are no longer offered for sending to Instagram, which only accepts photos and videos (posts)
+- Compose page: the Instagram box no longer touches the music button (posts)
+
 ## [0.9.38] - 2026-11-20
 
 Editing a text post.
