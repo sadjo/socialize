@@ -10,6 +10,8 @@ use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Crosspost\Meta\Application\InstagramConnections;
+use App\Crosspost\Meta\Application\InstagramException;
+use App\Crosspost\Meta\Application\InstagramPublishing;
 use App\Crosspost\Meta\Application\RefreshInstagramTokens;
 use App\Crosspost\Meta\Application\RefreshInstagramTokensHandler;
 use App\Crosspost\Meta\Domain\CrosspostStatus;
@@ -304,7 +306,7 @@ final class InstagramTest extends AppWebTestCase
 
         self::getContainer()->get(InstagramConnections::class)->connect($this->reloadUser($camille)->getAccount(), FakeInstagram::CODE, 'http://localhost/reglages/instagram/retour');
         $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
-        $form = $crawler->filter('form[action="/p/'.$post->getPublicId().'/instagram"]');
+        $form = $crawler->filter('.crosspost-status form[action="/p/'.$post->getPublicId().'/instagram"]');
         self::assertCount(1, $form);
         self::assertStringContainsString('visible de tous', (string) $form->attr('data-turbo-confirm'), 'Publication réservée aux abonnés : avertissement.');
         $this->client->submit($crawler->selectButton('Publier sur Instagram')->form());
@@ -328,6 +330,142 @@ final class InstagramTest extends AppWebTestCase
         $other = self::getContainer()->get(PostComposer::class)->publish($this->register('hugo')->getAccount(), 'Mer', [['file' => $this->jpeg(), 'alt' => null]]);
         $this->client->request('POST', '/p/'.$other->getPublicId().'/instagram', ['_token' => 'x']);
         self::assertResponseStatusCodeSame(404);
+    }
+
+    /**
+     * Menu ⋯ d'une publication jamais envoyée : « Publier sur Instagram » (envoi automatique) à côté du partage
+     * manuel ; retour sur la page affichée, ici le fil.
+     */
+    public function testThePostMenuSendsAPostAlreadyOnlineToInstagram(): void
+    {
+        $camille = $this->register('camille');
+        $post = self::getContainer()->get(PostComposer::class)->publish($camille->getAccount(), 'Port au matin', [['file' => $this->jpeg(), 'alt' => null]]);
+        $this->login($camille);
+        $menu = '#post-'.$post->getPublicId().' .pmenu';
+
+        // Instagram non connecté : le partage manuel seulement.
+        $this->client->request('GET', '/local');
+        self::assertSelectorNotExists($menu.' form[action$="/instagram"]');
+        self::assertSelectorTextContains($menu, 'Partager vers Instagram');
+        self::assertSelectorTextNotContains($menu, 'manuellement');
+
+        self::getContainer()->get(InstagramConnections::class)->connect($this->reloadUser($camille)->getAccount(), FakeInstagram::CODE, 'http://localhost/reglages/instagram/retour');
+        $crawler = $this->client->request('GET', '/local');
+        self::assertCount(1, $crawler->filter($menu.' form[action="/p/'.$post->getPublicId().'/instagram"] button[role="menuitem"]'));
+        self::assertSelectorTextContains($menu, 'Partager manuellement vers Instagram');
+
+        $form = $crawler->filter($menu)->selectButton('Publier sur Instagram')->form();
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), [], ['HTTP_REFERER' => 'http://localhost/local']);
+        self::assertResponseRedirects('/local');
+        self::assertCount(1, FakeInstagram::publishedContainers());
+        self::assertSame(CrosspostStatus::Published, $this->crosspostOf($post)->getStatus());
+
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Envoi vers Instagram en cours.');
+        self::assertSelectorNotExists($menu.' form[action$="/instagram"]', 'Déjà envoyée : plus d’entrée.');
+        self::assertSelectorTextNotContains($menu, 'manuellement');
+    }
+
+    /**
+     * Retour après l'envoi : la page affichée seulement si elle est sur cette instance.
+     */
+    public function testSendingAfterwardsNeverRedirectsElsewhere(): void
+    {
+        $camille = $this->connected('camille');
+        $this->login($camille);
+        foreach (['https://exemple.org/local', 'http://localhost//exemple.org/x'] as $i => $referer) {
+            $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadUser($camille)->getAccount(), 'Essai '.$i, [['file' => $this->jpeg(), 'alt' => null]]);
+            $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());
+            $form = $crawler->selectButton('Publier sur Instagram')->form();
+            $this->client->request('POST', $form->getUri(), $form->getPhpValues(), [], ['HTTP_REFERER' => $referer]);
+            self::assertResponseRedirects('/p/'.$post->getPublicId());
+        }
+    }
+
+    /**
+     * Instagram n'accepte que des photos et des vidéos : rien n'est proposé pour une publication texte.
+     */
+    public function testATextPostIsNotSentToInstagram(): void
+    {
+        $camille = $this->connected('camille');
+        $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadUser($camille)->getAccount(), 'Juste un mot', []);
+        $this->login($camille);
+
+        $this->client->request('GET', '/p/'.$post->getPublicId());
+        self::assertSelectorNotExists('form[action$="/instagram"]');
+        self::assertSelectorTextNotContains('.pmenu', 'Instagram');
+        $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        self::assertSelectorNotExists('input[name="edit_post[crosspostInstagram]"]');
+
+        try {
+            self::getContainer()->get(InstagramPublishing::class)->sendExisting($this->reload($post));
+            self::fail('Une publication texte ne part pas sur Instagram.');
+        } catch (InstagramException $e) {
+            self::assertStringContainsString('publication texte', $e->getMessage());
+        }
+        self::assertSame([], FakeInstagram::$containers);
+    }
+
+    /**
+     * Page Modifier d'une publication jamais envoyée : case « Publier aussi sur Instagram », décochée d'avance.
+     */
+    public function testEditingAPostCanSendItToInstagram(): void
+    {
+        $camille = $this->connected('camille');
+        $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadUser($camille)->getAccount(), 'Avant', [['file' => $this->jpeg(), 'alt' => null]]);
+        $this->login($camille);
+
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        self::assertSelectorExists('input[name="edit_post[crosspostInstagram]"]:not([checked])');
+        $form = $crawler->selectButton('Enregistrer les modifications')->form();
+        $form['edit_post[caption]'] = 'Après';
+        $box = $form['edit_post[crosspostInstagram]'];
+        self::assertInstanceOf(\Symfony\Component\DomCrawler\Field\ChoiceFormField::class, $box);
+        $box->tick();
+        $this->client->submit($form);
+
+        self::assertResponseRedirects('/p/'.$post->getPublicId());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Publication modifiée. Envoi vers Instagram en cours.');
+        self::assertCount(1, FakeInstagram::publishedContainers());
+        self::assertSame('Après', FakeInstagram::publishedContainers()[0]['params']['caption'] ?? null);
+
+        // Déjà envoyée : plus de case (« Republier » est sur sa page).
+        $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        self::assertSelectorNotExists('input[name="edit_post[crosspostInstagram]"]');
+        self::assertSelectorExists('.compose-extras .music-picker');
+    }
+
+    /**
+     * Vidéo ajoutée en modifiant, case cochée : l'envoi attend que la vidéo soit convertie, puis part avec elle.
+     */
+    public function testEditingWithANewVideoSendsToInstagramOnceTheVideoIsReady(): void
+    {
+        $camille = $this->connected('camille');
+        $post = self::getContainer()->get(PostComposer::class)->publish($this->reloadUser($camille)->getAccount(), 'Balade', [['file' => $this->jpeg(1200, 900), 'alt' => null]]);
+        $this->login($camille);
+
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        /** @var array{edit_post: array<string, mixed>} $values */
+        $values = $crawler->selectButton('Enregistrer les modifications')->form()->getPhpValues();
+        $order = $values['edit_post']['order'];
+        self::assertIsString($order);
+        $values['edit_post']['order'] = $order.',n-0';
+        $values['edit_post']['crosspostInstagram'] = '1';
+        $this->client->request('POST', '/p/'.$post->getPublicId().'/modifier', $values, ['edit_post' => ['media' => [$this->mp4()]]]);
+        self::assertResponseRedirects('/p/'.$post->getPublicId());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.success', 'Envoi vers Instagram dès que la vidéo sera prête.');
+        self::assertSame([], FakeInstagram::$containers, 'Rien ne part avant que la vidéo soit prête.');
+
+        $video = array_first(array_filter($this->reload($post)->getMedia()->toArray(), static fn (\App\Core\Domain\Media\MediaAttachment $m): bool => $m->isVideo()));
+        self::assertInstanceOf(\App\Core\Domain\Media\MediaAttachment::class, $video);
+        self::getContainer()->get(ProcessVideoHandler::class)(new ProcessVideo($video->getId()->toRfc4122()));
+
+        $published = FakeInstagram::publishedContainers();
+        self::assertCount(1, $published);
+        self::assertSame('CAROUSEL', $published[0]['params']['media_type'] ?? null, 'La photo et la nouvelle vidéo.');
+        self::assertSame(CrosspostStatus::Published, $this->crosspostOf($this->reload($post))->getStatus());
     }
 
     public function testAPhotoGoesToInstagramAsJpegWithinTheAcceptedProportions(): void

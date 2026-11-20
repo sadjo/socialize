@@ -7,8 +7,11 @@ Rules choose for which visibilities *Publier aussi sur Instagram* is ticked in a
 stories; the box can still be changed for each post.
 
 Sending happens in the background once the media are ready. Its status shows on the post, with *Réessayer* (retry) if
-it failed; a post already online can also be sent afterwards. The connection needs a Meta app, which the instance
-administrator may provide.
+it failed. The connection needs a Meta app, which the instance administrator may provide.
+
+A post already online and never sent can go afterwards with **Publier sur Instagram** in the **⋯** menu (feed,
+profile or post page), or by ticking *Publier aussi sur Instagram* in *Modifier* (edit). If a video was just added,
+sending waits until it is ready. Text posts are not sent: Instagram only accepts photos and videos.
 
 ## Sharing to Instagram
 

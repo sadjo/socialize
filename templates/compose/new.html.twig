@@ -29,7 +29,7 @@
                 {{ form_row(form.location, {attr: {'data-compose-target': 'location'}}) }}
                 {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Avec le lien, ici seulement', followers: 'Vos abonnés, ici et dans le fédivers', groups: 'Vos groupes d’abonnés, ici seulement', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
-                <div data-compose-target="mediaOnly"{% if text %} hidden{% endif %}>
+                <div class="compose-extras" data-compose-target="mediaOnly"{% if text %} hidden{% endif %}>
                     {{ include('compose/_music.html.twig', {field: form.music}) }}
                     {{ include('compose/_crosspost.html.twig', {visibility_field: 'visibility'}) }}
                 </div>

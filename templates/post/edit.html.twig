@@ -36,7 +36,13 @@
                 {{ form_row(form.location) }}
                 {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Avec le lien, ici seulement', followers: 'Vos abonnés, ici et dans le fédivers', groups: 'Vos groupes d’abonnés, ici seulement', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
-                {% if not text %}{{ include('compose/_music.html.twig', {field: form.music}) }}{% endif %}
+                {% if not text %}
+                    <div class="compose-extras">
+                        {{ include('compose/_music.html.twig', {field: form.music}) }}
+                        {# Jamais envoyée sur Instagram : case décochée ; déjà envoyée, « Republier » est sur sa page. #}
+                        {% if form.crosspostInstagram is defined %}{{ include('compose/_crosspost.html.twig', {visibility_field: 'visibility', crosspost_defaults: []}) }}{% endif %}
+                    </div>
+                {% endif %}
                 {% if form.publishedAt is defined %}{{ form_row(form.publishedAt) }}{% endif %}
                 <button class="btn pri" data-compose-target="submit">Enregistrer les modifications</button>
             </section>
