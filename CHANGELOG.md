@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.40] - 2026-11-20
+
+Sign-in screen with two tabs, and forgotten password.
+
+### Added
+
+- Sign-in screen with two tabs: "Mastodon" (server and username without the @, links to create an account and to
+  reset the password on the chosen server) and "socialize.example" (username or email, password); after an error the
+  right tab reopens, otherwise the one last chosen on the device (accounts)
+- Forgotten password for accounts of the instance: a signed link sent by email, valid for one hour and usable once,
+  with sending limits; needs a real `MAILER_DSN` (accounts)
+- Mastodon sign-in checks that the account exists on the server before leaving, and refills the fields after an
+  error (Mastodon)
+
+### Fixed
+
+- Messages (Mastodon sign-in errors…) are shown on the home page reduced to the sign-in form (`HOME_LOGIN_ONLY`)
+
 ## [0.9.39] - 2026-11-20
 
 Sending a post already online to Instagram.

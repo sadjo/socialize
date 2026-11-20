@@ -6,6 +6,7 @@ namespace App\Integration\Mastodon\Infrastructure;
 
 use App\Integration\Mastodon\Application\MastodonException;
 use App\Integration\Mastodon\Application\MastodonLimits;
+use App\Integration\Mastodon\Application\MastodonNotFound;
 use App\Integration\Mastodon\Application\MastodonRateLimited;
 use App\Integration\Mastodon\Application\MastodonSignupRejected;
 use App\Integration\Mastodon\Application\MastodonUnconfirmed;
@@ -188,6 +189,23 @@ final readonly class MastodonClient
             'actor' => \is_string($me['uri'] ?? null) && str_starts_with($me['uri'], 'https://') ? $me['uri'] : null,
             'privacy' => \in_array($source['privacy'] ?? null, ['public', 'unlisted', 'private', 'direct'], true) ? $source['privacy'] : null,
         ];
+    }
+
+    /**
+     * Le compte « nom » existe-t-il sur le serveur ? (API publique, sans jeton.) Null si le serveur ne le dit pas
+     * (API fermée, erreur, injoignable) : la connexion continue alors sans vérification.
+     */
+    public function accountExists(string $domain, string $username): ?bool
+    {
+        try {
+            $this->json('GET', $domain, '/api/v1/accounts/lookup?'.http_build_query(['acct' => $username]), null);
+
+            return true;
+        } catch (MastodonNotFound) {
+            return false;
+        } catch (MastodonException) {
+            return null;
+        }
     }
 
     /**
@@ -396,7 +414,7 @@ final readonly class MastodonClient
                 throw new MastodonRateLimited(\sprintf('%s limite le nombre d’envois : reprise plus tard.', $domain), $this->retryAfter($response->getHeaders(false)));
             }
             if (404 === $status) {
-                throw new MastodonException(\sprintf('%s ne trouve pas cet élément.', $domain));
+                throw new MastodonNotFound(\sprintf('%s ne trouve pas cet élément.', $domain));
             }
             if (422 === $status) {
                 $error = json_decode($response->getContent(false), true);

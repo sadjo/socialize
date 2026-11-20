@@ -1,60 +1,89 @@
-{# Formulaire de connexion. Variables : error, last_email, registration_open #}
+{# Écran de connexion. Variables : error, last_email, registration_open.
+   Deux onglets quand la connexion Mastodon est ouverte : « Mastodon » (serveur et identifiant, le mot de passe se tape
+   sur le serveur) et « socialize.example » (comptes de l'instance). Onglet ouvert : ?onglet=mastodon|socialize (retour
+   après une erreur), sinon socialize.example après un échec du formulaire, sinon le dernier choisi (auth_tabs_controller),
+   sinon Mastodon. #}
+{% import '_macros.html.twig' as ui %}
+{% set mastodon = mastodon_login() %}
+{% set forced_tab = app.request.query.get('onglet') in ['mastodon', 'socialize'] ? app.request.query.get('onglet') : (error ? 'socialize' : null) %}
+{% set tab = mastodon ? (forced_tab ?? 'mastodon') : 'socialize' %}
 <div class="auth">
     <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
-    <section class="card">
-        <h1>Connexion</h1>
-        <form method="post" action="{{ path('app_login') }}" class="form">
-            {% if error %}
-                <ul class="form-errors"><li>{{ error.messageKey|trans(error.messageData, 'security') }}</li></ul>
-            {% endif %}
-            <div class="field">
-                <label for="identifier">Adresse e-mail ou nom d’utilisateur</label>
-                <input class="inp" type="text" id="identifier" name="identifier" value="{{ last_email }}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+    <section class="card auth-card"{% if mastodon %} data-controller="auth-tabs" data-auth-tabs-forced-value="{{ forced_tab ?? '' }}"{% endif %}>
+        <h1>Connexion{{ ui.help('premiers-pas', 'se-connecter', 'la connexion') }}</h1>
+        {% if mastodon %}
+            <div class="seg auth-tabs" role="tablist" aria-label="Type de compte">
+                {% for key, label in {mastodon: 'Mastodon', socialize: 'socialize.example'} %}
+                    <button type="button" role="tab" id="auth-tab-{{ key }}" aria-controls="auth-panel-{{ key }}" aria-selected="{{ tab == key ? 'true' : 'false' }}"{% if tab != key %} tabindex="-1"{% endif %}
+                            data-auth-tabs-target="tab" data-tab="{{ key }}" data-action="auth-tabs#select keydown->auth-tabs#key">{{ label }}</button>
+                {% endfor %}
             </div>
-            <div class="field">
-                <label for="password">Mot de passe</label>
-                <input class="inp" type="password" id="password" name="password" autocomplete="current-password" required>
-            </div>
-            <label class="row" for="remember_me"><input type="checkbox" class="sw" id="remember_me" name="_remember_me" checked> <span>Rester connecté 30 jours</span></label>
-            <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
-            <button class="btn pri">Se connecter</button>
-        </form>
-    </section>
-    {% set mastodon = mastodon_login() %}
-    {% if mastodon %}
-        {# Connexion avec un compte Mastodon : mastodon.social d'un clic, ou un autre serveur indiqué dans le champ.
-           Départ vers la page d'autorisation du serveur, sans Turbo : il suivrait la redirection vers un autre
-           domaine en arrière-plan, et rien ne se passerait. #}
-        <section class="card mastodon-login">
-            <h2>Avec votre compte Mastodon</h2>
-            {% for server in mastodon.buttons %}
-                <form method="post" action="{{ path('app_mastodon_login') }}" class="form" data-turbo="false">
-                    <input type="hidden" name="server" value="{{ server }}">
-                    <input type="hidden" name="_token" value="{{ csrf_token('mastodon-login') }}">
-                    <button class="btn{{ loop.first ? ' pri' }} wide">Se connecter avec {{ server }}</button>
-                </form>
-            {% endfor %}
-            {% if mastodon.field is not null %}
-                {% if mastodon.buttons is not empty %}<details class="mastodon-other"><summary class="small">Votre compte est sur un autre serveur ?</summary>{% endif %}
+        {% endif %}
+
+        {% if mastodon %}
+            {# Serveur et identifiant, puis départ vers la page d'autorisation du serveur, sans Turbo : il suivrait la
+               redirection vers un autre domaine en arrière-plan, et rien ne se passerait. #}
+            {% set input = app.flashes('mastodon_login_input')|first|default({}) %}
+            {% set any_server = mastodon.field is not null and mastodon.field is empty %}
+            {% set servers = mastodon.buttons|merge(mastodon.field ?? []) %}
+            {% set server = input.server|default(servers|first) %}
+            {% set domain = mastodon_domain(server) %}
+            {% set signup_server = mastodon_signup_server() %}
+            <div class="auth-panel" role="tabpanel" id="auth-panel-mastodon" aria-labelledby="auth-tab-mastodon" data-auth-tabs-target="panel" data-tab="mastodon"{% if tab != 'mastodon' %} hidden{% endif %}
+                 data-controller="mastodon-server" data-mastodon-server-signup-server-value="{{ signup_server }}" data-mastodon-server-signup-url-value="{{ path('app_mastodon_signup') }}">
                 <form method="post" action="{{ path('app_mastodon_login') }}" class="form" data-turbo="false">
                     <div class="field">
-                        <label for="mastodon-server">Votre serveur Mastodon</label>
-                        <input class="inp" type="text" id="mastodon-server" name="server" placeholder="{{ mastodon.field|first ?: 'piaille.fr' }}" autocapitalize="none" spellcheck="false" required{% if mastodon.field is not empty %} list="mastodon-servers"{% endif %}>
-                        {% if mastodon.field is not empty %}
-                            <datalist id="mastodon-servers">{% for server in mastodon.field %}<option value="{{ server }}">{% endfor %}</datalist>
-                            <small>Serveurs acceptés : {{ mastodon.field|join(', ') }}</small>
+                        <label for="mastodon-server">Serveur Mastodon</label>
+                        {% if any_server %}
+                            <input class="inp" type="text" id="mastodon-server" name="server" value="{{ server }}" list="mastodon-servers" autocapitalize="none" spellcheck="false" required
+                                   data-mastodon-server-target="server" data-action="mastodon-server#update">
+                            <datalist id="mastodon-servers">{% for item in servers %}<option value="{{ item }}">{% endfor %}</datalist>
+                            <small>Par exemple mastodon.social ou piaille.fr</small>
+                        {% elseif servers|length == 1 %}
+                            <input type="hidden" id="mastodon-server" name="server" value="{{ servers|first }}" data-mastodon-server-target="server">
+                            <p class="auth-server">{{ servers|first }}</p>
                         {% else %}
-                            <small>Son adresse, ou votre adresse complète : @nom@serveur</small>
+                            <select class="inp" id="mastodon-server" name="server" data-mastodon-server-target="server" data-action="mastodon-server#update">
+                                {% for item in servers %}<option value="{{ item }}"{% if item == server %} selected{% endif %}>{{ item }}</option>{% endfor %}
+                            </select>
                         {% endif %}
                     </div>
+                    <div class="field">
+                        <label for="mastodon-username">Identifiant</label>
+                        <div class="inp-prefix"><span aria-hidden="true">@</span><input class="inp" type="text" id="mastodon-username" name="username" value="{{ input.username|default('') }}" placeholder="nom" autocomplete="username" autocapitalize="none" spellcheck="false" required{% if tab == 'mastodon' %} autofocus{% endif %}></div>
+                        <small>Votre nom d’utilisateur, sans le @. Le mot de passe se tape ensuite sur la page de votre serveur.</small>
+                    </div>
                     <input type="hidden" name="_token" value="{{ csrf_token('mastodon-login') }}">
-                    <button class="btn">Se connecter</button>
+                    <button class="btn pri">Continuer sur Mastodon</button>
                 </form>
-                {% if mastodon.buttons is not empty %}</details>{% endif %}
-            {% endif %}
-            {% set signup_server = mastodon_signup_server() %}
-            {% if signup_server %}<p class="small">Pas encore de compte Mastodon ? <a class="lnk" href="{{ path('app_mastodon_signup') }}">Créer un compte sur {{ signup_server }}</a></p>{% endif %}
-        </section>
-    {% endif %}
-    {% if registration_open and not home_login_only %}<p class="alt">Pas encore de compte ? <a class="lnk" href="{{ path('app_register') }}">Créer un compte</a></p>{% endif %}
+                <p class="auth-links small">
+                    <a class="lnk" data-mastodon-server-target="signup"{% if domain is not null and domain == signup_server %} href="{{ path('app_mastodon_signup') }}"{% elseif domain %} href="https://{{ domain }}/auth/sign_up" target="_blank" rel="noopener"{% endif %}>Créer un compte Mastodon</a>
+                    <a class="lnk" data-mastodon-server-target="forgot"{% if domain %} href="https://{{ domain }}/auth/password/new"{% endif %} target="_blank" rel="noopener">Mot de passe Mastodon oublié ?</a>
+                </p>
+            </div>
+        {% endif %}
+
+        <div class="auth-panel"{% if mastodon %} role="tabpanel" id="auth-panel-socialize" aria-labelledby="auth-tab-socialize" data-auth-tabs-target="panel" data-tab="socialize"{% if tab != 'socialize' %} hidden{% endif %}{% endif %}>
+            <form method="post" action="{{ path('app_login') }}" class="form">
+                {% if error %}
+                    <ul class="form-errors"><li>{{ error.messageKey|trans(error.messageData, 'security') }}</li></ul>
+                {% endif %}
+                <div class="field">
+                    <label for="identifier">Adresse e-mail ou nom d’utilisateur</label>
+                    <input class="inp" type="text" id="identifier" name="identifier" value="{{ last_email }}" autocomplete="username" autocapitalize="none" spellcheck="false" required{% if tab == 'socialize' %} autofocus{% endif %}>
+                </div>
+                <div class="field">
+                    <label for="password">Mot de passe</label>
+                    <input class="inp" type="password" id="password" name="password" autocomplete="current-password" required>
+                </div>
+                <label class="row" for="remember_me"><input type="checkbox" class="sw" id="remember_me" name="_remember_me" checked> <span>Rester connecté 30 jours</span></label>
+                <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
+                <button class="btn pri">Se connecter</button>
+            </form>
+            <p class="auth-links small">
+                <a class="lnk" href="{{ path('app_forgot_password') }}">Mot de passe oublié ?</a>
+                {% if registration_open and not home_login_only %}<a class="lnk" href="{{ path('app_register') }}">Créer un compte</a>{% endif %}
+            </p>
+        </div>
+    </section>
 </div>

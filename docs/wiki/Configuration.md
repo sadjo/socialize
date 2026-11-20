@@ -30,7 +30,7 @@ E-mails are used for invitations.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `MAILER_DSN` | `null://null` (nothing sent) | Symfony Mailer DSN, e.g. `smtp://user:password@smtp.example.org:587`. URL-encode special characters in the user name and password |
+| `MAILER_DSN` | `null://null` (nothing sent) | Symfony Mailer DSN, used for invitations and « forgotten password » links (without it, those links cannot be received), e.g. `smtp://user:password@smtp.example.org:587`. URL-encode special characters in the user name and password |
 | `MAILER_FROM` | `Socialize <ne-pas-repondre@localhost>` | Sender, e.g. `Socialize <no-reply@example.org>`; the address must be accepted by your mail server |
 
 Without a mail server, invitations can still be shared as links.

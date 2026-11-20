@@ -7,16 +7,28 @@ followed by them, without them needing an account here.
 ## Joining the instance
 
 Depending on its administrator's choice, you join an instance with an **invitation** (a link received by email or
-passed on otherwise), by **open sign-up** (*Créer un compte*), or with an existing **Mastodon account** (*Se connecter
-avec Mastodon*, see [With a Mastodon account](mastodon.md)).
+passed on otherwise), by **open sign-up** (*Créer un compte*), or with an existing **Mastodon account** (*Mastodon*
+tab of the sign-in screen, see [With a Mastodon account](mastodon.md)).
 
 A new account can follow, like and comment right away. **Posting** requires the *Publication* permission, granted by
 an administrator.
 
 ## Signing in
 
-Sign in with your email address or username (`camille` or `@camille`) and your password. *Rester connecté* keeps you
-signed in for 30 days on this device.
+The sign-in screen has two tabs when the instance accepts Mastodon accounts:
+
+- **socialize.example**, for an account created here: your email address or username (`camille` or `@camille`) and your
+  password. *Rester connecté* keeps you signed in for 30 days on this device;
+- **Mastodon**, for a Mastodon account: your server and your username, without the @ (see
+  [With a Mastodon account](mastodon.md#signing-in-with-mastodon)).
+
+The screen reopens the tab last chosen on the device.
+
+## Forgotten password
+
+In the *socialize.example* tab, *Mot de passe oublié ?* asks for the account's email address or username, then emails a
+link to choose a new password. The link is valid for one hour and works only once. For a Mastodon account, the
+password is changed on its server: *Mot de passe Mastodon oublié ?* leads there.
 
 ## Your fediverse address
 

@@ -7,3 +7,14 @@ framework:
             limit: 3
             interval: '1 hour'
             cache_pool: mastodon.cache
+        # « Mot de passe oublié » : 3 e-mails par heure pour un même compte, 10 par heure depuis une même adresse IP.
+        password_reset:
+            policy: fixed_window
+            limit: 3
+            interval: '1 hour'
+            cache_pool: login.cache
+        password_reset_ip:
+            policy: fixed_window
+            limit: 10
+            interval: '1 hour'
+            cache_pool: login.cache

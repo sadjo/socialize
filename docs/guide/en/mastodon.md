@@ -1,7 +1,16 @@
 # With a Mastodon account
 
 If the instance allows it, someone who already has a Mastodon account uses Socialize **without creating an account
-here**: *Se connecter avec Mastodon*, then choose your server and authorize access.
+here**, from the *Mastodon* tab of the sign-in screen.
+
+## Signing in with Mastodon
+
+1. Choose your **server** (for example mastodon.social) and enter your **username**, without the @: `alice` for
+   `@alice@mastodon.social`. A full address `@alice@server` works too.
+2. *Continuer sur Mastodon* opens your server's page: type your password there, then authorize Socialize.
+3. Back here, you are signed in.
+
+The links below the form lead to the chosen server: *Créer un compte Mastodon* and *Mot de passe Mastodon oublié ?*.
 
 ## What changes with a Mastodon account
 
