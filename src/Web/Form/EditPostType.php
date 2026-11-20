@@ -21,6 +21,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Modification d'une publication. Les médias existants sont désignés par leur jeton dans « order ».
+ * Publication texte (option « text ») : le texte seul, comme à la création, sans médias ni musique.
  *
  * @extends AbstractType<array<string, mixed>>
  */
@@ -33,33 +34,40 @@ final class EditPostType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        /** @var bool $text */
+        $text = $options['text'];
+        if (!$text) {
+            $builder
+                ->add('media', FileType::class, [
+                    'label' => 'Ajouter des photos ou des vidéos',
+                    'multiple' => true,
+                    'required' => false,
+                    'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input', 'class' => 'sr-only'],
+                    'constraints' => [
+                        new Assert\Count(max: Post::MAX_MEDIA, maxMessage: 'Une publication contient au plus {{ limit }} médias.'),
+                        new Assert\All([new Assert\File(maxSize: MediaRules::MAX_VIDEO_SIZE, mimeTypes: MediaRules::acceptedMimeTypes(), mimeTypesMessage: 'Ce format n’est pas accepté.')]),
+                    ],
+                ])
+                ->add('altTexts', CollectionType::class, [
+                    'label' => false,
+                    'entry_type' => TextType::class,
+                    'entry_options' => ['label' => false, 'required' => false, 'constraints' => [new Assert\Length(max: 1500)]],
+                    'allow_add' => true,
+                    'required' => false,
+                ])
+                ->add('order', HiddenType::class, [
+                    'attr' => ['data-compose-target' => 'order'],
+                    'constraints' => [new Assert\NotBlank(message: 'Une publication garde au moins une photo ou une vidéo.')],
+                ]);
+        }
         $builder
-            ->add('media', FileType::class, [
-                'label' => 'Ajouter des photos ou des vidéos',
-                'multiple' => true,
-                'required' => false,
-                'attr' => ['accept' => implode(',', MediaRules::acceptedMimeTypes()), 'data-compose-target' => 'input', 'class' => 'sr-only'],
-                'constraints' => [
-                    new Assert\Count(max: Post::MAX_MEDIA, maxMessage: 'Une publication contient au plus {{ limit }} médias.'),
-                    new Assert\All([new Assert\File(maxSize: MediaRules::MAX_VIDEO_SIZE, mimeTypes: MediaRules::acceptedMimeTypes(), mimeTypesMessage: 'Ce format n’est pas accepté.')]),
-                ],
-            ])
-            ->add('altTexts', CollectionType::class, [
-                'label' => false,
-                'entry_type' => TextType::class,
-                'entry_options' => ['label' => false, 'required' => false, 'constraints' => [new Assert\Length(max: 1500)]],
-                'allow_add' => true,
-                'required' => false,
-            ])
-            ->add('order', HiddenType::class, [
-                'attr' => ['data-compose-target' => 'order'],
-                'constraints' => [new Assert\NotBlank(message: 'Une publication garde au moins une photo ou une vidéo.')],
-            ])
             ->add('caption', TextareaType::class, [
-                'label' => 'Légende',
-                'required' => false,
-                'attr' => ['rows' => 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', [])],
-                'constraints' => [new Assert\Length(max: Post::MAX_CAPTION_LENGTH)],
+                'label' => $text ? 'Votre texte' : 'Légende',
+                'required' => $text,
+                'attr' => ['rows' => $text ? 8 : 5, 'maxlength' => Post::MAX_CAPTION_LENGTH, 'data-compose-target' => 'caption', 'data-controller' => 'mention', 'data-mention-url-value' => $this->urls->generate('app_mention_suggestions', [])],
+                'constraints' => $text
+                    ? [new Assert\NotBlank(message: 'Une publication texte garde un texte.'), new Assert\Length(max: Post::MAX_CAPTION_LENGTH)]
+                    : [new Assert\Length(max: Post::MAX_CAPTION_LENGTH)],
             ])
             ->add('location', TextType::class, [
                 'label' => 'Lieu',
@@ -78,8 +86,10 @@ final class EditPostType extends AbstractType
                 'required' => false,
                 'attr' => ['maxlength' => 500],
                 'constraints' => [new Assert\Length(max: 500)],
-            ])
-            ->add('music', MusicChoiceType::class);
+            ]);
+        if (!$text) {
+            $builder->add('music', MusicChoiceType::class);
+        }
         if (true === $options['can_redate']) {
             // Administrateur : date de publication modifiable (heure de Paris), jamais dans le futur.
             $builder->add('publishedAt', DateTimeType::class, [
@@ -104,7 +114,8 @@ final class EditPostType extends AbstractType
     public function configureOptions(\Symfony\Component\OptionsResolver\OptionsResolver $resolver): void
     {
         // Groupes d'abonnés du compte (visibilité « Groupes »).
-        $resolver->setDefaults(['groups' => [], 'can_redate' => false]);
+        $resolver->setDefaults(['groups' => [], 'can_redate' => false, 'text' => false]);
+        $resolver->setAllowedTypes('text', 'bool');
         $resolver->setAllowedTypes('groups', 'array');
         $resolver->setAllowedTypes('can_redate', 'bool');
     }

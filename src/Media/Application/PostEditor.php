@@ -20,6 +20,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Modifie une publication : texte, visibilité, musique, et médias (ajout, retrait, ordre, texte alternatif).
+ * Une publication texte (sans média) reste un texte : ni média ni musique.
  *
  * L'ordre est une liste de jetons : « m-<id> » pour un média existant, « n-<i> » pour le i-ème
  * nouveau fichier. Un média existant absent de la liste est retiré, avec ses fichiers.
@@ -69,7 +70,15 @@ final readonly class PostEditor
                 throw new MediaProcessingException('La liste des médias est invalide. Rechargez la page et réessayez.');
             }
         }
-        if ([] === $order) {
+        // Publication texte (sans média) : elle le reste, et garde un texte ; les autres gardent au moins un média.
+        $text = [] === $existing;
+        if ($text && [] !== $order) {
+            throw new MediaProcessingException('Une publication texte ne reçoit pas de photo ni de vidéo.');
+        }
+        if ($text && '' === trim($caption)) {
+            throw new MediaProcessingException('Une publication texte garde un texte.');
+        }
+        if (!$text && [] === $order) {
             throw new MediaProcessingException('Une publication garde au moins une photo ou une vidéo.');
         }
         if (\count($order) > Post::MAX_MEDIA) {
@@ -79,7 +88,7 @@ final readonly class PostEditor
         $previousVisibility = $post->getVisibility();
         $previousAudience = $post->getAudienceMembers();
         $post->edit($caption, $visibility, $contentWarning, $location, $this->clock->now());
-        $post->chooseMusic($music);
+        $post->chooseMusic($text ? null : $music);
         $post->restrictTo($audienceGroups);
         // Une publication en attente prend la date de sa parution : la date choisie ne vaut qu'une fois parue.
         $redated = $publishedAt instanceof \DateTimeImmutable && !$post->isPending() && $post->redate($publishedAt);

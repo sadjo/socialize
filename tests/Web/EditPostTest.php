@@ -73,6 +73,47 @@ final class EditPostTest extends AppWebTestCase
         self::assertCount(1, $this->reload($post)->getMedia());
     }
 
+    /**
+     * Publication texte : le formulaire de sa création (onglet « Texte »), sans photo demandée, ni musique.
+     */
+    public function testATextPostIsEditedWithoutAskingForAPhoto(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $post = self::getContainer()->get(PostComposer::class)->publish($camille->getAccount(), 'Premier jet', []);
+
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.compose.compose-text');
+        self::assertSelectorTextContains('label[for="edit_post_caption"]', 'Votre texte');
+        self::assertSelectorNotExists('input[name="edit_post[media][]"]');
+        self::assertSelectorNotExists('input[name="edit_post[order]"]');
+        self::assertSelectorNotExists('[name^="edit_post[music]"]');
+        self::assertSelectorTextNotContains('.compose', 'photo ou une vidéo');
+
+        $this->client->submit($crawler->selectButton('Enregistrer les modifications')->form([
+            'edit_post[caption]' => 'Version revue',
+            'edit_post[visibility]' => 'followers',
+        ]));
+
+        self::assertResponseRedirects('/p/'.$post->getPublicId());
+        $post = $this->reload($post);
+        self::assertSame('Version revue', $post->getCaption());
+        self::assertSame(Visibility::Followers, $post->getVisibility());
+        self::assertCount(0, $post->getMedia());
+    }
+
+    public function testATextPostKeepsItsText(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $post = self::getContainer()->get(PostComposer::class)->publish($camille->getAccount(), 'Garde-moi', []);
+
+        $crawler = $this->client->request('GET', '/p/'.$post->getPublicId().'/modifier');
+        $this->client->submit($crawler->selectButton('Enregistrer les modifications')->form(['edit_post[caption]' => '  ']));
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('Garde-moi', $this->reload($post)->getCaption());
+    }
+
     public function testOnlyTheAuthorCanEdit(): void
     {
         $camille = $this->register('camille');

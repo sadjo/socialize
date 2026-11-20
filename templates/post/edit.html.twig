@@ -4,17 +4,19 @@
 {% block title %}Modifier la publication · Socialize{% endblock %}
 
 {% block content %}
-<div class="compose">
+{# Publication texte : le texte seul, comme à sa création (onglet « Texte »), sans médias ni musique. #}
+<div class="compose{{ text ? ' compose-text' }}">
     <div class="page-h">
-        <div class="grow"><h1>Modifier la publication</h1><p>Ajoutez, retirez ou réordonnez les médias, et changez le texte ou la visibilité. Vos abonnés du fédivers reçoivent la modification.</p></div>
+        <div class="grow"><h1>Modifier la publication</h1><p>{{ text ? 'Changez le texte, le lieu ou la visibilité.' : 'Ajoutez, retirez ou réordonnez les médias, et changez le texte ou la visibilité.' }} Vos abonnés du fédivers reçoivent la modification.</p></div>
         <a class="btn" href="{{ path('app_post_show', {id: post.publicId}) }}">Annuler</a>
     </div>
 
     {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 20, 'data-compose-alt-name-value': 'edit_post[altTexts][__key__]', 'data-compose-existing-value': existing|json_encode}}) }}
         {{ form_errors(form) }}
-        {{ form_widget(form.order) }}
-        {% do form.altTexts.setRendered %}
         <div class="compose-grid">
+            {% if not text %}
+            {{ form_widget(form.order) }}
+            {% do form.altTexts.setRendered %}
             <section class="card picker">
                 <div class="previews" data-compose-target="previews" aria-live="polite"></div>
                 <p class="field-errors" data-compose-target="empty" hidden>Une publication garde au moins une photo ou une vidéo.</p>
@@ -26,6 +28,7 @@
                 {{ form_widget(form.media) }}
                 {{ form_errors(form.media) }}
             </section>
+            {% endif %}
 
             <section class="card">
                 {{ form_row(form.caption) }}
@@ -33,7 +36,7 @@
                 {{ form_row(form.location) }}
                 {{ include('compose/_audience.html.twig', {field: form.visibility, groups: form.audienceGroups, legend: 'Visibilité', descriptions: {public: 'Fils publics et fédivers', unlisted: 'Avec le lien, ici seulement', followers: 'Vos abonnés, ici et dans le fédivers', groups: 'Vos groupes d’abonnés, ici seulement', private: 'Vous seulement'}}) }}
                 {{ form_row(form.contentWarning) }}
-                {{ include('compose/_music.html.twig', {field: form.music}) }}
+                {% if not text %}{{ include('compose/_music.html.twig', {field: form.music}) }}{% endif %}
                 {% if form.publishedAt is defined %}{{ form_row(form.publishedAt) }}{% endif %}
                 <button class="btn pri" data-compose-target="submit">Enregistrer les modifications</button>
             </section>

@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.38] - 2026-11-20
+
+Editing a text post.
+
+### Fixed
+
+- Editing a text post no longer asks for a photo: the edit page shows the same form as the "Texte" tab of the compose
+  page, without media or music, and the text stays required (posts)
+
 ## [0.9.37] - 2026-11-20
 
 Text posts.
