@@ -178,6 +178,8 @@ final class PostController extends AbstractController
             throw $this->createAccessDeniedException('Seule l’autrice ou l’auteur peut modifier cette publication.');
         }
 
+        // Publication texte (sans média, parue) : le même formulaire qu'à sa création, sans médias ni musique.
+        $text = $post->getMedia()->isEmpty() && !$post->isPending();
         $existing = [];
         $altTexts = [];
         foreach ($post->getMedia() as $media) {
@@ -204,11 +206,11 @@ final class PostController extends AbstractController
             'music' => ['track' => $post->getMusic()?->getOpenverseId(), 'start' => (string) $post->getMusicStart()],
             'audienceGroups' => $post->getAudienceGroups(),
             'publishedAt' => $post->getPublishedAt(),
-        ], ['groups' => $groups->of($post->getAccount()), 'can_redate' => $this->isGranted('ROLE_ADMIN') && !$post->isPending()]);
+        ], ['groups' => $groups->of($post->getAccount()), 'can_redate' => $this->isGranted('ROLE_ADMIN') && !$post->isPending(), 'text' => $text]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media: list<UploadedFile>|null, altTexts: array<string, ?string>|null, order: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>, publishedAt?: \DateTimeImmutable} $data */
+            /** @var array{media?: list<UploadedFile>|null, altTexts?: array<string, ?string>|null, order?: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music?: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>, publishedAt?: \DateTimeImmutable} $data */
             $data = $form->getData();
             try {
                 $editor->edit(
@@ -217,10 +219,10 @@ final class PostController extends AbstractController
                     $data['visibility'],
                     $data['contentWarning'],
                     $data['location'],
-                    array_values(array_filter(explode(',', $data['order']))),
+                    array_values(array_filter(explode(',', $data['order'] ?? ''))),
                     $data['media'] ?? [],
                     $data['altTexts'] ?? [],
-                    $music->choice($data['music']['track'], (int) $data['music']['start']),
+                    isset($data['music']) ? $music->choice($data['music']['track'], (int) $data['music']['start']) : null,
                     Visibility::Groups === $data['visibility'] ? $data['audienceGroups'] : [],
                     $data['publishedAt'] ?? null,
                 );
@@ -232,7 +234,7 @@ final class PostController extends AbstractController
             }
         }
 
-        return $this->render('post/edit.html.twig', ['post' => $post, 'form' => $form, 'existing' => $existing]);
+        return $this->render('post/edit.html.twig', ['post' => $post, 'form' => $form, 'existing' => $existing, 'text' => $text]);
     }
 
     #[Route('/p/{id}/archiver', name: 'app_post_archive', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]

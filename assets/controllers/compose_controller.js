@@ -27,8 +27,17 @@ export default class extends Controller {
         this.items = this.existingValue.map((m) => ({ kind: 'existing', token: m.token, src: m.src, large: m.large || '', videoSrc: m.videoSrc || '', video: m.video, alt: m.alt || '' }));
         this.dragIndex = null;
 
-        this.inputTarget.addEventListener('change', () => this.add([...this.inputTarget.files]));
         if (this.hasCaptionTarget) this.captionTarget.addEventListener('input', () => this.count());
+        this.element.addEventListener('submit', () => {
+            if (!this.hasSubmitTarget) return;
+            this.submitTarget.disabled = true;
+            this.submitTarget.textContent = 'Envoi en cours…';
+        });
+        this.count();
+        // Modification d'une publication texte : ni médias ni aperçus, seulement le texte et son compteur.
+        if (!this.hasInputTarget) return;
+
+        this.inputTarget.addEventListener('change', () => this.add([...this.inputTarget.files]));
         if (this.hasDropTarget) {
             ['dragover', 'dragenter'].forEach((type) => this.dropTarget.addEventListener(type, (event) => {
                 event.preventDefault();
@@ -40,16 +49,10 @@ export default class extends Controller {
                 this.add([...event.dataTransfer.files]);
             });
         }
-        this.element.addEventListener('submit', () => {
-            if (!this.hasSubmitTarget) return;
-            this.submitTarget.disabled = true;
-            this.submitTarget.textContent = 'Envoi en cours…';
-        });
 
         // Nouvelles vignettes d'une photothèque (page suivante, autre album) : leur état coché suit la sélection.
         this.element.addEventListener('turbo:frame-load', () => this.markTiles());
 
-        this.count();
         this.render();
     }
 
