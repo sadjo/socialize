@@ -11,7 +11,8 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
- * Case « Publier aussi sur Instagram » des écrans de création, si le compte a connecté Instagram. Cochée d'avance
+ * Case « Publier aussi sur Instagram » des écrans de création (et de modification d'une publication jamais envoyée),
+ * si le compte a connecté Instagram. Cochée d'avance
  * selon les règles du compte pour la visibilité par défaut (Public) ; le contrôleur Stimulus « crosspost » la suit
  * quand la visibilité change, tant qu'on ne l'a pas touchée.
  */
@@ -23,8 +24,9 @@ final class CrosspostField
      * @template TData
      *
      * @param FormBuilderInterface<TData> $builder
+     * @param bool|null                   $checked cochée d'avance ou non ; null : selon les règles du compte
      */
-    public static function addTo(FormBuilderInterface $builder, ?InstagramConnection $connection, bool $story): void
+    public static function addTo(FormBuilderInterface $builder, ?InstagramConnection $connection, bool $story, ?bool $checked = null): void
     {
         if (!$connection instanceof InstagramConnection) {
             return;
@@ -32,7 +34,7 @@ final class CrosspostField
         $builder->add(self::NAME, CheckboxType::class, [
             'label' => \sprintf('Publier aussi sur Instagram (@%s)', $connection->getUsername()),
             'required' => false,
-            'data' => $connection->checksByDefault(Visibility::Public, $story),
+            'data' => $checked ?? $connection->checksByDefault(Visibility::Public, $story),
         ]);
     }
 

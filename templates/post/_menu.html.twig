@@ -19,7 +19,10 @@
                     {% set share_files = share_files|merge([{url: path('app_post_share_file', {id: post.publicId, position: loop.index0}), name: 'socialize-' ~ post.publicId ~ '-' ~ loop.index ~ (media.video ? '.mp4' : '.jpg'), type: media.video ? 'video/mp4' : 'image/jpeg'}]) %}
                 {% endif %}
             {% endfor %}
-            {% if share_files is not empty %}{{ include('post/_share_instagram.html.twig', {files: share_files, caption: post.caption, label: true}) }}{% endif %}
+            {# Instagram connecté et publication jamais envoyée : envoi automatique, le partage manuel reste proposé. #}
+            {% set can_send = can_send_to_instagram(post) %}
+            {% if can_send %}{{ include('post/_instagram_send_form.html.twig', {menuitem: true}) }}{% endif %}
+            {% if share_files is not empty %}{{ include('post/_share_instagram.html.twig', {files: share_files, caption: post.caption, label: true, manual: can_send}) }}{% endif %}
             {% if not post.isFederated() %}
                 <a role="menuitem" href="{{ path('app_post_edit', {id: post.publicId}) }}">{{ ui.icon('sliders', 'sm') }}Modifier</a>
                 <form method="post" action="{{ path(post.archived ? 'app_post_unarchive' : 'app_post_archive', {id: post.publicId}) }}">

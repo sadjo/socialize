@@ -8,6 +8,7 @@ use App\Core\Application\Post\Links;
 use App\Core\Application\Post\Mentions;
 use App\Core\Domain\Event\PostDeleting;
 use App\Core\Domain\Event\PostPublished;
+use App\Core\Domain\Event\PostUpdated;
 use App\Core\Domain\Event\StoryPublished;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\CrosspostTarget;
@@ -67,6 +68,20 @@ final readonly class InstagramPublishing
         $this->start(InstagramCrosspost::forPost($post, $this->clock->now()));
     }
 
+    /**
+     * Envoi demandé après coup pendant qu'une vidéo ajoutée était en conversion : il part quand elle est prête
+     * (ProcessVideoHandler envoie alors PostUpdated).
+     */
+    #[AsEventListener]
+    public function onPostUpdated(PostUpdated $event): void
+    {
+        $post = $event->post;
+        if (!$post->wantsCrosspost(CrosspostTarget::Instagram) || $post->isProcessing() || !$this->canSendExisting($post)) {
+            return;
+        }
+        $this->start(InstagramCrosspost::forPost($post, $this->clock->now()));
+    }
+
     #[AsEventListener]
     public function onStoryPublished(StoryPublished $event): void
     {
@@ -105,23 +120,35 @@ final readonly class InstagramPublishing
             && !$post->isImported()
             && !$post->isPending()
             && !$post->isArchived()
+            // Publication texte : Instagram n'accepte que des photos et des vidéos.
+            && !$post->getMedia()->isEmpty()
             && !$this->crossposts->forPost($post) instanceof InstagramCrosspost
             && $this->connections->usable($post->getAccount()) instanceof InstagramConnection;
     }
 
     /**
-     * Envoi après coup d'une publication déjà en ligne (bouton « Publier sur Instagram » de sa page).
+     * Envoi après coup d'une publication déjà en ligne (menu ⋯, bouton de sa page, ou page Modifier). Avec une vidéo
+     * encore en conversion (ajoutée en la modifiant), l'envoi est seulement noté : il part quand elle est prête.
+     *
+     * @return InstagramCrosspost|null null : en attente de la vidéo
      */
-    public function sendExisting(Post $post): InstagramCrosspost
+    public function sendExisting(Post $post): ?InstagramCrosspost
     {
         $existing = $this->crossposts->forPost($post);
         if ($existing instanceof InstagramCrosspost) {
             return $existing;
         }
         if (!$this->canSendExisting($post)) {
-            throw new InstagramException($post->isImported() ? 'Cette publication vient de votre archive Instagram : elle y est déjà.' : 'Cette publication ne peut pas être envoyée sur Instagram (en préparation, archivée, ou Instagram non connecté).');
+            throw new InstagramException(match (true) {
+                $post->isImported() => 'Cette publication vient de votre archive Instagram : elle y est déjà.', $post->getMedia()->isEmpty() => 'Instagram n’accepte que des photos et des vidéos : une publication texte n’y part pas.', default => 'Cette publication ne peut pas être envoyée sur Instagram (en préparation, archivée, ou Instagram non connecté).',
+            });
         }
         $post->addCrosspost(CrosspostTarget::Instagram);
+        if ($post->isProcessing()) {
+            $this->em->flush();
+
+            return null;
+        }
         $crosspost = InstagramCrosspost::forPost($post, $this->clock->now());
         $this->start($crosspost);
 

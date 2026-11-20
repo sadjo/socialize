@@ -90,6 +90,10 @@ final class EditPostType extends AbstractType
         if (!$text) {
             $builder->add('music', MusicChoiceType::class);
         }
+        // Publication jamais envoyée sur Instagram : case « Publier aussi sur Instagram », décochée d'avance.
+        /** @var \App\Crosspost\Meta\Domain\InstagramConnection|null $instagram */
+        $instagram = $options['instagram'];
+        CrosspostField::addTo($builder, $text ? null : $instagram, story: false, checked: false);
         if (true === $options['can_redate']) {
             // Administrateur : date de publication modifiable (heure de Paris), jamais dans le futur.
             $builder->add('publishedAt', DateTimeType::class, [
@@ -116,6 +120,7 @@ final class EditPostType extends AbstractType
         // Groupes d'abonnés du compte (visibilité « Groupes »).
         $resolver->setDefaults(['groups' => [], 'can_redate' => false, 'text' => false]);
         $resolver->setAllowedTypes('text', 'bool');
+        CrosspostField::configure($resolver);
         $resolver->setAllowedTypes('groups', 'array');
         $resolver->setAllowedTypes('can_redate', 'bool');
     }

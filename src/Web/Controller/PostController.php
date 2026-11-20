@@ -16,6 +16,9 @@ use App\Core\Domain\Post\Visibility;
 use App\Core\Infrastructure\Doctrine\CommentRepository;
 use App\Core\Infrastructure\Doctrine\LikeRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
+use App\Crosspost\Meta\Application\InstagramConnections;
+use App\Crosspost\Meta\Application\InstagramException;
+use App\Crosspost\Meta\Application\InstagramPublishing;
 use App\Federation\Application\Serializer;
 use App\Federation\Infrastructure\Http\ActivityJsonResponse;
 use App\Integration\Openverse\Application\MusicLibrary;
@@ -24,6 +27,7 @@ use App\Media\Application\MediaProcessingException;
 use App\Media\Application\MediaUrls;
 use App\Media\Application\PostComposer;
 use App\Media\Application\PostEditor;
+use App\Web\Form\CrosspostField;
 use App\Web\Form\EditPostType;
 use App\Web\Security\CurrentAccount;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -171,7 +175,7 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/modifier', name: 'app_post_edit', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['GET', 'POST'])]
-    public function edit(string $id, Request $request, PostEditor $editor, MediaUrls $urls, MusicLibrary $music, AudienceGroups $groups): Response
+    public function edit(string $id, Request $request, PostEditor $editor, MediaUrls $urls, MusicLibrary $music, AudienceGroups $groups, InstagramPublishing $instagram, InstagramConnections $instagramConnections): Response
     {
         $post = $this->visiblePost($id);
         if (!$post->isOwnedBy($this->currentAccount->get()) || $post->isFederated()) {
@@ -206,11 +210,13 @@ final class PostController extends AbstractController
             'music' => ['track' => $post->getMusic()?->getOpenverseId(), 'start' => (string) $post->getMusicStart()],
             'audienceGroups' => $post->getAudienceGroups(),
             'publishedAt' => $post->getPublishedAt(),
-        ], ['groups' => $groups->of($post->getAccount()), 'can_redate' => $this->isGranted('ROLE_ADMIN') && !$post->isPending(), 'text' => $text]);
+        ], ['groups' => $groups->of($post->getAccount()), 'can_redate' => $this->isGranted('ROLE_ADMIN') && !$post->isPending(), 'text' => $text,
+            // Jamais envoyée sur Instagram : la case « Publier aussi sur Instagram » est proposée.
+            'instagram' => $instagram->canSendExisting($post) ? $instagramConnections->usable($post->getAccount()) : null]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var array{media?: list<UploadedFile>|null, altTexts?: array<string, ?string>|null, order?: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music?: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>, publishedAt?: \DateTimeImmutable} $data */
+            /** @var array{media?: list<UploadedFile>|null, altTexts?: array<string, ?string>|null, order?: string, caption: ?string, location: ?string, visibility: Visibility, contentWarning: ?string, music?: array{track: ?string, start: ?string}, audienceGroups: list<\App\Core\Domain\Social\AudienceGroup>, publishedAt?: \DateTimeImmutable, crosspostInstagram?: bool} $data */
             $data = $form->getData();
             try {
                 $editor->edit(
@@ -226,7 +232,15 @@ final class PostController extends AbstractController
                     Visibility::Groups === $data['visibility'] ? $data['audienceGroups'] : [],
                     $data['publishedAt'] ?? null,
                 );
-                $this->addFlash('success', 'Publication modifiée.');
+                $notice = 'Publication modifiée.';
+                if (true === ($data[CrosspostField::NAME] ?? false)) {
+                    try {
+                        $notice .= $instagram->sendExisting($post) instanceof \App\Crosspost\Meta\Domain\InstagramCrosspost ? ' Envoi vers Instagram en cours.' : ' Envoi vers Instagram dès que la vidéo sera prête.';
+                    } catch (InstagramException $e) {
+                        $this->addFlash('error', $e->getMessage());
+                    }
+                }
+                $this->addFlash('success', $notice);
 
                 return $this->redirectToRoute('app_post_show', ['id' => $id], Response::HTTP_SEE_OTHER);
             } catch (MediaProcessingException|OpenverseException $e) {
@@ -263,7 +277,7 @@ final class PostController extends AbstractController
     }
 
     #[Route('/p/{id}/supprimer', name: 'app_post_delete', requirements: ['id' => \Symfony\Component\Routing\Requirement\Requirement::UID_BASE58], methods: ['POST'])]
-    public function delete(string $id, Request $request, PostComposer $composer, \App\Crosspost\Meta\Application\InstagramPublishing $instagramNotice, PilotedActions $piloted): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function delete(string $id, Request $request, PostComposer $composer, InstagramPublishing $instagramNotice, PilotedActions $piloted): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $post = $this->visiblePost($id);
         if (!$post->isOwnedBy($this->currentAccount->get())) {

@@ -33,9 +33,6 @@
     </div>
 {% elseif post is defined and can_send_to_instagram(post) %}
     <div class="crosspost-status small">
-        <form method="post" action="{{ path('app_post_instagram', {id: post.publicId}) }}" data-turbo-confirm="Publier aussi cette publication sur Instagram ? {{ post.visibility.value != 'public' ? 'Elle y sera visible de tous (compte professionnel public). ' }}Instagram ne permet ni de la modifier ni de la supprimer depuis Socialize.">
-            <input type="hidden" name="_token" value="{{ csrf_token('instagram-send-' ~ post.publicId) }}">
-            <button class="btn sm">{{ ui.icon('upload', 'xs') }}Publier sur Instagram</button>
-        </form>
+        {{ include('post/_instagram_send_form.html.twig', {class: 'btn sm'}) }}
     </div>
 {% endif %}

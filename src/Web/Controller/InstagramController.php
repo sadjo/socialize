@@ -170,7 +170,7 @@ final class InstagramController extends AbstractController
     }
 
     /**
-     * Envoi après coup d'une publication déjà en ligne.
+     * Envoi après coup d'une publication déjà en ligne (menu ⋯, ou bouton de sa page).
      */
     #[Route('/p/{id}/instagram', name: 'app_post_instagram', requirements: ['id' => Requirement::UID_BASE58], methods: ['POST'])]
     public function sendPost(string $id, Request $request, \App\Core\Infrastructure\Doctrine\PostRepository $posts, InstagramPublishing $publishing): RedirectResponse
@@ -183,10 +183,16 @@ final class InstagramController extends AbstractController
             throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
         }
         try {
-            $publishing->sendExisting($post);
-            $this->addFlash('success', 'Envoi vers Instagram en cours.');
+            $this->addFlash('success', $publishing->sendExisting($post) instanceof InstagramCrosspost ? 'Envoi vers Instagram en cours.' : 'Envoi vers Instagram dès que la vidéo sera prête.');
         } catch (InstagramException $e) {
             $this->addFlash('error', $e->getMessage());
+        }
+
+        // Retour sur la page affichée (menu ⋯ du fil, du profil…), si elle est sur cette instance.
+        $referer = parse_url((string) $request->headers->get('referer'));
+        $path = \is_array($referer) ? $referer['path'] ?? '' : '';
+        if (\is_array($referer) && ($referer['host'] ?? null) === $request->getHost() && str_starts_with($path, '/') && !str_starts_with($path, '//')) {
+            return $this->redirect($path.(isset($referer['query']) ? '?'.$referer['query'] : ''), Response::HTTP_SEE_OTHER);
         }
 
         return $this->redirectToRoute('app_post_show', ['id' => $id], Response::HTTP_SEE_OTHER);
