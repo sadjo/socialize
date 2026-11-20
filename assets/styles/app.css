@@ -630,16 +630,24 @@ fieldset.field legend{font-weight:600;margin-bottom:6px}
 /* Accueil réduit à la connexion (HOME_LOGIN_ONLY) : formulaire seul, centré dans la page */
 .auth-page{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
 .auth-page{grid-template-rows:1fr auto;gap:12px}
-.auth-page .auth{width:100%;margin:0;align-self:center}
+.auth-page .auth-main{width:100%;max-width:440px;align-self:center;display:flex;flex-direction:column;gap:12px}
+.auth-page .auth{width:100%;margin:0}
+.auth-main .flashes{margin:0}
 .auth-version{font-size:.75rem;color:var(--faint);font-variant-numeric:tabular-nums;text-align:center}
 .auth .logo{justify-content:center;padding:0;font-size:1.6rem}
 .auth .card{padding:24px}
 .auth .alt{text-align:center;font-size:.9rem;color:var(--muted)}
-.auth .mastodon-login h2{font-size:1.05rem;margin:0 0 12px}
-.auth .mastodon-login{display:flex;flex-direction:column;gap:10px}
-.auth .mastodon-login .wide{width:100%;justify-content:center}
-.auth .mastodon-other summary{cursor:pointer;color:var(--muted);padding:4px 0}
-.auth .mastodon-other[open] summary{margin-bottom:8px}
+/* Écran de connexion : onglets Mastodon et socialize.example (boîte .seg) */
+.auth-card{display:flex;flex-direction:column;gap:18px}
+.auth-card h1{margin:0}
+.auth-tabs button[aria-selected="true"]{background:var(--surface-2);color:var(--fg);box-shadow:var(--shadow)}
+.auth-panel{display:flex;flex-direction:column;gap:14px}
+.auth-panel[hidden]{display:none}
+.auth-links{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;margin:0}
+.auth-server{margin:0;font-weight:600}
+.inp-prefix{display:flex;align-items:center;gap:6px}
+.inp-prefix>span{color:var(--muted);font-weight:600}
+.inp-prefix .inp{flex:1;min-width:0}
 .auth .mastodon-rules summary{cursor:pointer}
 .auth .mastodon-rules ol{margin:8px 0 0;padding-left:1.4em;display:grid;gap:4px}
 .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}

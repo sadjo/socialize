@@ -26,6 +26,10 @@ framework:
             mastodon.cache:
                 adapter: cache.app
                 default_lifetime: 86400
+            # Compteurs des limites d'envoi (rate_limiter.yaml) de l'écran de connexion ; sur disque aussi en test, où un
+            # cache en mémoire serait vidé entre deux requêtes (PasswordResetTest le vide avant chaque test).
+            login.cache:
+                adapter: cache.app
 
 when@test:
     framework:

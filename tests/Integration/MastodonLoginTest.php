@@ -42,10 +42,12 @@ final class MastodonLoginTest extends AppWebTestCase
         ]]];
 
         $crawler = $this->client->request('GET', '/connexion');
-        self::assertSelectorTextContains('.mastodon-login button.pri', 'Se connecter avec remote.test');
-        self::assertSelectorNotExists('.mastodon-login input[name="server"][type="text"]', 'Un seul serveur permis : un bouton, pas de champ.');
-        self::assertSelectorExists('.mastodon-login form[data-turbo="false"]', 'Redirection vers un autre domaine : pas de Turbo.');
-        $this->client->submit($crawler->selectButton('Se connecter avec remote.test')->form());
+        self::assertSelectorTextSame('#auth-panel-mastodon .auth-server', 'remote.test', 'Un seul serveur permis : affiché, pas de champ.');
+        self::assertSelectorExists('#auth-panel-mastodon input[type="hidden"][name="server"][value="remote.test"]');
+        self::assertSelectorNotExists('#auth-panel-mastodon input[name="password"]', 'Le mot de passe se tape sur le serveur Mastodon.');
+        self::assertSelectorExists('#auth-panel-mastodon form[data-turbo="false"]', 'Redirection vers un autre domaine : pas de Turbo.');
+        $this->client->submit($crawler->selectButton('Continuer sur Mastodon')->form(['username' => '@alice']));
+        self::assertSame('acct=alice', parse_url(FakeMastodon::requestsTo('GET', '/api/v1/accounts/lookup')[0]['url'] ?? '', \PHP_URL_QUERY), 'Le compte est vérifié avant de partir.');
         $authorize = (string) $this->client->getResponse()->headers->get('Location');
         self::assertStringStartsWith('https://remote.test/oauth/authorize?', $authorize);
         parse_str((string) parse_url($authorize, \PHP_URL_QUERY), $query);
@@ -151,18 +153,45 @@ final class MastodonLoginTest extends AppWebTestCase
     public function testAnInvalidStateOrAnotherServerIsRefused(): void
     {
         $crawler = $this->client->request('GET', '/connexion');
-        $this->client->submit($crawler->selectButton('Se connecter avec remote.test')->form());
+        $this->client->submit($crawler->selectButton('Continuer sur Mastodon')->form(['username' => 'alice']));
         $this->client->request('GET', '/connexion/mastodon/retour?'.http_build_query(['code' => FakeMastodon::CODE, 'state' => 'falsifie']));
-        self::assertResponseRedirects('/connexion');
+        self::assertResponseRedirects('/connexion?onglet=mastodon');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.flashes', 'interrompue ou expirée');
+        self::assertSelectorExists('#auth-tab-mastodon[aria-selected="true"]', 'Retour sur l’onglet Mastodon.');
         self::assertSame([], FakeMastodon::requestsTo('POST', '/oauth/token'));
 
+        // Adresse complète d'un autre serveur dans le champ identifiant : son serveur l'emporte, et il n'est pas permis.
         $crawler = $this->client->request('GET', '/connexion');
-        $this->client->submit($crawler->selectButton('Se connecter avec remote.test')->form(), ['server' => '@bob@autre.test']);
-        self::assertResponseRedirects('/connexion');
+        $this->client->submit($crawler->selectButton('Continuer sur Mastodon')->form(['username' => '@bob@autre.test']));
+        self::assertResponseRedirects('/connexion?onglet=mastodon');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.flashes', 'n’est pas ouverte sur cette instance');
+        self::assertInputValueSame('username', '@bob@autre.test', 'Identifiant regarni après l’erreur.');
         self::assertSame([], self::getContainer()->get(MastodonUserRepository::class)->findAll());
+    }
+
+    public function testAnUnknownUsernameIsRefusedBeforeLeaving(): void
+    {
+        $crawler = $this->client->request('GET', '/connexion');
+        $this->client->submit($crawler->selectButton('Continuer sur Mastodon')->form(['username' => 'inconnu']));
+        self::assertResponseRedirects('/connexion?onglet=mastodon');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flashes', 'Aucun compte @inconnu sur remote.test');
+        self::assertSame([], FakeMastodon::requestsTo('POST', '/api/v1/apps'), 'Pas de départ vers le serveur.');
+
+        $crawler = $this->client->request('GET', '/connexion');
+        $this->client->submit($crawler->selectButton('Continuer sur Mastodon')->form(['username' => 'ali ce']));
+        self::assertResponseRedirects('/connexion?onglet=mastodon');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flashes', 'Indiquez votre nom d’utilisateur Mastodon');
+    }
+
+    public function testTheLoginContinuesWhenTheServerDoesNotTellWhetherTheAccountExists(): void
+    {
+        FakeMastodon::$lookupClosed = true;
+        $crawler = $this->client->request('GET', '/connexion');
+        $this->client->submit($crawler->selectButton('Continuer sur Mastodon')->form(['username' => 'quelquun']));
+        self::assertStringStartsWith('https://remote.test/oauth/authorize?', (string) $this->client->getResponse()->headers->get('Location'));
     }
 }

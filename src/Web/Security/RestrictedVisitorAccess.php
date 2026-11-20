@@ -38,7 +38,9 @@ final readonly class RestrictedVisitorAccess
             return;
         }
         if (\in_array($event->getRequest()->attributes->get('_route'), self::ROUTES, true) && !$this->currentAccount->get() instanceof \App\Core\Domain\Account\Account) {
-            $event->setResponse(new RedirectResponse($this->urls->generate('app_home')));
+            // L'onglet de l'écran de connexion à ouvrir (après une erreur de connexion Mastodon) suit la redirection.
+            $tab = $event->getRequest()->query->getString('onglet');
+            $event->setResponse(new RedirectResponse($this->urls->generate('app_home', \in_array($tab, ['mastodon', 'socialize'], true) ? ['onglet' => $tab] : [])));
         }
     }
 }

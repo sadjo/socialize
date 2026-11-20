@@ -24,7 +24,7 @@ final class MastodonSignupTest extends AppWebTestCase
     public function testAnAccountIsCreatedThenConnectedOnceItsAddressIsConfirmed(): void
     {
         $crawler = $this->client->request('GET', '/connexion');
-        $this->client->click($crawler->selectLink('Créer un compte sur remote.test')->link());
+        $this->client->click($crawler->selectLink('Créer un compte Mastodon')->link());
         self::assertSelectorTextContains('h1', 'Créer un compte sur remote.test');
         self::assertSelectorTextContains('.mastodon-rules', 'Respectez les autres.');
         self::assertSelectorExists('input[name="mastodon_signup[dateOfBirth]"]', 'Âge minimal demandé par le serveur.');

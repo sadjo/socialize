@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Twig;
 
+use App\Integration\Mastodon\Application\MastodonLogin;
 use App\Integration\Mastodon\Application\MastodonLoginPolicy;
 use App\Integration\Mastodon\Application\MastodonSignup;
 use App\Integration\Mastodon\Domain\MastodonPublication;
@@ -25,6 +26,15 @@ final readonly class MastodonExtension
         private ClockInterface $clock,
         private MastodonSignup $signup,
     ) {
+    }
+
+    /**
+     * Domaine d'un serveur Mastodon indiqué par la personne (voir MastodonLogin::domainOf()), ou null.
+     */
+    #[AsTwigFunction('mastodon_domain')]
+    public function domain(string $server): ?string
+    {
+        return MastodonLogin::domainOf($server);
     }
 
     /**

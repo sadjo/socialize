@@ -45,17 +45,7 @@
     {% endif %}
 
     <main id="main">
-        {# Messages d'information seulement : les autres (lien d'invitation…) sont affichés par leur page. #}
-        {% set flashes = app.flashes(['success', 'error']) %}
-        {% if flashes is not empty %}
-            <div class="flashes" role="status">
-                {% for type, messages in flashes %}
-                    {% for message in messages %}
-                        <div class="flash {{ type }}">{{ ui.icon(type == 'error' ? 'flag' : 'check', 'sm') }}<span>{{ message }}</span></div>
-                    {% endfor %}
-                {% endfor %}
-            </div>
-        {% endif %}
+        {{ include('_flashes.html.twig') }}
         <div class="view">{% block content %}{% endblock %}</div>
         {% if public_profile %}
             <footer class="powered">Propulsé par <a href="{{ path('app_home') }}">socialize.example</a> · <a href="{{ path('app_help') }}">Aide</a> · Version {{ app_version|trim('v', 'left') }}</footer>

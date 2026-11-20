@@ -8,15 +8,27 @@ comptes Mastodon ou Pixelfed, et être suivi par eux, sans qu'ils aient besoin d
 
 Selon le choix de son administrateur, on rejoint une instance par une **invitation** (un lien reçu par e-mail ou
 transmis autrement), par **inscription libre** (*Créer un compte*), ou avec un **compte Mastodon** existant
-(*Se connecter avec Mastodon*, voir [Avec un compte Mastodon](mastodon.md)).
+(onglet *Mastodon* de l'écran de connexion, voir [Avec un compte Mastodon](mastodon.md)).
 
 Un nouveau compte peut tout de suite suivre, aimer et commenter. **Publier** demande le droit *Publication*, accordé
 par un administrateur.
 
 ## Se connecter
 
-La connexion se fait avec l'adresse e-mail ou le nom d'utilisateur (`camille` ou `@camille`) et le mot de passe.
-*Rester connecté* garde la session ouverte 30 jours sur cet appareil.
+L'écran de connexion a deux onglets quand l'instance accepte les comptes Mastodon :
+
+- **socialize.example**, pour un compte créé ici : l'adresse e-mail ou le nom d'utilisateur (`camille` ou `@camille`)
+  et le mot de passe. *Rester connecté* garde la session ouverte 30 jours sur cet appareil ;
+- **Mastodon**, pour un compte Mastodon : le serveur et le nom d'utilisateur, sans le @ (voir
+  [Avec un compte Mastodon](mastodon.md#se-connecter-avec-mastodon)).
+
+L'écran rouvre le dernier onglet choisi sur l'appareil.
+
+## Mot de passe oublié
+
+Dans l'onglet *socialize.example*, *Mot de passe oublié ?* demande l'adresse e-mail ou le nom d'utilisateur du compte,
+puis envoie par e-mail un lien pour choisir un nouveau mot de passe. Ce lien est valable une heure et ne sert qu'une
+fois. Pour un compte Mastodon, le mot de passe se change sur son serveur : *Mot de passe Mastodon oublié ?* y mène.
 
 ## Votre adresse dans le fédivers
 

@@ -30,7 +30,7 @@ Les e-mails servent aux invitations.
 
 | Variable | Par défaut | Rôle |
 | --- | --- | --- |
-| `MAILER_DSN` | `null://null` (aucun envoi) | DSN de Symfony Mailer, par exemple `smtp://utilisateur:motdepasse@smtp.example.org:587`. Encodez les caractères spéciaux de l'identifiant et du mot de passe |
+| `MAILER_DSN` | `null://null` (aucun envoi) | DSN de Symfony Mailer, utilisé pour les invitations et les liens « mot de passe oublié » (sans lui, ces liens ne peuvent pas être reçus), par exemple `smtp://utilisateur:motdepasse@smtp.example.org:587`. Encodez les caractères spéciaux de l'identifiant et du mot de passe |
 | `MAILER_FROM` | `Socialize <ne-pas-repondre@localhost>` | Expéditeur, par exemple `Socialize <bonjour@example.org>`, accepté par le serveur d'envoi |
 
 Sans serveur d'envoi, une invitation se partage aussi sous forme de lien.

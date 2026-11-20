@@ -23,6 +23,9 @@ final class MastodonLoginController extends AbstractController
     private const string PENDING = 'mastodon_login';
     private const int PENDING_TTL = 600;
 
+    /** Serveur et identifiant saisis, rendus au formulaire après une erreur (message flash). */
+    public const string INPUT = 'mastodon_login_input';
+
     public function __construct(
         private readonly MastodonLogin $login,
     ) {
@@ -34,14 +37,18 @@ final class MastodonLoginController extends AbstractController
         if (!$this->isCsrfTokenValid('mastodon-login', $request->request->getString('_token'))) {
             $this->addFlash('error', 'Jeton de sécurité invalide. Rechargez la page et réessayez.');
 
-            return $this->redirectToRoute('app_login', status: Response::HTTP_SEE_OTHER);
+            return $this->backToLogin();
         }
+        $server = $request->request->getString('server');
+        $username = $request->request->has('username') ? $request->request->getString('username') : null;
         try {
-            $pending = $this->login->start($request->request->getString('server'), $this->callbackUrl());
+            $pending = $this->login->start($server, $this->callbackUrl(), $username);
         } catch (MastodonException $e) {
             $this->addFlash('error', $e->getMessage());
+            // Champs regarnis au retour sur l'écran de connexion.
+            $this->addFlash(self::INPUT, ['server' => mb_substr($server, 0, 255), 'username' => mb_substr($username ?? '', 0, 255)]);
 
-            return $this->redirectToRoute('app_login', status: Response::HTTP_SEE_OTHER);
+            return $this->backToLogin();
         }
         $request->getSession()->set(self::PENDING, ['domain' => $pending['domain'], 'state' => $pending['state'], 'verifier' => $pending['verifier'], 'at' => time()]);
 
@@ -58,12 +65,12 @@ final class MastodonLoginController extends AbstractController
             || !\is_int($pending['at'] ?? null) || $pending['at'] < time() - self::PENDING_TTL || '' === $state || !hash_equals($pending['state'], $state)) {
             $this->addFlash('error', 'Connexion avec Mastodon interrompue ou expirée : recommencez.');
 
-            return $this->redirectToRoute('app_login');
+            return $this->backToLogin();
         }
         if ('' === $code) {
             $this->addFlash('error', 'Connexion avec Mastodon annulée.');
 
-            return $this->redirectToRoute('app_login');
+            return $this->backToLogin();
         }
 
         try {
@@ -71,11 +78,19 @@ final class MastodonLoginController extends AbstractController
         } catch (MastodonException $e) {
             $this->addFlash('error', $e->getMessage());
 
-            return $this->redirectToRoute('app_login');
+            return $this->backToLogin();
         }
         $security->login($user, 'form_login', 'main');
 
         return $this->redirectToRoute('app_home');
+    }
+
+    /**
+     * Retour à l'écran de connexion, onglet Mastodon ouvert.
+     */
+    private function backToLogin(): RedirectResponse
+    {
+        return $this->redirectToRoute('app_login', ['onglet' => 'mastodon'], Response::HTTP_SEE_OTHER);
     }
 
     private function callbackUrl(): string

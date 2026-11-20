@@ -1,7 +1,18 @@
 # Avec un compte Mastodon
 
 Si l'instance le permet, une personne qui a déjà un compte Mastodon utilise Socialize **sans créer de compte
-ici** : *Se connecter avec Mastodon*, puis elle choisit son serveur et autorise l'accès.
+ici**, depuis l'onglet *Mastodon* de l'écran de connexion.
+
+## Se connecter avec Mastodon
+
+1. Choisissez votre **serveur** (par exemple mastodon.social) et indiquez votre **identifiant**, sans le @ : `alice`
+   pour `@alice@mastodon.social`. Une adresse complète `@alice@serveur` fonctionne aussi.
+2. *Continuer sur Mastodon* ouvre la page de votre serveur : vous y tapez votre mot de passe, puis vous autorisez
+   Socialize.
+3. De retour ici, vous êtes connecté.
+
+Les liens sous le formulaire mènent au serveur choisi : *Créer un compte Mastodon* et *Mot de passe Mastodon
+oublié ?*.
 
 ## Ce qui change avec un compte Mastodon
 

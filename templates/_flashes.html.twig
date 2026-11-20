@@ -1,0 +1,12 @@
+{# Messages d'information seulement : les autres (lien d'invitation…) sont affichés par leur page. #}
+{% import '_macros.html.twig' as ui %}
+{% set flashes = app.flashes(['success', 'error']) %}
+{% if flashes is not empty %}
+    <div class="flashes" role="status">
+        {% for type, messages in flashes %}
+            {% for message in messages %}
+                <div class="flash {{ type }}">{{ ui.icon(type == 'error' ? 'flag' : 'check', 'sm') }}<span>{{ message }}</span></div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+{% endif %}

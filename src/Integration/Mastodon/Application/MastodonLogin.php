@@ -63,15 +63,40 @@ final readonly class MastodonLogin
     }
 
     /**
+     * Identifiant indiqué par la personne : « alice », « @alice », ou son adresse complète « @alice@serveur », dont le
+     * serveur l'emporte alors sur celui choisi. Null si ce n'est pas un nom d'utilisateur Mastodon.
+     *
+     * @return ?array{username: string, server: ?string}
+     */
+    public static function usernameOf(string $input): ?array
+    {
+        $input = trim($input);
+        if (!preg_match('/^@?([A-Za-z0-9_](?:[A-Za-z0-9_.-]*[A-Za-z0-9_])?)(?:@([^@\s\/]+))?$/', $input, $m)) {
+            return null;
+        }
+
+        return ['username' => $m[1], 'server' => $m[2] ?? null];
+    }
+
+    /**
      * Début de la connexion : adresse de la page d'autorisation du serveur, et ce qu'il faut garder en session
-     * pour le retour (état contre la falsification de requête, vérificateur PKCE).
+     * pour le retour (état contre la falsification de requête, vérificateur PKCE). Avec un identifiant, le compte doit
+     * exister sur le serveur (vérifié avant de partir, quand le serveur le permet) ; le mot de passe se tape ensuite
+     * sur la page du serveur.
      *
      * @return array{url: string, domain: string, state: string, verifier: string}
      */
-    public function start(string $server, string $redirectUri): array
+    public function start(string $server, string $redirectUri, ?string $username = null): array
     {
+        if (null !== $username) {
+            $identity = self::usernameOf($username) ?? throw new MastodonException('Indiquez votre nom d’utilisateur Mastodon, par exemple alice.');
+            $server = $identity['server'] ?? $server;
+        }
         $domain = self::domainOf($server) ?? throw new MastodonException('Indiquez l’adresse de votre serveur Mastodon, par exemple mastodon.social.');
         $this->checkAllowed($domain);
+        if (isset($identity) && false === $this->client->accountExists($domain, $identity['username'])) {
+            throw new MastodonException(\sprintf('Aucun compte @%s sur %s : vérifiez votre identifiant et votre serveur.', $identity['username'], $domain));
+        }
         $app = $this->app($domain, $redirectUri);
         $state = bin2hex(random_bytes(16));
         $verifier = rtrim(strtr(base64_encode(random_bytes(48)), '+/', '-_'), '=');

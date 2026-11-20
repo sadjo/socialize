@@ -62,6 +62,9 @@ final class FakeMastodon
     /** @var list<array{type: string, description: ?string}> médias reçus */
     public static array $media = [];
 
+    /** Recherche d'un compte par son nom (accounts/lookup) fermée par le serveur (erreur 401). */
+    public static bool $lookupClosed = false;
+
     public static function reset(): void
     {
         self::$actor = FakeFediverse::ALICE;
@@ -80,6 +83,7 @@ final class FakeMastodon
         self::$settings = [];
         self::$privacy = 'public';
         self::$settingsFail = false;
+        self::$lookupClosed = false;
     }
 
     /**
@@ -146,6 +150,10 @@ final class FakeMastodon
             'GET' === $method && '/api/v1/accounts/verify_credentials' === $path => \in_array($token, [self::TOKEN, self::NEW_TOKEN], true)
                 ? $this->json(array_filter(['id' => '109', 'username' => 'alice', 'acct' => 'alice', 'display_name' => 'Alice', 'url' => 'https://remote.test/@alice', 'uri' => self::$actor, 'source' => ['privacy' => self::$privacy]]))
                 : $this->json(['error' => 'The access token is invalid'], 401),
+            'GET' === $method && '/api/v1/accounts/lookup' === $path && self::$lookupClosed => $this->json(['error' => 'This API requires an authenticated user'], 401),
+            'GET' === $method && '/api/v1/accounts/lookup' === $path => str_contains($url, 'acct=alice') && !str_contains($url, 'acct=alice%')
+                ? $this->json(['id' => '109', 'username' => 'alice', 'acct' => 'alice'])
+                : $this->json(['error' => 'Record not found'], 404),
             'GET' === $method && '/api/v2/instance' === $path => $this->json(['domain' => self::DOMAIN,
                 'registrations' => ['enabled' => self::$registrationsOpen, 'approval_required' => false, 'min_age' => 16, 'message' => null],
                 'rules' => [['id' => '1', 'text' => 'Pas de contenu illégal.'], ['id' => '2', 'text' => 'Respectez les autres.']],
