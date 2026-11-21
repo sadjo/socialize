@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Web;
 
+use App\Core\Application\Story\StoryActions;
 use App\Core\Domain\Account\Account;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Story\Story;
+use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
 use App\Media\Application\StoryComposer;
 use App\Tests\AppWebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
+use Symfony\Component\DomCrawler\Field\ChoiceFormField;
+use Symfony\Component\DomCrawler\Form;
 
 final class StoryTest extends AppWebTestCase
 {
@@ -107,6 +111,7 @@ final class StoryTest extends AppWebTestCase
         self::assertSelectorTextContains('main', 'Archives');
         self::assertSelectorCount(1, '.story-tile');
         $form = $crawler->selectButton('Mettre à la une')->form(['highlight' => '__new__', 'title' => 'Montagne']);
+        $this->tickStories($form);
         $this->client->submit($form);
         self::assertResponseRedirects('/stories/mes-stories');
 
@@ -115,6 +120,103 @@ final class StoryTest extends AppWebTestCase
         self::assertSelectorTextContains('.hls', 'Montagne');
         $this->client->request('GET', (string) $crawler->filter('.hls a.hl')->attr('href'));
         self::assertResponseIsSuccessful();
+    }
+
+    public function testSeveralStoriesArePinnedAtOnceThenRemovedOneByOne(): void
+    {
+        self::mockTime('2026-11-10 10:00:00');
+        $camille = $this->register('camille');
+        $first = $this->publish($camille->getAccount(), 'Première');
+        self::mockTime('2026-11-11 10:00:00');
+        $second = $this->publish($camille->getAccount(), 'Seconde');
+        // Story en cours réservée à des groupes : elle se gère aussi depuis « Mes stories ».
+        self::mockTime('2026-11-13 10:00:00');
+        $third = $this->publish($camille->getAccount(), 'Pour la famille', Visibility::Groups);
+        self::mockTime('2026-11-13 10:30:00');
+
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/stories/mes-stories');
+        self::assertSelectorCount(3, '.story-tile input[name="stories[]"]');
+        $form = $crawler->selectButton('Mettre à la une')->form(['highlight' => '__new__', 'title' => 'Montagne']);
+        $this->tickStories($form);
+        $this->client->submit($form);
+        self::assertResponseRedirects('/stories/mes-stories');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash, main', '3 stories ajoutées à « Montagne »');
+
+        $highlight = $this->reload($first)->getHighlight();
+        self::assertNotNull($highlight);
+        self::assertSame(['Première', 'Seconde', 'Pour la famille'], array_map(static fn (Story $s): ?string => $s->getText(), $highlight->getStories()->toArray()));
+
+        // Retrait depuis la page de la story à la une : on y reste tant qu'elle a des stories.
+        $crawler = $this->client->request('GET', '/a-la-une/'.$highlight->getPublicId().'/modifier');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorCount(3, '.story-tile');
+        $this->client->submit($crawler->filter('form[action="/stories/'.$third->getPublicId().'/retirer-de-la-une"]')->form());
+        self::assertResponseRedirects('/a-la-une/'.$highlight->getPublicId().'/modifier');
+        self::assertNull($this->reload($third)->getHighlight());
+
+        // Retrait depuis « Mes stories ».
+        $crawler = $this->client->request('GET', '/stories/mes-stories');
+        $this->client->submit($crawler->filter('form[action="/stories/'.$second->getPublicId().'/retirer-de-la-une"]')->form());
+        self::assertResponseRedirects('/stories/mes-stories');
+
+        // La dernière story retirée : la story à la une disparaît, on revient à « Mes stories ».
+        $crawler = $this->client->request('GET', '/a-la-une/'.$highlight->getPublicId().'/modifier');
+        $this->client->submit($crawler->filter('form[action="/stories/'.$first->getPublicId().'/retirer-de-la-une"]')->form());
+        self::assertResponseRedirects('/stories/mes-stories');
+        self::assertSame([], self::getContainer()->get(HighlightRepository::class)->findAll());
+    }
+
+    public function testPinningWithoutAnyTickedStoryIsRefused(): void
+    {
+        $camille = $this->register('camille');
+        $this->publish($camille->getAccount(), 'Lac');
+        $this->login($camille);
+        $crawler = $this->client->request('GET', '/stories/mes-stories');
+        $this->client->submit($crawler->selectButton('Mettre à la une')->form(['highlight' => '__new__', 'title' => 'Lac']));
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('main', 'Cochez au moins une story');
+        self::assertSame([], self::getContainer()->get(HighlightRepository::class)->findAll());
+    }
+
+    public function testAHighlightGetsANewTitleAndItsOwnCover(): void
+    {
+        $camille = $this->register('camille');
+        $story = $this->publish($camille->getAccount(), 'Lac');
+        $highlight = self::getContainer()->get(StoryActions::class)->pin($story, null, 'Lac');
+        $this->login($camille);
+
+        $crawler = $this->client->request('GET', '/a-la-une/'.$highlight->getPublicId().'/modifier');
+        $form = $crawler->selectButton('Enregistrer')->form(['highlight[title]' => 'Montagne']);
+        $values = $form->getPhpValues();
+        $this->client->request('POST', $form->getUri(), $values, ['highlight' => ['media' => [$this->jpeg(1200, 800)]]]);
+        self::assertResponseRedirects('/a-la-une/'.$highlight->getPublicId().'/modifier');
+
+        $saved = $this->reload($story)->getHighlight();
+        self::assertNotNull($saved);
+        self::assertSame('Montagne', $saved->getTitle());
+        $cover = (string) $saved->getCoverPath();
+        self::assertStringStartsWith('highlights/', $cover);
+        $storage = self::getContainer()->get('derivatives.storage');
+        self::assertTrue($storage->fileExists($cover));
+
+        $this->client->request('GET', '/@camille');
+        self::assertSelectorExists('.hls a.hl img[src$="'.basename($cover).'"]');
+
+        // Retour à la couverture automatique.
+        $crawler = $this->client->request('GET', '/a-la-une/'.$highlight->getPublicId().'/modifier');
+        $form = $crawler->selectButton('Enregistrer')->form(['highlight[removeCover]' => '1']);
+        $this->client->submit($form);
+        self::assertResponseRedirects();
+        $saved = $this->reload($story)->getHighlight();
+        self::assertNull($saved?->getCoverPath());
+        self::assertFalse($storage->fileExists($cover), 'Le fichier de l’ancienne couverture est supprimé.');
+
+        // Un autre compte n'y a pas accès.
+        $this->login($this->register('hugo'));
+        $this->client->request('GET', '/a-la-une/'.$highlight->getPublicId().'/modifier');
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testAnArchivedStoryOpensInTheViewerForItsOwnerOnly(): void
@@ -183,6 +285,16 @@ final class StoryTest extends AppWebTestCase
         self::assertResponseRedirects('/stories/mes-stories');
         self::assertSame([], self::getContainer()->get(StoryRepository::class)->findAll());
         self::assertFalse(self::getContainer()->get('originals.storage')->fileExists($original));
+    }
+
+    /** Coche les cases des stories (sélection pour la mise à la une groupée). */
+    private function tickStories(Form $form): void
+    {
+        foreach ($form->all() as $field) {
+            if ($field instanceof ChoiceFormField && str_starts_with($field->getName(), 'stories[')) {
+                $field->tick();
+            }
+        }
     }
 
     /** Compte rechargé dans le gestionnaire d'entités actuel (après des requêtes HTTP). */

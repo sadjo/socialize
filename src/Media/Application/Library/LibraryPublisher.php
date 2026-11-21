@@ -11,7 +11,9 @@ use App\Core\Domain\Post\CrosspostTarget;
 use App\Core\Domain\Post\Post;
 use App\Core\Domain\Post\Visibility;
 use App\Core\Domain\Social\AudienceGroup;
+use App\Core\Domain\Story\Highlight;
 use App\Core\Domain\Story\Story;
+use App\Media\Application\HighlightCovers;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\PostComposer;
 use App\Media\Application\StoryComposer;
@@ -38,6 +40,7 @@ final readonly class LibraryPublisher
         private PostComposer $posts,
         private StoryComposer $stories,
         private EntityManagerInterface $em,
+        private HighlightCovers $highlightCovers,
         private Filesystem $filesystem = new Filesystem(),
     ) {
     }
@@ -89,6 +92,23 @@ final readonly class LibraryPublisher
             $this->complete($author, array_map(static fn (Story $s): ?MediaAttachment => $s->getMedia(), $stories), $items);
 
             return $stories;
+        } finally {
+            $this->cleanUp($items);
+        }
+    }
+
+    /**
+     * Nouvelle image de couverture d'une story à la une : une photo de l'appareil ou d'une photothèque.
+     *
+     * @param list<string> $order
+     * @param list<File>   $files
+     */
+    public function changeHighlightCover(Highlight $highlight, array $order, array $files): void
+    {
+        $items = $this->resolve($highlight->getAccount(), $order, $files, 1);
+        try {
+            $this->highlightCovers->replace($highlight, $items[0]['file']);
+            $this->em->flush();
         } finally {
             $this->cleanUp($items);
         }

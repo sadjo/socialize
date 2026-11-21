@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Core\Application\Story\StoryActions;
 use App\Core\Domain\Account\User;
 use App\Core\Domain\Post\Post;
+use App\Core\Domain\Post\Visibility;
+use App\Core\Infrastructure\Doctrine\HighlightRepository;
 use App\Core\Infrastructure\Doctrine\PostRepository;
 use App\Core\Infrastructure\Doctrine\StoryRepository;
 use App\Integration\Immich\Application\ImmichConnections;
@@ -13,6 +16,7 @@ use App\Integration\Immich\Domain\ImmichConnection;
 use App\Integration\Immich\Infrastructure\Doctrine\ImmichConnectionRepository;
 use App\Integration\Immich\Infrastructure\ImmichVault;
 use App\Media\Application\ProcessVideo;
+use App\Media\Application\StoryComposer;
 use App\Tests\AppWebTestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
@@ -220,6 +224,29 @@ final class ImmichTest extends AppWebTestCase
         self::assertCount(1, $stories);
         self::assertSame('Honfleur', $stories[0]->getMedia()?->getExif()['immich-city'] ?? null);
         self::assertSame([], FakeImmich::requestsTo('POST', '#^/albums$#'), 'Sans l’option, aucun album n’est créé.');
+    }
+
+    public function testAHighlightCoverFromImmich(): void
+    {
+        $camille = $this->connected('camille');
+        $story = self::getContainer()->get(StoryComposer::class)->publish($camille->getAccount(), [$this->jpeg(1080, 1920)], null, Visibility::Public)[0];
+        $highlight = self::getContainer()->get(StoryActions::class)->pin($story, null, 'Normandie');
+        $this->login($camille);
+
+        $crawler = $this->client->request('GET', '/a-la-une/'.$highlight->getPublicId().'/modifier');
+        self::assertSelectorExists('[data-source-name="immich"]', 'La photothèque est proposée pour la couverture.');
+        $values = $this->values($crawler->selectButton('Enregistrer')->form()->getPhpValues());
+        $values['highlight']['order'] = 'i-'.FakeImmich::VIDEO_LAC;
+        $this->client->request('POST', '/a-la-une/'.$highlight->getPublicId().'/modifier', $values);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('.field-errors', 'Choisissez une photo pour la couverture');
+
+        $values['highlight']['order'] = 'i-'.FakeImmich::PHOTO_HONFLEUR;
+        $this->client->request('POST', '/a-la-une/'.$highlight->getPublicId().'/modifier', $values);
+        self::assertResponseRedirects();
+        self::getContainer()->get('doctrine')->getManager()->clear();
+        $saved = self::getContainer()->get(HighlightRepository::class)->findByPublicId($highlight->getPublicId());
+        self::assertStringStartsWith('highlights/', (string) $saved?->getCoverPath());
     }
 
     public function testAnUnreachableImmichLeavesNoHalfCreatedPost(): void

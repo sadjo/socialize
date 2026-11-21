@@ -8,6 +8,7 @@ use App\Core\Domain\Account\Account;
 use App\Core\Domain\Event\AccountDeleting;
 use App\Core\Domain\Media\MediaAttachment;
 use App\Core\Domain\Post\Post;
+use App\Core\Domain\Story\Highlight;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\FilesystemOperator;
@@ -15,7 +16,8 @@ use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
- * Compte supprimé : les fichiers de ses publications et de ses stories (originaux et copies), sa photo de profil et son image de couverture.
+ * Compte supprimé : les fichiers de ses publications et de ses stories (originaux et copies), sa photo de profil, son image
+ * de couverture et celles de ses stories à la une.
  */
 #[AsEventListener]
 final readonly class AccountFilesCleaner
@@ -49,7 +51,10 @@ final readonly class AccountFilesCleaner
         /** @var list<string> $previews */
         $previews = $this->em->createQuery('SELECT p.previewImage FROM '.Post::class.' p WHERE p.account = :account AND p.previewImage IS NOT NULL')
             ->setParameter('account', $account->getId(), UuidType::NAME)->getSingleColumnResult();
-        foreach ([...ProfileImages::filesOf($account), ...$previews] as $path) {
+        /** @var list<string> $highlightCovers */
+        $highlightCovers = $this->em->createQuery('SELECT h.coverPath FROM '.Highlight::class.' h WHERE h.account = :account AND h.coverPath IS NOT NULL')
+            ->setParameter('account', $account->getId(), UuidType::NAME)->getSingleColumnResult();
+        foreach ([...ProfileImages::filesOf($account), ...$previews, ...$highlightCovers] as $path) {
             try {
                 $this->derivativesStorage->delete($path);
             } catch (FilesystemException) {

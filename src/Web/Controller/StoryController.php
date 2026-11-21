@@ -21,17 +21,21 @@ use App\Core\Infrastructure\Doctrine\StoryRepository;
 use App\Crosspost\Meta\Application\InstagramConnections;
 use App\Integration\Openverse\Application\MusicLibrary;
 use App\Integration\Openverse\Application\OpenverseException;
+use App\Media\Application\HighlightCovers;
 use App\Media\Application\Library\LibraryPublisher;
 use App\Media\Application\MediaProcessingException;
 use App\Media\Application\StoryComposer;
 use App\Web\Form\ComposeStoryType;
 use App\Web\Form\CrosspostField;
+use App\Web\Form\HighlightType;
 use App\Web\Security\CurrentAccount;
 use App\Web\Twig\StoryViewerData;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -176,24 +180,45 @@ final class StoryController extends AbstractController
         $now = $this->clock->now();
 
         return $this->render('story/manage.html.twig', [
-            'active' => $this->stories->activeOf($account, [Visibility::Public, Visibility::Followers], $now),
+            // Toutes les audiences : une story réservée à des groupes se gère (et se retire de la une) comme les autres.
+            'active' => $this->stories->activeOf($account, Visibility::cases(), $now),
             'archive' => $this->stories->archiveOf($account, $now),
             'highlights' => $this->highlights->forAccount($account),
         ]);
     }
 
-    #[Route('/stories/{id}/a-la-une', name: 'app_story_pin', requirements: ['id' => self::ID], methods: ['POST'])]
-    public function pin(string $id, Request $request): \Symfony\Component\HttpFoundation\RedirectResponse
+    /**
+     * Met à la une les stories cochées sur « Mes stories », toutes dans la même story à la une.
+     */
+    #[Route('/stories/a-la-une', name: 'app_story_pin', methods: ['POST'])]
+    public function pin(Request $request): RedirectResponse
     {
-        $story = $this->ownStory($id, $request, 'story-pin-'.$id);
+        $account = $this->currentAccount->require();
+        if (!$this->isCsrfTokenValid('story-pin', $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton de sécurité invalide. Rechargez la page et réessayez.');
+        }
+        $stories = [];
+        foreach ($request->request->all('stories') as $id) {
+            $story = \is_string($id) ? $this->stories->findByPublicId($id) : null;
+            if ($story instanceof Story && $story->isOwnedBy($account)) {
+                $stories[] = $story;
+            }
+        }
+        if ([] === $stories) {
+            $this->addFlash('error', 'Cochez au moins une story à mettre à la une.');
+
+            return $this->redirectToRoute('app_story_manage', status: Response::HTTP_SEE_OTHER);
+        }
         $target = $request->request->getString('highlight');
         try {
-            $highlight = $this->actions->pin(
-                $story,
-                '__new__' === $target ? null : $this->ownHighlight($target, $story->getAccount()),
+            $highlight = $this->actions->pinAll(
+                $stories,
+                '__new__' === $target ? null : ($this->ownHighlight($target, $account) ?? throw new \DomainException('Cette story à la une n’existe plus.')),
                 $request->request->getString('title'),
             );
-            $this->addFlash('success', \sprintf('Story ajoutée à « %s ».', $highlight->getTitle()));
+            $this->addFlash('success', 1 === \count($stories)
+                ? \sprintf('Story ajoutée à « %s ».', $highlight?->getTitle())
+                : \sprintf('%d stories ajoutées à « %s ».', \count($stories), $highlight?->getTitle()));
         } catch (\DomainException $e) {
             $this->addFlash('error', $e->getMessage());
         }
@@ -202,16 +227,57 @@ final class StoryController extends AbstractController
     }
 
     #[Route('/stories/{id}/retirer-de-la-une', name: 'app_story_unpin', requirements: ['id' => self::ID], methods: ['POST'])]
-    public function unpin(string $id, Request $request): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function unpin(string $id, Request $request): RedirectResponse
     {
-        $this->actions->unpin($this->ownStory($id, $request, 'story-unpin-'.$id));
+        $story = $this->ownStory($id, $request, 'story-unpin-'.$id);
+        $highlight = $story->getHighlight();
+        $this->actions->unpin($story);
         $this->addFlash('success', 'Story retirée de la une.');
+
+        // Depuis la page de la story à la une : on y reste, tant qu'elle existe (sa dernière story la supprime).
+        if ($highlight instanceof Highlight && 'a-la-une' === $request->request->getString('retour') && $this->highlights->find($highlight->getId()) instanceof Highlight) {
+            return $this->redirectToRoute('app_highlight_edit', ['id' => $highlight->getPublicId()], Response::HTTP_SEE_OTHER);
+        }
 
         return $this->redirectToRoute('app_story_manage', status: Response::HTTP_SEE_OTHER);
     }
 
+    /**
+     * Story à la une : titre, image de couverture (appareil, Immich, Synology Photos) et stories qu'elle contient.
+     */
+    #[Route('/a-la-une/{id}/modifier', name: 'app_highlight_edit', requirements: ['id' => self::ID], methods: ['GET', 'POST'])]
+    public function editHighlight(string $id, Request $request, LibraryPublisher $publisher, HighlightCovers $covers, ComposeSources $sources, EntityManagerInterface $em): Response
+    {
+        $account = $this->currentAccount->require();
+        $highlight = $this->ownHighlight($id, $account) ?? throw new NotFoundHttpException('Cette story à la une n’existe pas.');
+        $form = $this->createForm(HighlightType::class, ['title' => $highlight->getTitle()]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var array{title: string, order: ?string, media: list<UploadedFile>, removeCover: bool} $data */
+            $data = $form->getData();
+            $order = ComposeSources::order($data['order']);
+            try {
+                $highlight->rename($data['title']);
+                if ([] !== $order || [] !== $data['media']) {
+                    $publisher->changeHighlightCover($highlight, $order, $data['media']);
+                } elseif ($data['removeCover']) {
+                    $covers->remove($highlight);
+                }
+                $em->flush();
+                $this->addFlash('success', 'Story à la une enregistrée.');
+
+                return $this->redirectToRoute('app_highlight_edit', ['id' => $highlight->getPublicId()], Response::HTTP_SEE_OTHER);
+            } catch (MediaProcessingException $e) {
+                $form->get('media')->addError(new FormError($e->getMessage()));
+            }
+        }
+
+        return $this->render('story/highlight.html.twig', ['highlight' => $highlight, 'form' => $form] + $sources->forCurrentAccount());
+    }
+
     #[Route('/stories/{id}/supprimer', name: 'app_story_delete', requirements: ['id' => self::ID], methods: ['POST'])]
-    public function delete(string $id, Request $request, StoryComposer $composer): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function delete(string $id, Request $request, StoryComposer $composer): RedirectResponse
     {
         $composer->delete($this->ownStory($id, $request, 'story-delete-'.$id));
         $this->addFlash('success', 'Story supprimée.');
@@ -220,7 +286,7 @@ final class StoryController extends AbstractController
     }
 
     #[Route('/a-la-une/{id}/supprimer', name: 'app_highlight_delete', requirements: ['id' => self::ID], methods: ['POST'])]
-    public function deleteHighlight(string $id, Request $request): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function deleteHighlight(string $id, Request $request): RedirectResponse
     {
         $account = $this->currentAccount->require();
         $highlight = $this->ownHighlight($id, $account) ?? throw new NotFoundHttpException();
@@ -252,10 +318,7 @@ final class StoryController extends AbstractController
         if (null === $target || '' === $target) {
             return;
         }
-        $highlight = '__new__' === $target ? null : $this->ownHighlight($target, $account);
-        foreach ($stories as $story) {
-            $highlight = $this->actions->pin($story, $highlight, $title);
-        }
+        $this->actions->pinAll($stories, '__new__' === $target ? null : $this->ownHighlight($target, $account), $title);
     }
 
     private function visibleStory(string $id): Story

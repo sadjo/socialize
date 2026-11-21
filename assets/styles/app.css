@@ -745,6 +745,22 @@ button[disabled]{opacity:.5;cursor:not-allowed}
 .story-tile form{display:flex;flex-direction:column;gap:6px;margin:0}
 .story-tile .inp{min-height:34px;padding:6px 10px;font-size:.82rem}
 .story-tile .row{flex-wrap:wrap;gap:6px}
+/* Boutons des vignettes : pleine largeur, le libellé passe à la ligne plutôt que de déborder (« Partager vers Instagram »). */
+.story-tile .btn{width:100%;height:auto;min-height:30px;padding:6px 10px;white-space:normal;text-align:center;line-height:1.2}
+.story-tile .chip{max-width:100%;align-self:flex-start}
+.story-tile .chip .ellipsis{overflow:hidden;text-overflow:ellipsis}
+.story-tile .th-wrap{position:relative}
+.story-tile.picked{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.story-pick{position:absolute;top:6px;left:6px;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:oklch(0 0 0 / .45);cursor:pointer}
+.story-pick input{width:18px;height:18px;margin:0;accent-color:var(--accent);cursor:pointer}
+.pin-bar{position:sticky;top:8px;z-index:5;display:flex;flex-direction:row;flex-wrap:wrap;padding:12px 16px;box-shadow:var(--shadow, 0 6px 20px oklch(0 0 0 / .08));align-items:center;justify-content:space-between;gap:8px 12px}
+.pin-bar .row{gap:6px}
+.pin-bar .inp[hidden]{display:none}
+@media (max-width:767px){.pin-bar{top:calc(env(safe-area-inset-top,0px) + 58px)}}
+.hl-list{display:flex;flex-direction:column;gap:8px}
+.hl-cover{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--surface-2);border:1px solid var(--line)}
+.hl-cover.big{width:72px;height:72px}
+.hl-cover img{width:100%;height:100%;object-fit:cover}
 .story-viewer{place-items:center}
 @media (max-width:767px){
   .story-viewer{padding:0}

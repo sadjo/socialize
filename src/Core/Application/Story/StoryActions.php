@@ -55,11 +55,33 @@ final readonly class StoryActions
         return $highlight;
     }
 
+    /**
+     * Met plusieurs stories à la une d'un coup (dans l'ordre donné), dans la même story à la une.
+     *
+     * @param list<Story> $stories
+     */
+    public function pinAll(array $stories, ?Highlight $highlight, ?string $newTitle = null): ?Highlight
+    {
+        foreach ($stories as $story) {
+            $highlight = $this->pin($story, $highlight, $newTitle);
+        }
+
+        return $highlight;
+    }
+
+    public function rename(Highlight $highlight, string $title): void
+    {
+        $highlight->rename($title);
+        $this->em->flush();
+    }
+
     public function unpin(Story $story): void
     {
         $highlight = $story->getHighlight();
-        $story->pinTo(null);
+        // Collection retirée d'abord : la charger après pinTo(null) relirait la story depuis la base et lui rendrait sa
+        // story à la une (le retrait n'était alors jamais enregistré, sauf pour la dernière story).
         $highlight?->getStories()->removeElement($story);
+        $story->pinTo(null);
         if ($highlight instanceof Highlight && $highlight->getStories()->isEmpty()) {
             $this->em->remove($highlight);
         }
