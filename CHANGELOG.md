@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.41] - 2026-11-21
+
+Footer of public profiles.
+
+### Changed
+
+- The footer of a public profile now reads "Propulsé par socialize" and links to the project site, instead of the
+  instance home page (profiles)
+
 ## [0.9.40] - 2026-11-20
 
 Sign-in screen with two tabs, and forgotten password.
