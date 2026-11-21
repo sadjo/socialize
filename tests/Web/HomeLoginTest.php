@@ -57,7 +57,7 @@ final class HomeLoginTest extends AppWebTestCase
             self::assertSelectorNotExists(\sprintf('a[href="%s"]', $closed), $closed);
         }
         self::assertSelectorNotExists('header.mtop', 'Profil public : ni logo ni bouton de connexion.');
-        self::assertSelectorTextContains('footer.powered', 'Propulsé par socialize.example');
+        self::assertSelectorTextContains('footer.powered', 'Propulsé par socialize');
 
         $this->login($camille);
         $this->client->request('GET', '/local');

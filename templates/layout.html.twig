@@ -48,7 +48,7 @@
         {{ include('_flashes.html.twig') }}
         <div class="view">{% block content %}{% endblock %}</div>
         {% if public_profile %}
-            <footer class="powered">Propulsé par <a href="{{ path('app_home') }}">socialize.example</a> · <a href="{{ path('app_help') }}">Aide</a> · Version {{ app_version|trim('v', 'left') }}</footer>
+            <footer class="powered">Propulsé par <a href="https://sadjo.github.io/socialize/" rel="noopener" target="_blank">socialize</a> · <a href="{{ path('app_help') }}">Aide</a> · Version {{ app_version|trim('v', 'left') }}</footer>
         {% endif %}
     </main>
 </div>
