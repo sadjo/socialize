@@ -1,0 +1,58 @@
+{% extends 'layout.html.twig' %}
+{% import '_macros.html.twig' as ui %}
+
+{% block title %}{{ highlight.title }} · Story à la une · Socialize{% endblock %}
+
+{% block content %}
+<div class="compose">
+    <div class="page-h">
+        <div class="grow"><h1>{{ highlight.title }}{{ ui.help('stories', 'mettre-une-story-à-la-une', 'les stories à la une') }}</h1><p>Changez le titre et l’image de couverture de cette story à la une, ou retirez-en des stories.</p></div>
+        <a class="btn" href="{{ path('app_story_manage') }}">{{ ui.icon('left', 'sm') }}Mes stories</a>
+    </div>
+    {{ form_start(form, {attr: {class: 'form', 'data-controller': 'compose', 'data-compose-max-value': 1}}) }}
+        {{ form_errors(form) }}
+        <div class="compose-grid">
+            <section class="card picker">
+                <h2>Couverture</h2>
+                {% set cover = highlight_cover_url(highlight) %}
+                <div class="row">
+                    <span class="hl-cover big">{% if cover %}<img src="{{ cover }}" alt="Couverture actuelle">{% endif %}</span>
+                    <p class="small grow">{{ highlight.coverPath ? 'Image choisie.' : 'Couverture automatique : la story la plus récente.' }} Choisissez une nouvelle photo ci-dessous, elle sera recadrée en rond.</p>
+                </div>
+                {{ include('compose/_sources.html.twig', {drop_label: 'Choisissez une photo', drop_hint: form.media.vars.help}) }}
+                {{ form_widget(form.media) }}
+                {{ form_widget(form.order) }}
+                {{ form_errors(form.media) }}
+                <div class="previews" data-compose-target="previews" aria-live="polite"></div>
+                {% if highlight.coverPath %}{{ form_row(form.removeCover) }}{% else %}{% do form.removeCover.setRendered() %}{% endif %}
+            </section>
+            <section class="card">
+                {{ form_row(form.title) }}
+                <button class="btn pri" data-compose-target="submit">Enregistrer</button>
+            </section>
+        </div>
+    {{ form_end(form) }}
+
+    <section class="card">
+        <h2>Stories ({{ highlight.stories|length }})</h2>
+        <p class="small">Retirer une story la laisse dans vos archives. Une story à la une sans story disparaît.</p>
+        <div class="story-grid">
+            {% for story in highlight.stories %}
+                {% set media = story.media %}
+                <article class="story-tile">
+                    <a class="th" href="{{ path('app_story_archive', {id: story.publicId}) }}" aria-label="Voir la story du {{ story.createdAt|format_datetime('long', 'short', locale: 'fr') }}">
+                        {% if media and media.ready %}<img src="{{ media_url(media, 'thumb') }}" alt="">{% else %}<span class="processing skel">{{ ui.icon('reel') }}</span>{% endif %}
+                        {% if media and media.video %}<span class="gi">{{ ui.icon('reel', 'sm') }}</span>{% endif %}
+                    </a>
+                    <small>{{ story.createdAt|format_date('medium', locale: 'fr') }}</small>
+                    <form method="post" action="{{ path('app_story_unpin', {id: story.publicId}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('story-unpin-' ~ story.publicId) }}">
+                        <input type="hidden" name="retour" value="a-la-une">
+                        <button class="btn sm">{{ ui.icon('x', 'xs') }}Retirer de la une</button>
+                    </form>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

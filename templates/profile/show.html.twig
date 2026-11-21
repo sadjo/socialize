@@ -78,9 +78,9 @@
     {% if highlights is not empty or (is_owner and not mastodon_owner) %}
         <div class="hls" aria-label="Stories à la une">
             {% for highlight in highlights %}
-                {% set cover = highlight.cover %}
+                {% set cover = highlight_cover_url(highlight) %}
                 <a class="hl" href="{{ path('app_highlight', {username: account.username, id: highlight.publicId}) }}">
-                    <span class="c">{% if cover %}<img src="{{ media_url(cover.media, 'thumb') }}" alt="">{% endif %}</span>{{ highlight.title }}
+                    <span class="c">{% if cover %}<img src="{{ cover }}" alt="">{% endif %}</span>{{ highlight.title }}
                 </a>
             {% endfor %}
             {% if is_owner and not mastodon_owner %}

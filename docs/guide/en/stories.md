@@ -18,3 +18,11 @@ You can see who viewed your stories.
 
 An expired story moves to your story archive. From *Mes stories*, **feature** it (*à la une*): it then stays on your
 profile, under the profile picture, grouped with others under a title of your choice.
+
+- **Several at once**: tick the stories you want (current or archived), pick an existing highlight or
+  *Nouvelle story à la une…* with its title, then **Mettre à la une**.
+- **Remove a story**: *Retirer de la une* under its thumbnail, or from the highlight's *Modifier* page. The story stays
+  in your archive; a highlight left without any story disappears.
+- **Edit** a highlight: change its title and its **cover image**, a photo from your device or from your Immich or
+  Synology Photos library (cropped to a circle). Without a chosen image, the cover is the most recent story; tick
+  *Revenir à la couverture automatique* to go back to it.

@@ -52,6 +52,20 @@ final readonly class SocializeExtension
         return null !== $preview->image ? $this->urls->path($preview->image) : null;
     }
 
+    /**
+     * Couverture d'une story à la une : l'image choisie, sinon la vignette de sa story la plus récente.
+     */
+    #[AsTwigFunction('highlight_cover_url')]
+    public function highlightCoverUrl(\App\Core\Domain\Story\Highlight $highlight): ?string
+    {
+        if (null !== $highlight->getCoverPath()) {
+            return $this->urls->path($highlight->getCoverPath());
+        }
+        $media = $highlight->getCover()?->getMedia();
+
+        return $media instanceof MediaAttachment ? $this->urls->derivative($media, MediaAttachment::DERIVATIVE_THUMB) : null;
+    }
+
     #[AsTwigFunction('avatar_url')]
     public function avatarUrl(Account $account): ?string
     {

@@ -35,6 +35,10 @@ class Highlight
     #[ORM\OrderBy(['createdAt' => 'ASC', 'id' => 'ASC'])]
     private Collection $stories;
 
+    /** Image de couverture choisie (fichier des copies, carré) ; sans elle, la story la plus récente sert de couverture. */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $coverPath = null;
+
     public function __construct(
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -92,8 +96,18 @@ class Highlight
         return $this->stories;
     }
 
+    public function getCoverPath(): ?string
+    {
+        return $this->coverPath;
+    }
+
+    public function changeCover(?string $coverPath): void
+    {
+        $this->coverPath = $coverPath;
+    }
+
     /**
-     * Couverture : la story la plus récente qui a un média prêt.
+     * Couverture par défaut (sans image choisie) : la story la plus récente qui a un média prêt.
      */
     public function getCover(): ?Story
     {
