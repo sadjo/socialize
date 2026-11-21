@@ -35,7 +35,7 @@ final class PublicProfileTest extends AppWebTestCase
         self::assertSame(['h1.', 'p.uname', 'button.btn sm', 'span.handle'], $order);
 
         self::assertSelectorTextSame('footer.powered', 'Propulsé par socialize · Aide · Version dev');
-        self::assertSelectorExists('footer.powered a[href="https://github.com/alice/socialize"]');
+        self::assertSelectorExists('footer.powered a[href="https://sadjo.github.io/socialize/"]');
     }
 
     public function testAConnectedVisitorKeepsTheMenuAndTheFollowButton(): void
