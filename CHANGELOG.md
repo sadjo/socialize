@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.42] - 2026-11-21
+
+Story highlights: removing a story works, several stories at once, chosen cover.
+
+### Added
+
+- Several stories featured at once: tick them on "Mes stories" (current or archived), pick a highlight or create one,
+  then "Mettre à la une" (stories)
+- Edit page for a highlight: title, cover image from the device, Immich or Synology Photos (cropped to a circle) or
+  back to the automatic cover, and removal of its stories one by one (stories)
+
+### Fixed
+
+- Removing a story from a highlight is saved again; it only worked for the last story of the highlight (stories)
+- Current stories restricted to groups now appear on "Mes stories", so they can be managed and removed from a
+  highlight (stories)
+- The "Partager vers Instagram" button no longer overflows story thumbnails (stories)
+
 ## [0.9.41] - 2026-11-21
 
 Footer of public profiles.
