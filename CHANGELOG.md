@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.43] - 2026-11-21
+
+Documentation of highlight covers.
+
+### Changed
+
+- User guide, wiki (Integrations) and README: Immich and Synology Photos also provide the cover image of a story
+  highlight (documentation)
+
 ## [0.9.42] - 2026-11-21
 
 Story highlights: removing a story works, several stories at once, chosen cover.
