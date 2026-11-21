@@ -34,7 +34,8 @@ final class PublicProfileTest extends AppWebTestCase
         $order = $info->filter('h1, .uname, button[data-controller="copy"], .handle')->each(static fn ($n): string => $n->nodeName().'.'.$n->attr('class'));
         self::assertSame(['h1.', 'p.uname', 'button.btn sm', 'span.handle'], $order);
 
-        self::assertSelectorTextSame('footer.powered', 'Propulsé par socialize.example · Aide · Version dev');
+        self::assertSelectorTextSame('footer.powered', 'Propulsé par socialize · Aide · Version dev');
+        self::assertSelectorExists('footer.powered a[href="https://github.com/alice/socialize"]');
     }
 
     public function testAConnectedVisitorKeepsTheMenuAndTheFollowButton(): void
