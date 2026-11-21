@@ -84,6 +84,8 @@ The session lasts as long as it is used (DSM › Control Panel › Security › 
 inactivity); when it expires, Socialize offers to reconnect. The server must be reachable from Socialize
 (QuickConnect addresses are not supported). Synology does not document the Photos API: a DSM update may change it.
 
+Both libraries also provide the cover image of a story highlight (*Mes stories › Modifier*), in addition to the device.
+
 ## Openverse (music)
 
 Music search uses the public [Openverse](https://openverse.org) API — no configuration needed. Previews are relayed

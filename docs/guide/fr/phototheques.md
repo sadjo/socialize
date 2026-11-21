@@ -24,4 +24,5 @@ sélections qu'Immich. Quand la session expire, Socialize propose de se reconnec
 ## Mélanger les sources
 
 Médias de l'appareil, d'Immich et de Synology Photos se mêlent dans une même publication ; la légende et le lieu sont
-préremplis depuis la photothèque quand ils y figurent.
+préremplis depuis la photothèque quand ils y figurent. Les mêmes onglets servent à choisir l'image de couverture d'une
+[story à la une](stories.md#mettre-une-story-à-la-une).
