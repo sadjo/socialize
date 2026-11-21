@@ -49,7 +49,7 @@ friends who live on Mastodon or Pixelfed.
 | | |
 | --- | --- |
 | 📸 **Posts** | Carousels of up to 20 photos and videos, alt text, captions with hashtags and mentions, location, content warnings, 4:5 frame, full-screen viewer |
-| ⏱️ **Stories** | 24-hour stories with text overlay, highlights on the profile, archives, viewers list |
+| ⏱️ **Stories** | 24-hour stories with text overlay, highlights on the profile (several stories at once, chosen cover), archives, viewers list |
 | 🌐 **Fediverse** | ActivityPub (WebFinger, NodeInfo, HTTP Signatures): follow and be followed from Mastodon, Pixelfed and others |
 | 🐘 **Mastodon sign-in** | People can use Socialize with their existing Mastodon account — no local account needed |
 | 👥 **Audience groups** | Share a post or story with selected groups of followers only |

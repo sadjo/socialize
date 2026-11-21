@@ -84,6 +84,9 @@ La session dure tant qu'elle sert (DSM › Panneau de configuration › Sécurit
 Socialize (pas d'adresse QuickConnect). L'API de Synology Photos n'est pas documentée : une mise à jour de DSM peut la
 changer.
 
+Les deux photothèques fournissent aussi, en plus de l'appareil, l'image de couverture d'une story à la une
+(*Mes stories › Modifier*).
+
 ## Openverse (musique)
 
 La recherche de musique utilise l'API publique d'[Openverse](https://openverse.org), sans réglage. Les pré-écoutes

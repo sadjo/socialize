@@ -24,4 +24,5 @@ selections as Immich. When the session expires, Socialize offers to sign in agai
 ## Mixing sources
 
 Media from the device, Immich and Synology Photos mix in a single post; caption and location are prefilled from the
-library when it has them.
+library when it has them. The same tabs are used to pick the cover image of a
+[highlight](stories.md#featuring-a-story).

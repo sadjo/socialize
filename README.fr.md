@@ -49,7 +49,7 @@ vos publications atteignent quand même vos proches sur Mastodon ou Pixelfed.
 | | |
 | --- | --- |
 | 📸 **Publications** | Carrousels jusqu'à 20 photos et vidéos, texte alternatif, légendes avec hashtags et mentions, lieu, avertissement de contenu, cadre 4:5, visionneuse plein écran |
-| ⏱️ **Stories** | Stories de 24 h avec texte superposé, stories à la une sur le profil, archives, liste des vues |
+| ⏱️ **Stories** | Stories de 24 h avec texte superposé, stories à la une sur le profil (plusieurs stories d’un coup, couverture au choix), archives, liste des vues |
 | 🌐 **Fédivers** | ActivityPub (WebFinger, NodeInfo, signatures HTTP) : suivre et être suivi depuis Mastodon, Pixelfed et les autres |
 | 🐘 **Connexion Mastodon** | Utiliser Socialize avec son compte Mastodon existant, sans compte local |
 | 👥 **Groupes d'abonnés** | Réserver une publication ou une story à certains groupes d'abonnés |
