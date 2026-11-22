@@ -104,6 +104,31 @@ final class PasswordResetTest extends AppWebTestCase
         }
     }
 
+    public function testAnInvalidMailerDsnDoesNotBreakThePage(): void
+    {
+        $saved = ['server' => $_SERVER['MAILER_DSN'] ?? null, 'env' => $_ENV['MAILER_DSN'] ?? null];
+        $_SERVER['MAILER_DSN'] = $_ENV['MAILER_DSN'] = 'smtp.exemple.fr:587';
+        try {
+            $this->register('camille', 'camille@exemple.fr');
+            $this->client->request('GET', '/mot-de-passe-oublie');
+            self::assertResponseIsSuccessful();
+            $this->client->submitForm('Recevoir le lien', ['forgot_password[identifier]' => 'camille']);
+            self::assertResponseIsSuccessful();
+            self::assertSelectorTextContains('h1', 'Regardez vos e-mails');
+        } finally {
+            if (null === $saved['server']) {
+                unset($_SERVER['MAILER_DSN']);
+            } else {
+                $_SERVER['MAILER_DSN'] = $saved['server'];
+            }
+            if (null === $saved['env']) {
+                unset($_ENV['MAILER_DSN']);
+            } else {
+                $_ENV['MAILER_DSN'] = $saved['env'];
+            }
+        }
+    }
+
     private function linkIn(string $email): string
     {
         self::assertSame(1, preg_match('#http://localhost/mot-de-passe/nouveau\?[^\s"<]+#', quoted_printable_decode($email), $m));
