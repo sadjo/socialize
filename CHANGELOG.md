@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.44] - 2026-11-22
+
+Invalid mail server setting no longer breaks pages.
+
+### Fixed
+
+- An invalid `MAILER_DSN` (for instance without `smtp://`) no longer causes an error 500 on the invitations page and
+  the « forgotten password » page: the mailer is only built when an e-mail is sent, and a failure shows a message
+  (accounts)
+
 ## [0.9.43] - 2026-11-21
 
 Documentation of highlight covers.
