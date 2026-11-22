@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.45] - 2026-11-22
+
+Tabs on the home page, Local feed without tabs.
+
+### Changed
+
+- Home page "Publications": three tabs limited to the accounts you follow, "Abonnements" (all of them), "Instance"
+  (accounts of this instance, with your own posts) and "Fédéré" (fediverse accounts); infinite scrolling stays in the
+  chosen tab (feeds)
+- "Local" page: no tab bar, still every public post of the accounts of this instance (feeds)
+
+### Removed
+
+- Public federated feed: `/federe` now redirects to the "Fédéré" tab of the home page (feeds)
+
 ## [0.9.44] - 2026-11-22
 
 Invalid mail server setting no longer breaks pages.
