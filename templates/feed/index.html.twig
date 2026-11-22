@@ -1,7 +1,7 @@
 {% extends 'layout.html.twig' %}
 {% import '_macros.html.twig' as ui %}
 
-{% block title %}{{ tab == 'home' ? 'Publications' : (tab == 'federated' ? 'Fil fédéré' : 'Fil local') }} · Socialize{% endblock %}
+{% block title %}{{ tab == 'home' ? 'Publications' : 'Fil local' }} · Socialize{% endblock %}
 
 {% block content %}
 <div class="home">
@@ -19,20 +19,24 @@
         {# Barre des stories : seulement s'il y en a à voir (les siennes ou celles des comptes suivis) ; pour en publier
            une, le bouton « Créer » propose « Story ». #}
         {% if tab == 'home' and story_groups is not empty %}{{ include('feed/_stories_bar.html.twig') }}{% endif %}
-        {# Barre des fils : sur les fils Local et Fédéré seulement, pas sur l'écran d'accueil. #}
-        {% if tab in ['local', 'federated'] %}{{ include('feed/_tabs.html.twig') }}{% endif %}
-        {% if tab in ['local', 'federated'] %}{{ include('search/_form.html.twig') }}{% endif %}
+        {# Onglets Abonnements / Local / Fédéré : sur la page Publications seulement. #}
+        {% if tab == 'home' %}{{ include('feed/_tabs.html.twig') }}{% endif %}
+        {% if tab == 'local' %}{{ include('search/_form.html.twig') }}{% endif %}
         <div class="feed" data-controller="infinite-list">
             {% if page.empty %}
                 <div class="empty">
                     {{ ui.icon('image') }}
-                    {% if tab == 'home' %}
+                    {% if tab == 'home' and subtab == 'local' %}
+                        <b>Aucune publication des comptes d’ici que vous suivez</b>
+                        <span>Découvrez les comptes de l’instance depuis le fil local.</span>
+                        <div class="row"><a class="btn" href="{{ path('app_feed_local') }}">Voir le fil local</a></div>
+                    {% elseif tab == 'home' and subtab == 'federated' %}
+                        <b>Aucune publication du fédivers pour l’instant</b>
+                        <span>Suivez des comptes Mastodon ou Pixelfed : leurs publications apparaîtront ici. Cherchez-les avec leur adresse, par exemple @nom@pixelfed.social.</span>
+                    {% elseif tab == 'home' %}
                         <b>Votre fil est vide pour l’instant</b>
                         <span>Publiez votre première photo, ou suivez des comptes depuis le fil local.</span>
                         <div class="row">{% if is_granted('ROLE_PUBLISHER') %}<a class="btn pri" href="{{ path('app_compose') }}">Publier</a>{% endif %}<a class="btn" href="{{ path('app_feed_local') }}">Voir le fil local</a></div>
-                    {% elseif tab == 'federated' %}
-                        <b>Aucune publication du fédivers pour l’instant</b>
-                        <span>Suivez des comptes Mastodon ou Pixelfed : leurs publications publiques apparaîtront ici. Cherchez-les avec leur adresse, par exemple @nom@pixelfed.social.</span>
                     {% else %}
                         <b>Aucune publication publique pour l’instant</b>
                     {% endif %}

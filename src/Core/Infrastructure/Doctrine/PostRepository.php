@@ -65,9 +65,12 @@ final class PostRepository extends ServiceEntityRepository
     }
 
     /**
-     * Fil « Abonnements » : ses propres publications et celles des comptes suivis.
+     * Fil « Publications » : ses propres publications et celles des comptes suivis.
+     *
+     * @param bool|null $local true : comptes de l'instance seulement (onglet Local) ; false : comptes du fédivers
+     *                         (onglet Fédéré) ; null : tous (onglet Abonnements)
      */
-    public function homeTimeline(Account $viewer, ?Cursor $cursor, int $limit): TimelinePage
+    public function homeTimeline(Account $viewer, ?Cursor $cursor, int $limit, ?bool $local = null): TimelinePage
     {
         // Auteurs lus d'abord, puis passés en liste : « p.account IN (liste) » en condition principale permet à la base
         // de parcourir l'index (account_id, published_at) de ces seuls comptes. Avec « p.account = :viewer OR
@@ -90,6 +93,9 @@ final class PostRepository extends ServiceEntityRepository
             ->setParameter('viewer', $viewer->getId(), UuidType::NAME)
             ->setParameter('shared', [Visibility::Public, Visibility::Unlisted, Visibility::Followers])
             ->setParameter('groups', Visibility::Groups);
+        if (null !== $local) {
+            $qb->andWhere($local ? 'a.domain IS NULL' : 'a.domain IS NOT NULL');
+        }
 
         return $this->page($qb, $cursor, $limit);
     }
@@ -101,19 +107,6 @@ final class PostRepository extends ServiceEntityRepository
     {
         $qb = $this->base()
             ->where('a.domain IS NULL')
-            ->andWhere('p.visibility = :public')
-            ->setParameter('public', Visibility::Public);
-
-        return $this->page($qb, $cursor, $limit);
-    }
-
-    /**
-     * Fil « Fédéré » : publications publiques reçues des autres instances.
-     */
-    public function federatedTimeline(?Cursor $cursor, int $limit): TimelinePage
-    {
-        $qb = $this->base()
-            ->where('a.domain IS NOT NULL')
             ->andWhere('p.visibility = :public')
             ->setParameter('public', Visibility::Public);
 

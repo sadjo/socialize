@@ -47,6 +47,29 @@ final class FeedListTest extends AppWebTestCase
         self::assertSelectorNotExists('turbo-stream[action="replace"]');
     }
 
+    public function testTheTabsOfThePublicationsPageKeepTheirFilterOnTheNextPage(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $this->publishMany($camille->getAccount(), 12);
+
+        $crawler = $this->client->request('GET', '/?fil=local');
+        self::assertSelectorTextContains('.seg a.on[aria-selected="true"]', 'Local');
+        self::assertSelectorCount(10, '.feed > article.post', 'Ses propres publications sont dans l’onglet Local.');
+        $next = (string) $crawler->filter('#feed-more a')->attr('href');
+        self::assertStringStartsWith('/?fil=local&apres=', $next, 'La page suivante reste dans l’onglet.');
+        $this->client->request('GET', $next, server: self::STREAM);
+        self::assertSelectorCount(2, 'turbo-stream[action="before"] article.post');
+
+        $this->client->request('GET', '/?fil=federe');
+        self::assertSelectorTextContains('.seg a.on', 'Fédéré');
+        self::assertSelectorNotExists('.feed > article.post', 'Aucun compte du fédivers suivi.');
+        self::assertSelectorTextContains('.empty', 'Aucune publication du fédivers');
+
+        $this->client->request('GET', '/?fil=inconnu');
+        self::assertSelectorTextContains('.seg a.on', 'Abonnements', 'Valeur inconnue : onglet Abonnements.');
+        self::assertSelectorCount(10, '.feed > article.post');
+    }
+
     /**
      * Turbo envoie ses formulaires en acceptant les flux, et le navigateur garde cet en-tête en suivant la redirection :
      * le fil ou le profil atteint ainsi doit être rendu en entier (sinon l'écran ne change pas après la connexion,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Web;
 
 use App\Tests\AppWebTestCase;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Instance réservée aux comptes (temporaire, HOME_LOGIN_ONLY=1).
@@ -64,7 +65,7 @@ final class HomeLoginTest extends AppWebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('nav.side a[href="/local"]', 'Connecté : fils publics accessibles.');
         $this->client->request('GET', '/federe');
-        self::assertResponseIsSuccessful();
+        self::assertResponseRedirects('/?fil=federe', Response::HTTP_MOVED_PERMANENTLY, 'Ancien fil fédéré : onglet Fédéré de Publications.');
         $this->client->request('GET', '/recherche');
         self::assertResponseIsSuccessful();
         $this->client->request('GET', '/@camille');
