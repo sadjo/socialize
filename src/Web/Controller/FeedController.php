@@ -24,6 +24,8 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 final class FeedController extends AbstractController
 {
     private const int PAGE_SIZE = 10;
+    private const string TAB_INSTANCE = 'instance';
+    private const string TAB_FEDERATED = 'federe';
 
     public function __construct(
         private readonly PostRepository $posts,
@@ -55,10 +57,23 @@ final class FeedController extends AbstractController
             ]);
         }
 
-        return $this->renderFeed($request, 'home', $this->posts->homeTimeline($viewer, $this->cursor($request), self::PAGE_SIZE), static fn (): array => [
+        // Onglets Abonnements (tous les comptes suivis), Instance (ceux de l'instance) et Fédéré (ceux du fédivers).
+        $filter = $request->query->getString('fil');
+        $local = match ($filter) {
+            self::TAB_INSTANCE => true,
+            self::TAB_FEDERATED => false,
+            default => null,
+        };
+        $routeParams = null === $local ? [] : ['fil' => $filter];
+
+        return $this->renderFeed($request, 'home', $this->posts->homeTimeline($viewer, $this->cursor($request), self::PAGE_SIZE, $local), static fn (): array => [
             'suggestions' => $accounts->suggestionsFor($viewer),
             'story_groups' => $stories->barFor($viewer),
-        ]);
+        ], ['subtab' => match ($local) {
+            true => 'local',
+            false => 'federated',
+            null => 'all',
+        }, 'route_params' => $routeParams]);
     }
 
     #[Route('/local', name: 'app_feed_local', methods: ['GET'])]
@@ -71,24 +86,24 @@ final class FeedController extends AbstractController
         ]);
     }
 
+    /**
+     * Ancien fil fédéré public : remplacé par l'onglet Fédéré de « Publications » (comptes suivis du fédivers).
+     */
     #[Route('/federe', name: 'app_feed_federated', methods: ['GET'])]
-    public function federated(Request $request, AccountRepository $accounts): Response
+    public function federated(): \Symfony\Component\HttpFoundation\RedirectResponse
     {
-        $viewer = $this->currentAccount->get();
-
-        return $this->renderFeed($request, 'federated', $this->posts->federatedTimeline($this->cursor($request), self::PAGE_SIZE), static fn (): array => [
-            'suggestions' => $viewer instanceof \App\Core\Domain\Account\Account ? $accounts->suggestionsFor($viewer) : [],
-        ]);
+        return $this->redirectToRoute('app_home', ['fil' => self::TAB_FEDERATED], Response::HTTP_MOVED_PERMANENTLY);
     }
 
     /**
-     * @param \Closure(): array<string, mixed> $extra blocs autour du fil (suggestions, stories…), calculés pour une
-     *                                                page complète seulement
+     * @param \Closure(): array<string, mixed> $extra  blocs autour du fil (suggestions, stories…), calculés pour une
+     *                                                 page complète seulement
+     * @param array<string, mixed>             $shared paramètres utiles aussi aux pages suivantes (onglet)
      */
-    private function renderFeed(Request $request, string $tab, TimelinePage $page, \Closure $extra): Response
+    private function renderFeed(Request $request, string $tab, TimelinePage $page, \Closure $extra, array $shared = []): Response
     {
         $this->commentPreviews->prime($page->posts);
-        $parameters = [
+        $parameters = $shared + [
             'tab' => $tab,
             'page' => $page,
             'liked' => $this->likes->likedAmong($this->currentAccount->get(), $page->posts),

@@ -3,9 +3,12 @@
 ## Les fils
 
 - **Publications** (accueil) : vos publications et celles des comptes que vous suivez, des plus récentes aux plus
-  anciennes ;
-- **Local** : les publications publiques des comptes de cette instance ;
-- **Fédéré** : les publications publiques reçues du fédivers, venues des comptes que suivent les personnes d'ici.
+  anciennes, réparties en trois onglets :
+  - **Abonnements** : tous les comptes suivis ;
+  - **Instance** : les comptes de cette instance que vous suivez, et vos propres publications ;
+  - **Fédéré** : les comptes du fédivers que vous suivez (Mastodon, Pixelfed…) ;
+- **Local** (menu) : toutes les publications publiques des comptes de cette instance, suivis ou non, pour en
+  découvrir de nouveaux.
 
 ## Publications texte
 

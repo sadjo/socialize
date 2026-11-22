@@ -84,12 +84,12 @@ final class AccountTest extends AppWebTestCase
         self::assertSelectorTextContains('nav.side a.nav.on', 'Publications', 'L’accueil s’appelle « Publications » dans le menu.');
         self::assertSelectorExists('nav.side a.nav.on use[href="#i-image"]');
         self::assertSelectorExists('.tabbar a.on[aria-label="Publications"]');
-        self::assertSelectorNotExists('.seg', 'Pas de barre Abonnements / Local / Fédéré sur l’accueil.');
+        self::assertSelectorTextContains('.seg a.on[href="/"]', 'Abonnements', 'Onglets des comptes suivis sur Publications.');
+        self::assertSelectorTextContains('.seg a[href="/?fil=instance"]', 'Instance');
+        self::assertSelectorTextContains('.seg a[href="/?fil=federe"]', 'Fédéré');
 
         $this->client->request('GET', '/local');
-        self::assertSelectorTextContains('.seg a.on', 'Local', 'La barre reste sur le fil local…');
-        self::assertSelectorExists('.seg a[href="/federe"]', '… et mène toujours au fil fédéré.');
-        self::assertSelectorTextContains('.seg a[href="/"]', 'Publications');
+        self::assertSelectorNotExists('.seg', 'Pas d’onglets sur le fil local.');
         self::assertSelectorTextContains('nav.side a.nav.on', 'Local', '« Local » est inchangé dans le menu.');
     }
 
