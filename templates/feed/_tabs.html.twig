@@ -1,6 +1,6 @@
 {# Onglets de la page Publications, tous limités aux comptes suivis. Variable : subtab (all, local, federated) #}
 <div class="seg" role="tablist" aria-label="Publications">
-    {% for key, item in {all: {label: 'Abonnements', params: {}}, local: {label: 'Instance', params: {fil: 'local'}}, federated: {label: 'Fédéré', params: {fil: 'federe'}}} %}
+    {% for key, item in {all: {label: 'Abonnements', params: {}}, local: {label: 'Instance', params: {fil: 'instance'}}, federated: {label: 'Fédéré', params: {fil: 'federe'}}} %}
         <a role="tab" class="{{ subtab == key ? 'on' }}" aria-selected="{{ subtab == key ? 'true' : 'false' }}" href="{{ path('app_home', item.params) }}">{{ item.label }}</a>
     {% endfor %}
 </div>

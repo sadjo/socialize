@@ -24,7 +24,7 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 final class FeedController extends AbstractController
 {
     private const int PAGE_SIZE = 10;
-    private const string TAB_LOCAL = 'local';
+    private const string TAB_INSTANCE = 'instance';
     private const string TAB_FEDERATED = 'federe';
 
     public function __construct(
@@ -60,7 +60,7 @@ final class FeedController extends AbstractController
         // Onglets Abonnements (tous les comptes suivis), Instance (ceux de l'instance) et Fédéré (ceux du fédivers).
         $filter = $request->query->getString('fil');
         $local = match ($filter) {
-            self::TAB_LOCAL => true,
+            self::TAB_INSTANCE => true,
             self::TAB_FEDERATED => false,
             default => null,
         };

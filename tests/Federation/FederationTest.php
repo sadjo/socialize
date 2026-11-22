@@ -746,7 +746,7 @@ final class FederationTest extends AppWebTestCase
         self::assertSelectorTextContains('article.post .fed', 'remote.test');
         $this->client->request('GET', '/?fil=federe');
         self::assertSelectorCount(1, 'article.post', 'Onglet Fédéré : les comptes suivis du fédivers.');
-        $this->client->request('GET', '/?fil=local');
+        $this->client->request('GET', '/?fil=instance');
         self::assertSelectorNotExists('article.post', 'Onglet Instance : pas de compte distant.');
 
         // Like et commentaire envoyés à l'autrice

@@ -85,7 +85,7 @@ final class AccountTest extends AppWebTestCase
         self::assertSelectorExists('nav.side a.nav.on use[href="#i-image"]');
         self::assertSelectorExists('.tabbar a.on[aria-label="Publications"]');
         self::assertSelectorTextContains('.seg a.on[href="/"]', 'Abonnements', 'Onglets des comptes suivis sur Publications.');
-        self::assertSelectorTextContains('.seg a[href="/?fil=local"]', 'Instance');
+        self::assertSelectorTextContains('.seg a[href="/?fil=instance"]', 'Instance');
         self::assertSelectorTextContains('.seg a[href="/?fil=federe"]', 'Fédéré');
 
         $this->client->request('GET', '/local');

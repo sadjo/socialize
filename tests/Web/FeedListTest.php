@@ -52,11 +52,11 @@ final class FeedListTest extends AppWebTestCase
         $camille = $this->login($this->register('camille'));
         $this->publishMany($camille->getAccount(), 12);
 
-        $crawler = $this->client->request('GET', '/?fil=local');
+        $crawler = $this->client->request('GET', '/?fil=instance');
         self::assertSelectorTextContains('.seg a.on[aria-selected="true"]', 'Instance');
         self::assertSelectorCount(10, '.feed > article.post', 'Ses propres publications sont dans l’onglet Instance.');
         $next = (string) $crawler->filter('#feed-more a')->attr('href');
-        self::assertStringStartsWith('/?fil=local&apres=', $next, 'La page suivante reste dans l’onglet.');
+        self::assertStringStartsWith('/?fil=instance&apres=', $next, 'La page suivante reste dans l’onglet.');
         $this->client->request('GET', $next, server: self::STREAM);
         self::assertSelectorCount(2, 'turbo-stream[action="before"] article.post');
 
