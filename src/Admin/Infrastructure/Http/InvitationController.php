@@ -10,9 +10,10 @@ use App\Core\Domain\Account\User;
 use App\Core\Infrastructure\Doctrine\InvitationRepository;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\Mailer\Exception\ExceptionInterface as MailerException;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Routing\Attribute\Route;
@@ -28,11 +29,14 @@ final class InvitationController extends AbstractController
 {
     public function __construct(
         private readonly Invitations $invitations,
+        // Paresseux : un MAILER_DSN invalide ne doit pas empêcher d'afficher la page ni de créer un lien.
+        #[Autowire(lazy: true)]
+        private readonly MailerInterface $mailer,
     ) {
     }
 
     #[Route('/admin/invitations', name: 'admin_invitations', methods: ['GET', 'POST'])]
-    public function index(Request $request, MailerInterface $mailer): Response
+    public function index(Request $request): Response
     {
         $form = $this->createForm(InvitationType::class);
         $form->handleRequest($request);
@@ -47,14 +51,14 @@ final class InvitationController extends AbstractController
 
             if (null !== $invitation->getEmail()) {
                 try {
-                    $mailer->send(new TemplatedEmail()
+                    $this->mailer->send(new TemplatedEmail()
                         ->to(new Address($invitation->getEmail()))
                         ->subject(\sprintf('%s vous invite sur Socialize', $admin->getAccount()->getDisplayName()))
                         ->htmlTemplate('emails/invitation.html.twig')
                         ->textTemplate('emails/invitation.txt.twig')
                         ->context(['invitation' => $invitation, 'link' => $link, 'inviter' => $admin->getAccount()]));
                     $this->addFlash('success', \sprintf('Invitation envoyée à %s.', $invitation->getEmail()));
-                } catch (TransportExceptionInterface) {
+                } catch (MailerException) {
                     $this->addFlash('error', \sprintf('L’e-mail n’a pas pu être envoyé à %s (serveur d’envoi : MAILER_DSN). Transmettez le lien ci-dessous vous-même.', $invitation->getEmail()));
                 }
             } else {

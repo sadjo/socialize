@@ -12,10 +12,11 @@ use App\Web\Security\PasswordReset;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\Mailer\Exception\ExceptionInterface as MailerException;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -28,6 +29,9 @@ final class PasswordResetController extends AbstractController
 {
     public function __construct(
         private readonly PasswordReset $reset,
+        // Paresseux : un MAILER_DSN invalide ne doit pas empêcher d'afficher la page.
+        #[Autowire(lazy: true)]
+        private readonly MailerInterface $mailer,
     ) {
     }
 
@@ -35,7 +39,6 @@ final class PasswordResetController extends AbstractController
     public function request(
         Request $request,
         UserRepository $users,
-        MailerInterface $mailer,
         LoggerInterface $logger,
         RateLimiterFactoryInterface $passwordResetLimiter,
         RateLimiterFactoryInterface $passwordResetIpLimiter,
@@ -55,13 +58,13 @@ final class PasswordResetController extends AbstractController
                 // Même réponse que le compte existe ou non : la page ne dit pas quels comptes existent.
                 if ($user instanceof User && $passwordResetLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
                     try {
-                        $mailer->send(new TemplatedEmail()
+                        $this->mailer->send(new TemplatedEmail()
                             ->to(new Address($user->getEmail()))
                             ->subject('Choisir un nouveau mot de passe Socialize')
                             ->htmlTemplate('emails/password_reset.html.twig')
                             ->textTemplate('emails/password_reset.txt.twig')
                             ->context(['account' => $user->getAccount(), 'link' => $this->reset->linkFor($user)]));
-                    } catch (TransportExceptionInterface $e) {
+                    } catch (MailerException $e) {
                         $logger->error('E-mail « Mot de passe oublié » non envoyé (MAILER_DSN) : {message}', ['message' => $e->getMessage()]);
                     }
                 }

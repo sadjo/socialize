@@ -23,10 +23,15 @@ final class InvitationTest extends AppWebTestCase
     {
         // Instance fermée, comme en production : l'invitation est la seule façon d'entrer.
         foreach (['HOME_LOGIN_ONLY' => '1', 'REGISTRATION' => 'closed'] as $name => $value) {
-            $this->savedEnv[$name] = ['server' => $_SERVER[$name] ?? null, 'env' => $_ENV[$name] ?? null];
-            $_SERVER[$name] = $_ENV[$name] = $value;
+            $this->setEnv($name, $value);
         }
         parent::setUp();
+    }
+
+    private function setEnv(string $name, string $value): void
+    {
+        $this->savedEnv[$name] ??= ['server' => $_SERVER[$name] ?? null, 'env' => $_ENV[$name] ?? null];
+        $_SERVER[$name] = $_ENV[$name] = $value;
     }
 
     protected function tearDown(): void
@@ -67,7 +72,8 @@ final class InvitationTest extends AppWebTestCase
 
     public function testALinkInvitationCreatesOneAccountEvenWhenRegistrationIsClosed(): void
     {
-        $this->login($this->register('alice'));
+        $admin = $this->register('alice');
+        $this->login($admin);
         $crawler = $this->client->request('GET', '/admin/invitations');
         $this->client->submit($crawler->selectButton('Inviter')->form());
         self::assertResponseRedirects('/admin/invitations');
@@ -115,6 +121,13 @@ final class InvitationTest extends AppWebTestCase
         $this->client->request('GET', '/invitation/'.$token);
         self::assertResponseStatusCodeSame(410);
         self::assertSelectorTextContains('h1', 'Invitation non valable');
+
+        // La liste montre l'invitation utilisée et le compte créé.
+        $this->login($admin);
+        $this->client->request('GET', '/admin/invitations');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('table.invitations', 'Utilisée');
+        self::assertSelectorExists('table.invitations a[href="/@lina"]');
     }
 
     public function testAnEmailInvitationIsSentAndReservedToItsAddress(): void
@@ -176,6 +189,22 @@ final class InvitationTest extends AppWebTestCase
             $this->client->request('GET', '/invitation/'.$token);
             self::assertResponseStatusCodeSame(410, $token);
         }
+    }
+
+    public function testAnInvalidMailerDsnDoesNotBreakTheInvitationsPage(): void
+    {
+        // Réglage erroné en production : « The mailer DSN must contain a scheme. »
+        $this->setEnv('MAILER_DSN', 'smtp.exemple.fr:587');
+        $this->login($this->register('alice'));
+
+        $crawler = $this->client->request('GET', '/admin/invitations');
+        self::assertResponseIsSuccessful();
+
+        $this->client->submit($crawler->selectButton('Inviter')->form(['invitation[email]' => 'hugo@exemple.fr']));
+        self::assertResponseRedirects('/admin/invitations');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash.error', 'L’e-mail n’a pas pu être envoyé à hugo@exemple.fr');
+        self::assertSelectorExists('.invite-link input', 'Le lien reste à transmettre soi-même.');
     }
 
     private function onlyInvitation(): Invitation
