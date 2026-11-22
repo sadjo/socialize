@@ -19,7 +19,7 @@
         {# Barre des stories : seulement s'il y en a à voir (les siennes ou celles des comptes suivis) ; pour en publier
            une, le bouton « Créer » propose « Story ». #}
         {% if tab == 'home' and story_groups is not empty %}{{ include('feed/_stories_bar.html.twig') }}{% endif %}
-        {# Onglets Abonnements / Local / Fédéré : sur la page Publications seulement. #}
+        {# Onglets Abonnements / Instance / Fédéré : sur la page Publications seulement. #}
         {% if tab == 'home' %}{{ include('feed/_tabs.html.twig') }}{% endif %}
         {% if tab == 'local' %}{{ include('search/_form.html.twig') }}{% endif %}
         <div class="feed" data-controller="infinite-list">

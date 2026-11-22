@@ -4,7 +4,7 @@
 
 - **Publications** (home): your posts and those of the accounts you follow, newest first, in three tabs:
   - **Abonnements** (following): all the accounts you follow;
-  - **Local**: the accounts of this instance you follow, and your own posts;
+  - **Instance**: the accounts of this instance you follow, and your own posts;
   - **Fédéré** (federated): the fediverse accounts you follow (Mastodon, Pixelfed…);
 - **Local** (menu): all public posts of the accounts of this instance, followed or not, to discover new ones.
 

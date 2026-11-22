@@ -747,7 +747,7 @@ final class FederationTest extends AppWebTestCase
         $this->client->request('GET', '/?fil=federe');
         self::assertSelectorCount(1, 'article.post', 'Onglet Fédéré : les comptes suivis du fédivers.');
         $this->client->request('GET', '/?fil=local');
-        self::assertSelectorNotExists('article.post', 'Onglet Local : pas de compte distant.');
+        self::assertSelectorNotExists('article.post', 'Onglet Instance : pas de compte distant.');
 
         // Like et commentaire envoyés à l'autrice
         $crawler = $this->client->request('GET', '/p/'.$post->getPublicId());

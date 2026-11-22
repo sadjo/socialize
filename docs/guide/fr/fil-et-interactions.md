@@ -5,7 +5,7 @@
 - **Publications** (accueil) : vos publications et celles des comptes que vous suivez, des plus récentes aux plus
   anciennes, réparties en trois onglets :
   - **Abonnements** : tous les comptes suivis ;
-  - **Local** : les comptes de cette instance que vous suivez, et vos propres publications ;
+  - **Instance** : les comptes de cette instance que vous suivez, et vos propres publications ;
   - **Fédéré** : les comptes du fédivers que vous suivez (Mastodon, Pixelfed…) ;
 - **Local** (menu) : toutes les publications publiques des comptes de cette instance, suivis ou non, pour en
   découvrir de nouveaux.

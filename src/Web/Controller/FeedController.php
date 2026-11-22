@@ -57,7 +57,7 @@ final class FeedController extends AbstractController
             ]);
         }
 
-        // Onglets Abonnements (tous les comptes suivis), Local (ceux de l'instance) et Fédéré (ceux du fédivers).
+        // Onglets Abonnements (tous les comptes suivis), Instance (ceux de l'instance) et Fédéré (ceux du fédivers).
         $filter = $request->query->getString('fil');
         $local = match ($filter) {
             self::TAB_LOCAL => true,

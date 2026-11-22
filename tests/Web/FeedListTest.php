@@ -53,8 +53,8 @@ final class FeedListTest extends AppWebTestCase
         $this->publishMany($camille->getAccount(), 12);
 
         $crawler = $this->client->request('GET', '/?fil=local');
-        self::assertSelectorTextContains('.seg a.on[aria-selected="true"]', 'Local');
-        self::assertSelectorCount(10, '.feed > article.post', 'Ses propres publications sont dans l’onglet Local.');
+        self::assertSelectorTextContains('.seg a.on[aria-selected="true"]', 'Instance');
+        self::assertSelectorCount(10, '.feed > article.post', 'Ses propres publications sont dans l’onglet Instance.');
         $next = (string) $crawler->filter('#feed-more a')->attr('href');
         self::assertStringStartsWith('/?fil=local&apres=', $next, 'La page suivante reste dans l’onglet.');
         $this->client->request('GET', $next, server: self::STREAM);

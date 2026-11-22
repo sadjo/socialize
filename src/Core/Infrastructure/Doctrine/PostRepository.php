@@ -67,7 +67,7 @@ final class PostRepository extends ServiceEntityRepository
     /**
      * Fil « Publications » : ses propres publications et celles des comptes suivis.
      *
-     * @param bool|null $local true : comptes de l'instance seulement (onglet Local) ; false : comptes du fédivers
+     * @param bool|null $local true : comptes de l'instance seulement (onglet Instance) ; false : comptes du fédivers
      *                         (onglet Fédéré) ; null : tous (onglet Abonnements)
      */
     public function homeTimeline(Account $viewer, ?Cursor $cursor, int $limit, ?bool $local = null): TimelinePage
