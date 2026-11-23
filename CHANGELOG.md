@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.52] - 2026-11-23
+
+GitHub actions on Node 24.
+
+### Changed
+
+- GitHub workflows use the latest versions of their actions, which run on Node 24 (checkout, setup-python, Pages and
+  Docker actions) (ci)
+
+### Fixed
+
+- Website: when the Pages deployment does not find the freshly uploaded site yet, it tries again 30 seconds later
+  (ci)
+
 ## [0.9.51] - 2026-11-23
 
 Thumbnails of small photos are no longer enlarged.
