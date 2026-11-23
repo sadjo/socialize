@@ -6,12 +6,9 @@
 FROM dunglas/frankenphp:1-php8.5 AS frankenphp_upstream
 
 # ---------------------------------------------------------------------------
-# Base commune
+# Système : bibliothèques médias et extensions PHP (partagé par l'application et la CI)
 # ---------------------------------------------------------------------------
-FROM frankenphp_upstream AS frankenphp_base
-
-ARG APP_UID=1000
-ARG APP_GID=1000
+FROM frankenphp_upstream AS frankenphp_system
 
 WORKDIR /app
 
@@ -33,6 +30,14 @@ RUN set -eux; \
         pdo_sqlite \
         pdo_mysql \
     ;
+
+# ---------------------------------------------------------------------------
+# Base commune de l'application
+# ---------------------------------------------------------------------------
+FROM frankenphp_system AS frankenphp_base
+
+ARG APP_UID=1000
+ARG APP_GID=1000
 
 ENV COMPOSER_ALLOW_SUPERUSER=1 \
     PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d" \
@@ -122,3 +127,21 @@ RUN set -eux; \
 # Version affichée dans l'interface (tag v0.X.Y passé par la CI) ; en dernier pour garder le cache des étapes précédentes.
 ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}
+
+# ---------------------------------------------------------------------------
+# CI : PHP, extensions, ffmpeg et libvips déjà installés pour les jobs de qualité et de tests (.github/workflows/ci.yaml).
+# Node sert aux actions JavaScript (actions/checkout). Pas de variables de l'application : celles de .env s'appliquent.
+# ---------------------------------------------------------------------------
+FROM frankenphp_system AS ci
+
+# hadolint ignore=DL3008
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
+
+RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
+
+COPY --link docker/frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
