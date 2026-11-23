@@ -50,3 +50,9 @@ It then opens full screen and can send [notifications](notifications.md#on-this-
 The **menu** (on the left on a computer, at the bottom and in *Menu* on a phone) leads to the feeds, search, the
 *Créer* button, notifications, your profile and the settings. The small **?** next to page titles open the part of
 this guide that matches the page.
+
+On a wide screen, the panel icon to the right of the logo (**‹** chevron) reduces the menu, and the one under the
+logo (**›** chevron) expands it again; the device remembers your choice. In landscape mode the reduced menu keeps only
+the icons (their name shows on hover); in portrait mode each icon keeps its name in small print underneath. On a
+tablet in portrait mode the menu is always reduced; on an iPad Pro in portrait mode, reducing it shows the suggestions
+column next to the feed.
