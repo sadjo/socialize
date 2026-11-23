@@ -8,6 +8,8 @@ use App\Core\Domain\Media\MediaAttachment;
 use App\Media\Application\ImageSizes;
 use App\Media\Application\PostComposer;
 use App\Tests\AppWebTestCase;
+use App\Tests\Support\TestStorage;
+use Jcupitt\Vips\Image;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -81,6 +83,27 @@ final class ResponsiveImagesTest extends AppWebTestCase
         $crawler = $this->client->request('GET', '/');
         self::assertNull($crawler->filter('article.post .media img')->first()->attr('srcset'), 'Une seule taille réelle : le src suffit.');
         self::assertSame(400, ImageSizes::actualWidth('large_960', 400, 500));
+    }
+
+    public function testTheThumbnailsOfASmallPhotoAreNotEnlarged(): void
+    {
+        $camille = $this->login($this->register('camille'));
+        $post = self::getContainer()->get(PostComposer::class)->publish($camille->getAccount(), 'Petite', [['file' => $this->jpeg(200, 300), 'alt' => null]]);
+        $media = $post->getMedia()->first();
+        self::assertInstanceOf(MediaAttachment::class, $media);
+
+        // Plus grand recadrage 4:5 de l'original (200×250) pour les vignettes plus grandes, 4:5 gardé.
+        foreach (ImageSizes::widths(ImageSizes::THUMB) as $name => $width) {
+            $file = Image::newFromFile(TestStorage::dir('public/'.$media->getDerivative($name)));
+            self::assertSame([min($width, 200), min(intdiv($width * 5, 4), 250)], [$file->width, $file->height], $name);
+        }
+        self::assertSame([200, 250, true], ImageSizes::actualBox('thumb_720', 200, 300));
+        self::assertSame([240, 300, true], ImageSizes::actualBox('thumb_240', 1600, 2000), 'Grande image : taille prévue.');
+        self::assertSame(200, ImageSizes::actualWidth('thumb_360', 200, 300));
+
+        // Toutes les vignettes font la même largeur : une seule suffit, sans srcset.
+        $crawler = $this->client->request('GET', '/@camille');
+        self::assertNull($crawler->filter('.grid3 .gt img')->first()->attr('srcset'));
     }
 
     public function testTheCommandAddsTheMissingSizesToAlreadyPublishedMedia(): void

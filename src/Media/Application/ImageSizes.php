@@ -73,11 +73,32 @@ final class ImageSizes
     }
 
     /**
-     * Largeur réelle d'une copie pour une image d'origine donnée : une image entière n'est jamais agrandie.
+     * Dimensions de la copie pour une image d'origine donnée : [largeur, hauteur, recadrée]. Une vignette recadrée
+     * garde son format 4:5 mais ne dépasse pas le plus grand recadrage 4:5 de l'original : une petite image n'est
+     * jamais agrandie (des pixels en plus, ni plus nets ni plus fidèles, seulement plus lourds à produire et à charger).
+     *
+     * @return array{int, int, bool}
+     */
+    public static function actualBox(string $name, ?int $originalWidth, ?int $originalHeight): array
+    {
+        [$width, $height, $crop] = self::box($name);
+        if (!$crop || null === $originalWidth || null === $originalHeight || $originalWidth < 1 || $originalHeight < 1) {
+            return [$width, $height, $crop];
+        }
+        $cropWidth = max(1, min($originalWidth, intdiv($originalHeight * 4, 5)));
+        if ($cropWidth >= $width) {
+            return [$width, $height, true];
+        }
+
+        return [$cropWidth, max(1, min($originalHeight, intdiv($cropWidth * 5, 4))), true];
+    }
+
+    /**
+     * Largeur réelle d'une copie pour une image d'origine donnée : une image n'est jamais agrandie.
      */
     public static function actualWidth(string $name, ?int $originalWidth, ?int $originalHeight): int
     {
-        [$width, $height, $crop] = self::box($name);
+        [$width, $height, $crop] = self::actualBox($name, $originalWidth, $originalHeight);
         if ($crop || null === $originalWidth || null === $originalHeight || $originalWidth < 1 || $originalHeight < 1) {
             return $width;
         }

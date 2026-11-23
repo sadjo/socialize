@@ -50,9 +50,11 @@ final class VipsImageProcessor
     {
         try {
             $files = [];
+            // Dimensions redressées (EXIF), comme celles des copies : une petite image n'est pas agrandie.
+            $source = Image::newFromBuffer($bytes)->autorot();
             foreach ($names as $name) {
-                [$width, $height, $crop] = ImageSizes::box($name);
-                $options = $crop ? ['height' => $height, 'crop' => 'attention'] : ['height' => $height, 'size' => 'down'];
+                [$width, $height, $crop] = ImageSizes::actualBox($name, $source->width, $source->height);
+                $options = $crop ? ['height' => $height, 'crop' => 'attention', 'size' => 'down'] : ['height' => $height, 'size' => 'down'];
                 $files[$name] = $this->webp(Image::thumbnail_buffer($bytes, $width, $options));
             }
 
