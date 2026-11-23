@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.48] - 2026-11-23
+
+Faster continuous integration.
+
+### Changed
+
+- New `ci` target in the Dockerfile (PHP 8.5, extensions, ffmpeg, libvips and Node already installed): quality checks
+  and tests run in this image, rebuilt only when the Dockerfile changes, instead of installing PHP and the media
+  libraries on every run (build)
+- The indicative test run on the next PHP version only runs when the CI is started by hand, no longer on version tags
+  (build)
+
 ## [0.9.47] - 2026-11-23
 
 Collapsible side menu.
