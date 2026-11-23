@@ -49,5 +49,8 @@ final class SideMenuSizeTest extends AppWebTestCase
             $css,
         );
         self::assertStringContainsString(':root[data-menu="reduit"]{--side-w:84px}', $css);
+        // Réduit par choix en paysage : icônes seules, noms masqués à l'écran mais lus par les lecteurs d'écran.
+        self::assertStringContainsString('@media (min-width:1024px) and (orientation:landscape){'."\n".'  :root[data-menu="reduit"]{--side-w:72px}', $css);
+        self::assertStringContainsString('@container side (max-width:80px){'."\n".'  .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}', $css);
     }
 }

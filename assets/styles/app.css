@@ -125,6 +125,11 @@ main{min-width:0;padding-block:28px 110px}
 @media (min-width:1024px){
   :root[data-menu="reduit"]{--side-w:84px}
 }
+/* Réduit par choix en paysage (ordinateur, tablette) : icônes seules, plus étroit ; le nom reste lu par les lecteurs
+   d'écran et s'affiche au survol (title posé par le contrôleur menu-size). */
+@media (min-width:1024px) and (orientation:landscape){
+  :root[data-menu="reduit"]{--side-w:72px}
+}
 /* Menu réduit sur une tablette en portrait large (iPad Pro, 1024 à 1199 px) : la place gagnée rend la colonne des
    suggestions, masquée sinon sous 1200 px. */
 @media (min-width:1024px) and (max-width:1199px){
@@ -140,6 +145,11 @@ main{min-width:0;padding-block:28px 110px}
   .nav .badge{position:absolute;top:3px;left:calc(50% + 5px);margin:0;min-width:18px;height:18px;padding:0 5px;font-size:.65rem}
   .side-version{margin-inline:0;text-align:center;font-size:.68rem}
   .side-help{margin-inline:auto;font-size:.68rem}
+}
+@container side (max-width:80px){
+  .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .nav{padding:12px}
+  .nav .badge{top:2px;left:calc(50% + 4px)}
 }
 @media (max-width:767px){
   .app{grid-template-columns:minmax(0,1fr);gap:0}
