@@ -11,7 +11,7 @@
     {% if not mastodon %}<a href="{{ path('app_settings_groups') }}" class="{{ current == 'groups' ? 'on' }}"{{ current == 'groups' ? ' aria-current="page"' }}>{{ ui.icon('stack', 'xs') }}Groupes</a>{% endif %}
     {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_immich') }}" class="{{ current == 'immich' ? 'on' }}"{{ current == 'immich' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Immich</a>{% endif %}
     {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_synology_photos') }}" class="{{ current == 'synology' ? 'on' }}"{{ current == 'synology' ? ' aria-current="page"' }}>{{ ui.icon('album', 'xs') }}Synology</a>{% endif %}
-    {% if is_granted('ROLE_PUBLISHER') %}<a href="{{ path('app_settings_instagram') }}" class="{{ current == 'instagram' ? 'on' }}"{{ current == 'instagram' ? ' aria-current="page"' }}>{{ ui.icon('image', 'xs') }}Instagram</a>{% endif %}
+    {% if is_granted('ROLE_PUBLISHER') or (mastodon and is_granted('ROLE_INSTAGRAM_IMPORTER')) %}<a href="{{ path('app_settings_instagram') }}" class="{{ current == 'instagram' ? 'on' }}"{{ current == 'instagram' ? ' aria-current="page"' }}>{{ ui.icon('image', 'xs') }}Instagram</a>{% endif %}
 </nav>
 <button type="button" class="ptabs-arrow next" data-tabs-target="next" data-action="tabs#next" aria-label="Onglets suivants" tabindex="-1" hidden>{{ ui.icon('right', 'sm') }}</button>
 </div>

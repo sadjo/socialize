@@ -45,9 +45,27 @@ final class MastodonImportTest extends AppWebTestCase
         $this->client->request('GET', '/import');
         self::assertResponseStatusCodeSame(403, 'Sans le droit donné par un administrateur, pas d’import.');
 
+        $this->client->request('GET', '/reglages/instagram');
+        self::assertResponseStatusCodeSame(403, 'Ni l’onglet Instagram des réglages.');
+
+        // Une fois permis, l'import se lance depuis l'onglet Instagram des réglages, qui ne montre que lui.
         $this->allowImport();
         $this->client->request('GET', '/');
-        self::assertSelectorExists('.side a[href="/import"]');
+        self::assertSelectorNotExists('.side a[href="/import"]', 'Pas dans le menu.');
+        $this->client->request('GET', '/reglages/apparence');
+        self::assertSelectorExists('.ptabs a[href="/reglages/instagram"]');
+        $this->client->request('GET', '/reglages/instagram');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.ptabs a[href="/reglages/instagram"].on');
+        self::assertSelectorTextContains('#import', 'publiés sur votre compte Mastodon');
+        self::assertSelectorExists('#import a[href="/import"]');
+        self::assertSelectorNotExists('#application-meta', 'Publier aussi sur Instagram reste réservé aux comptes d’ici.');
+        self::assertSelectorNotExists('main form');
+        self::assertSelectorExists('.side a.nav.on[href="/reglages/apparence"]');
+        $this->client->request('POST', '/reglages/instagram');
+        self::assertResponseStatusCodeSame(403, 'En lecture seulement.');
+        $this->client->request('GET', '/reglages/instagram/retour');
+        self::assertResponseStatusCodeSame(403, 'Connexion à Instagram fermée.');
 
         // Un média par message sur ce serveur : le carrousel de l'été part en fil de deux messages.
         FakeMastodon::$maxMedia = 1;

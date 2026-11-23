@@ -1,7 +1,8 @@
 # Importing your Instagram archive
 
 With the *Import Instagram* permission, granted by an administrator, you bring back your whole Instagram history
-(*Import Instagram* in the menu): posts, carousels, videos, archived posts and stories, with their original dates.
+(*Réglages › Instagram › Importer mon archive*, the settings): posts, carousels, videos, archived posts and stories,
+with their original dates. An import in progress is shown there, with a button to resume it.
 
 ## Requesting the archive from Instagram
 
