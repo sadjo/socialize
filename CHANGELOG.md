@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.46] - 2026-11-23
+
+Labels in the narrow menu on tablets in portrait mode.
+
+### Fixed
+
+- Narrow side menu (between 768 and 1023 px, e.g. iPad in portrait mode): each icon now shows its label underneath,
+  since a touch screen cannot hover to reveal it, and the unread notifications badge is shown on the bell (layout)
+
 ## [0.9.45] - 2026-11-22
 
 Tabs on the home page, Local feed without tabs.
