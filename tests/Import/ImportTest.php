@@ -57,6 +57,11 @@ final class ImportTest extends AppWebTestCase
         self::assertResponseStatusCodeSame(409);
         self::assertSame(1000, $this->json()['received']);
 
+        // Réglages › Instagram signale l'import en cours, qu'on reprend d'un clic.
+        $this->client->request('GET', '/reglages/instagram');
+        self::assertSelectorTextContains('#import .note', 'Un import est en cours.');
+        self::assertSelectorTextContains('#import a[href="/import"]', 'Reprendre l’import');
+
         // Nouvelle page, mêmes fichiers : l'envoi reprend.
         $this->client->request('GET', '/import');
         self::assertSelectorTextContains('.note', 'Envoi interrompu');

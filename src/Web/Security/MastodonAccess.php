@@ -16,7 +16,7 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
  * Ce qu'une personne connectée avec Mastodon peut faire ici : lire (fils, profils, publications, stories), marquer
  * une story comme vue, aimer, commenter, suivre, accepter, refuser ou retirer ses abonnés, lire ses notifications,
  * choisir l'apparence, publier sur son compte Mastodon, et y importer son archive Instagram si un administrateur le lui
- * a permis. Le reste (publier ici, autres réglages, notifications sur l'appareil, import, administration) lui est
+ * a permis (pages d'import et onglet Instagram des réglages). Le reste (publier ici, autres réglages, notifications sur l'appareil, import, administration) lui est
  * fermé : son compte se gère sur son serveur.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 4)]
@@ -56,8 +56,10 @@ final readonly class MastodonAccess
         }
         $request = $event->getRequest();
         $route = $request->attributes->getString('_route');
-        // Import Instagram vers son compte Mastodon, si un administrateur le lui a permis.
-        if (str_starts_with($route, 'app_import') && $this->security->isGranted(User::ROLE_INSTAGRAM_IMPORTER)) {
+        // Import Instagram vers son compte Mastodon, si un administrateur le lui a permis : les pages d'import, et l'onglet
+        // Instagram des réglages qui y mène (en lecture : il n'y voit que l'import).
+        if ($this->security->isGranted(User::ROLE_INSTAGRAM_IMPORTER)
+            && (str_starts_with($route, 'app_import') || ('app_settings_instagram' === $route && $request->isMethodSafe()))) {
             return;
         }
         $closed = (!\in_array($route, self::OPEN, true) && array_any(self::CLOSED, static fn (string $prefix): bool => str_starts_with($route, $prefix)))

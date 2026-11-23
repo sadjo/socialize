@@ -64,8 +64,10 @@ final class AccountRightsTest extends AppWebTestCase
         $this->login($this->reload($hugo));
         $this->client->request('GET', '/publier');
         self::assertResponseIsSuccessful();
-        self::assertSelectorExists('nav.side a[href="/import"]');
+        self::assertSelectorNotExists('nav.side a[href="/import"]', 'L’import n’est plus dans le menu.');
         self::assertSelectorExists('nav.side button[popovertarget="create-menu"]');
+        $this->client->request('GET', '/reglages/instagram');
+        self::assertSelectorExists('#import a[href="/import"]', 'Il se lance depuis Réglages › Instagram.');
         self::assertSelectorExists('#create-menu a[href="/publier"]');
 
         $this->login($this->reload($admin));
@@ -142,6 +144,9 @@ final class AccountRightsTest extends AppWebTestCase
         self::assertSelectorExists('nav.side button[popovertarget="create-menu"]');
         self::assertSelectorExists('#create-menu a[href="/publier"]');
         self::assertSelectorNotExists('a[href="/import"]');
+        $this->client->request('GET', '/reglages/instagram');
+        self::assertResponseIsSuccessful('L’onglet Instagram reste ouvert au publieur (publier aussi sur Instagram).');
+        self::assertSelectorNotExists('#import', 'Sans le droit, pas de section d’import.');
 
         // L'administrateur l'accorde dans la colonne « Import Instagram ».
         $this->login($admin);
@@ -155,9 +160,12 @@ final class AccountRightsTest extends AppWebTestCase
         self::assertTrue($this->reload($hugo)->can(AccountRight::InstagramImport));
 
         $this->login($this->reload($hugo));
-        $this->client->request('GET', '/import');
+        $this->client->request('GET', '/reglages/instagram');
+        self::assertSelectorTextContains('#import h2', 'Importer mon archive Instagram');
+        $this->client->click($this->client->getCrawler()->filter('#import a[href="/import"]')->link());
         self::assertResponseIsSuccessful();
-        self::assertSelectorExists('nav.side a[href="/import"]');
+        self::assertSelectorExists('nav.side a.nav.on[href="/reglages"]', 'Pendant l’import, Réglages reste allumé dans le menu.');
+        self::assertSelectorExists('.page-h a[href="/reglages/instagram"]', 'Retour aux réglages.');
 
         // Sans le droit de publier, le droit d'import ne suffit plus (et l'administration le signale).
         $user = $this->reload($hugo);

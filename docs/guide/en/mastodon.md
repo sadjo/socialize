@@ -26,7 +26,8 @@ The links below the form lead to the chosen server: *Créer un compte Mastodon* 
   Mastodon server.
 - **Posting**: photos, videos and texts posted from Socialize go to your Mastodon account; the *Texte* tab posts a
   message without media.
-- **Instagram import**: possible if an administrator allows it; the archive is posted to your Mastodon account.
+- **Instagram import**: possible if an administrator allows it, from *Apparence › Instagram*; the archive is posted
+  to your Mastodon account.
 
 Socialize acts with the authorization granted when signing in, never knowing your Mastodon password.
 

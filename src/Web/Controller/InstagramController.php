@@ -13,12 +13,15 @@ use App\Crosspost\Meta\Domain\InstagramAppSettings;
 use App\Crosspost\Meta\Domain\InstagramConnection;
 use App\Crosspost\Meta\Domain\InstagramCrosspost;
 use App\Crosspost\Meta\Infrastructure\Doctrine\InstagramCrosspostRepository;
+use App\Import\Instagram\Infrastructure\Doctrine\InstagramImportRepository;
+use App\Integration\Mastodon\Domain\MastodonUser;
 use App\Web\Form\InstagramAppType;
 use App\Web\Form\InstagramRulesType;
 use App\Web\Security\CurrentAccount;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,7 +34,6 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Crosspost Instagram : connexion du compte professionnel (OAuth), règles par défaut, nouvel essai d'un envoi.
  */
-#[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
 final class InstagramController extends AbstractController
 {
     private const string STATE = 'instagram_oauth_state';
@@ -45,10 +47,19 @@ final class InstagramController extends AbstractController
     ) {
     }
 
+    /**
+     * Instagram dans les réglages : publier aussi sur Instagram (publieurs) et importer son archive (droit d'import).
+     * Un compte Mastodon autorisé à importer n'y voit que l'import.
+     */
     #[Route('/reglages/instagram', name: 'app_settings_instagram', methods: ['GET', 'POST'])]
-    public function settings(Request $request): Response
+    #[IsGranted(new Expression("is_granted('".User::ROLE_PUBLISHER."') or (is_granted('".MastodonUser::ROLE."') and is_granted('".User::ROLE_INSTAGRAM_IMPORTER."'))"), message: 'Votre compte n’a pas le droit de publier.')]
+    public function settings(Request $request, InstagramImportRepository $imports): Response
     {
         $account = $this->currentAccount->require();
+        $import = $this->isGranted(User::ROLE_INSTAGRAM_IMPORTER) ? ['active' => $imports->activeFor($account)] : null;
+        if (!$this->isGranted(User::ROLE_PUBLISHER)) {
+            return $this->render('settings/instagram.html.twig', ['account' => $account, 'crosspost' => false, 'import' => $import]);
+        }
         $connection = $this->connections->of($account);
         $form = null;
         if ($connection instanceof InstagramConnection) {
@@ -91,12 +102,15 @@ final class InstagramController extends AbstractController
             'app_form' => $appForm,
             'redirect_uri' => $this->redirectUri(),
             'form' => $form,
+            'crosspost' => true,
+            'import' => $import,
         ]);
     }
 
     /**
      * Vers Instagram : l'utilisateur s'y connecte et autorise la publication.
      */
+    #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
     #[Route('/reglages/instagram/connexion', name: 'app_settings_instagram_connect', methods: ['POST'])]
     public function connect(Request $request): RedirectResponse
     {
@@ -118,6 +132,7 @@ final class InstagramController extends AbstractController
     /**
      * Retour d'Instagram : code échangé contre un jeton, après vérification de l'état (contre la falsification).
      */
+    #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
     #[Route('/reglages/instagram/retour', name: 'app_settings_instagram_callback', methods: ['GET'])]
     public function callback(Request $request): RedirectResponse
     {
@@ -145,6 +160,7 @@ final class InstagramController extends AbstractController
         return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
     }
 
+    #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
     #[Route('/reglages/instagram/application/retirer', name: 'app_settings_instagram_app_remove', methods: ['POST'])]
     public function removeApp(Request $request): RedirectResponse
     {
@@ -157,6 +173,7 @@ final class InstagramController extends AbstractController
         return $this->redirectToRoute('app_settings_instagram', status: Response::HTTP_SEE_OTHER);
     }
 
+    #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
     #[Route('/reglages/instagram/deconnecter', name: 'app_settings_instagram_disconnect', methods: ['POST'])]
     public function disconnect(Request $request): RedirectResponse
     {
@@ -172,6 +189,7 @@ final class InstagramController extends AbstractController
     /**
      * Envoi après coup d'une publication déjà en ligne (menu ⋯, ou bouton de sa page).
      */
+    #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
     #[Route('/p/{id}/instagram', name: 'app_post_instagram', requirements: ['id' => Requirement::UID_BASE58], methods: ['POST'])]
     public function sendPost(string $id, Request $request, \App\Core\Infrastructure\Doctrine\PostRepository $posts, InstagramPublishing $publishing): RedirectResponse
     {
@@ -202,6 +220,7 @@ final class InstagramController extends AbstractController
      * Relance d'un envoi : après un échec, s'il est bloqué, ou pour republier (la publication Instagram précédente
      * est d'abord supprimée si possible).
      */
+    #[IsGranted(User::ROLE_PUBLISHER, message: 'Votre compte n’a pas le droit de publier.')]
     #[Route('/instagram/envois/{id}/reessayer', name: 'app_instagram_retry', requirements: ['id' => Requirement::UUID], methods: ['POST'])]
     public function retry(string $id, Request $request, InstagramCrosspostRepository $crossposts, InstagramPublishing $publishing): RedirectResponse
     {

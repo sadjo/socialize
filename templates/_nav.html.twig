@@ -12,13 +12,12 @@
         <a class="nav notif-link{{ current_route == 'app_notifications' ? ' on' }}" href="{{ path('app_notifications') }}"{% if current_route == 'app_notifications' %} aria-current="page"{% endif %}>{{ ui.icon('bell') }}<span class="lbl">Notifications</span>{% if unread %}<span class="badge num" aria-label="{{ unread }} non lue{{ unread > 1 ? 's' }}">{{ unread > 99 ? '99+' : unread }}</span>{% endif %}</a>
         <a class="nav{{ current_route == 'app_profile' and account is defined and account.id == me.id ? ' on' }}" href="{{ path('app_profile', {username: me.acct}) }}">{{ ui.icon('user') }}<span class="lbl">Profil</span></a>
         <div class="sep"></div>
-        {% if (is_granted('ROLE_PUBLISHER') or is_granted('ROLE_MASTODON')) and is_granted('ROLE_INSTAGRAM_IMPORTER') %}<a class="nav{{ (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_import') }}">{{ ui.icon('download') }}<span class="lbl">Import Instagram</span></a>{% endif %}
         {% if mastodon %}
             {# Compte Mastodon : il se règle sur son serveur ; seule l'apparence se choisit ici. #}
-            <a class="nav{{ current_route == 'app_settings_appearance' ? ' on' }}" href="{{ path('app_settings_appearance') }}">{{ ui.icon('moon') }}<span class="lbl">Apparence</span></a>
+            <a class="nav{{ current_route in ['app_settings_appearance', 'app_settings_instagram'] or (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_settings_appearance') }}">{{ ui.icon('moon') }}<span class="lbl">Apparence</span></a>
             {% if me.profileUrl %}<a class="nav" href="{{ me.profileUrl }}" target="_blank" rel="noopener">{{ ui.icon('sliders') }}<span class="lbl">Mon compte sur {{ me.domain }}</span></a>{% endif %}
         {% else %}
-            <a class="nav{{ current_route == 'app_settings' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
+            <a class="nav{{ (current_route ?? '') starts with 'app_settings' or (current_route ?? '') starts with 'app_import' ? ' on' }}" href="{{ path('app_settings') }}">{{ ui.icon('sliders') }}<span class="lbl">Réglages</span></a>
         {% endif %}
         {% if app.user.isAdmin() %}<a class="nav{{ (current_route ?? '') starts with 'admin_' ? ' on' }}" href="{{ path('admin_accounts') }}">{{ ui.icon('shield') }}<span class="lbl">Administration</span></a>{% endif %}
     {% else %}

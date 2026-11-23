@@ -21,10 +21,11 @@ final class MobileMenuTest extends AppWebTestCase
         self::assertSelectorExists('header.mtop button[data-action="mobile-menu#open"]');
         self::assertSelectorExists('dialog.mobile-menu button[popovertarget="create-menu"]', 'Créer : choix publication ou story.');
         self::assertSelectorExists('nav.side button[popovertarget="create-menu"]');
-        foreach (['/deconnexion', '/recherche', '/import', '/reglages', '/@hugo'] as $href) {
+        foreach (['/deconnexion', '/recherche', '/reglages', '/@hugo'] as $href) {
             self::assertSelectorExists(\sprintf('dialog.mobile-menu a[href="%s"]', $href), $href);
             self::assertSelectorExists(\sprintf('nav.side a[href="%s"]', $href), 'Menu de gauche inchangé : '.$href);
         }
+        self::assertSelectorNotExists('a.nav[href="/import"]', 'L’import Instagram est dans Réglages › Instagram, pas dans le menu.');
         self::assertSelectorNotExists('dialog.mobile-menu button[data-controller="theme"]', 'Le thème se choisit dans les réglages.');
         self::assertSelectorTextSame('dialog.mobile-menu .side-version', 'dev');
         self::assertSelectorNotExists('dialog.mobile-menu a[href="/admin/comptes"]');

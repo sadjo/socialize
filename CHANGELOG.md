@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.50] - 2026-11-23
+
+Instagram import moved to the settings.
+
+### Changed
+
+- The Instagram import is no longer in the main menu: it starts from *Settings › Instagram*, which also shows an
+  import in progress with a button to resume it (import)
+- Accounts signed in with Mastodon and allowed to import see the Instagram settings tab with the import only; posting
+  to Instagram stays reserved to local publishers (import)
+- During an import, Settings stays highlighted in the menu, and the import pages have a button back to the settings
+  (layout)
+
 ## [0.9.49] - 2026-11-23
 
 Tests run in parallel.

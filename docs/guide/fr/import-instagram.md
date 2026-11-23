@@ -1,8 +1,8 @@
 # Importer son archive Instagram
 
 Avec le droit *Import Instagram*, accordé par un administrateur, vous rapatriez tout votre historique Instagram
-(*Import Instagram* dans le menu) : publications, carrousels, vidéos, publications archivées et stories, avec leurs
-dates d'origine.
+(*Réglages › Instagram › Importer mon archive*) : publications, carrousels, vidéos, publications archivées et stories,
+avec leurs dates d'origine. Un import en cours y est signalé, avec un bouton pour le reprendre.
 
 ## Demander l'archive à Instagram
 

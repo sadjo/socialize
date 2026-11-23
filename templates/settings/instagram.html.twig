@@ -5,9 +5,10 @@
 
 {% block content %}
 <div class="page-narrow">
-    <div class="page-h"><div class="grow"><h1>Réglages{{ ui.help('instagram', 'publier-aussi-sur-instagram', 'Instagram') }}</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
+    <div class="page-h"><div class="grow"><h1>Réglages{{ crosspost ? ui.help('instagram', 'publier-aussi-sur-instagram', 'Instagram') : ui.help('import-instagram', null, 'l’import Instagram') }}</h1><p>Compte {{ handle(account, local_domain) }}</p></div></div>
     {{ include('settings/_tabs.html.twig', {current: 'instagram'}) }}
 
+    {% if crosspost %}
     <section class="card stack">
         <h2>Publier aussi sur Instagram</h2>
         <p class="small">Vos publications et stories peuvent partir aussi sur votre compte Instagram <b>professionnel</b> (Créateur ou Entreprise), au moment de les publier. Instagram ne permet pas de modifier ni de supprimer ces copies depuis Socialize : cela se fait dans l’application Instagram.</p>
@@ -63,7 +64,22 @@
             <p class="small">{{ own_app ? 'Connexion avec votre application Meta.' : 'Connexion avec l’application Meta de l’instance.' }} Tant qu’elle n’est pas validée par Meta, seuls les comptes Instagram ajoutés comme testeurs de l’application peuvent se connecter.</p>
         {% endif %}
     </section>
+    {% endif %}
 
+    {% if import is not null %}
+    <section class="card stack" id="import">
+        <h2>Importer mon archive Instagram</h2>
+        <p class="small">Récupérez votre historique Instagram : publications, carrousels, vidéos, publications archivées et stories, avec leurs dates d’origine{{ is_granted('ROLE_MASTODON') ? ', publiés sur votre compte Mastodon' }}.</p>
+        {% if import.active %}
+            <div class="note">{{ ui.icon('download', 'sm') }}<span>Un import est en cours.</span></div>
+            <div class="navbtns"><span></span><a class="btn pri" href="{{ path('app_import') }}">Reprendre l’import{{ ui.icon('right', 'sm') }}</a></div>
+        {% else %}
+            <div class="navbtns"><span></span><a class="btn pri" href="{{ path('app_import') }}">{{ ui.icon('download', 'sm') }}Importer mon archive</a></div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {% if crosspost %}
     <section class="card stack" id="application-meta">
         <h2>Application Meta</h2>
         <p class="small">La connexion à Instagram passe par une application Meta (developers.facebook.com, cas d’utilisation « Gérer les messages et le contenu sur Instagram »). Vous pouvez utiliser la vôtre{{ instance_app ? ' à la place de celle de l’instance' }}. Déclarez-y l’adresse de retour <code>{{ redirect_uri }}</code> : pour une application récente (connexion unifiée), dans la configuration et dans Facebook Login for Business › Paramètres › URI de redirection OAuth valides ; pour une application plus ancienne, dans la configuration de l’API avec connexion Instagram.</p>
@@ -85,5 +101,6 @@
             </form>
         {% endif %}
     </section>
+    {% endif %}
 </div>
 {% endblock %}

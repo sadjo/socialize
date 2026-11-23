@@ -29,7 +29,8 @@ oublié ?*.
   restent sur votre serveur Mastodon.
 - **Publier** : les photos, vidéos et textes publiés depuis Socialize partent sur votre compte Mastodon ; l'onglet
   *Texte* publie un message sans média.
-- **Import Instagram** : possible si un administrateur l'autorise ; l'archive est publiée sur votre compte Mastodon.
+- **Import Instagram** : possible si un administrateur l'autorise, depuis *Apparence › Instagram* ; l'archive est
+  publiée sur votre compte Mastodon.
 
 Socialize agit avec l'autorisation accordée à la connexion, sans jamais connaître votre mot de passe Mastodon.
 
