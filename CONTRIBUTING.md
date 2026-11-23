@@ -43,7 +43,8 @@ Every pull request must pass:
 
 ```bash
 make quality   # PHP-CS-Fixer (@Symfony), Rector, PHPStan (max level), Deptrac, Symfony linters
-make test      # PHPUnit (fails on any deprecation)
+make test      # PHPUnit in parallel with ParaTest (fails on any deprecation)
+make test-serie f=<filter>   # PHPUnit alone, one test at a time
 ```
 
 `make fix` applies Rector and the coding style automatically. A feature is complete when it has a test that

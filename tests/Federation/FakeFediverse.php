@@ -24,6 +24,8 @@ final class FakeFediverse
 
     private static ?string $photo = null;
 
+    private static ?string $smallPhoto = null;
+
     /** @var list<array{url: string, headers: array<string, string>, body: string, activity: array<string, mixed>}> */
     public array $deliveries = [];
 
@@ -72,6 +74,11 @@ final class FakeFediverse
         // Médias des publications : une vraie photo JPEG pour /media/<numéro>.jpg (copiée ici par CacheRemoteMedia).
         if (1 === preg_match('#^/media/\d+\.jpg$#', $path)) {
             return new MockResponse(self::photo(), ['response_headers' => ['content-type' => 'image/jpeg']]);
+        }
+
+        // Petite photo pour /media/petite/<numéro>.jpg : tests qui importent des dizaines de publications.
+        if (1 === preg_match('#^/media/petite/\d+\.jpg$#', $path)) {
+            return new MockResponse(self::smallPhoto(), ['response_headers' => ['content-type' => 'image/jpeg']]);
         }
 
         // Pages web (aperçus de liens) : un article avec ses balises Open Graph, et une adresse qui n'est pas une page.
@@ -127,6 +134,14 @@ final class FakeFediverse
     public static function photo(): string
     {
         return self::$photo ??= Image::black(1080, 1350, ['bands' => 3])->add([40, 60, 140])->cast('uchar')->writeToBuffer('.jpg', ['Q' => 80]);
+    }
+
+    /**
+     * Petite photo 4:5 : ses copies WebP se font vite, pour les tests qui en importent des dizaines.
+     */
+    public static function smallPhoto(): string
+    {
+        return self::$smallPhoto ??= Image::black(216, 270, ['bands' => 3])->add([40, 60, 140])->cast('uchar')->writeToBuffer('.jpg', ['Q' => 80]);
     }
 
     /**

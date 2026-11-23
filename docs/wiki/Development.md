@@ -15,7 +15,8 @@ make help          # every command
 | --- | --- |
 | `make up` / `make down` | Start / stop the development environment |
 | `make logs`, `make sh` | Follow the logs, open a shell in the container |
-| `make test` | PHPUnit |
+| `make test` | PHPUnit in parallel (ParaTest, one process per core; `p=4` to set the number) |
+| `make test-serie` | PHPUnit alone, one test after another (`f=<filter>` to pick some) |
 | `make quality` | PHP-CS-Fixer, Rector (dry run), PHPStan (max level), Deptrac — like the CI |
 | `make fix` | Apply Rector and the coding style |
 | `make console c="…"` | Run a Symfony command, e.g. `make console c="app:demo:seed"` |

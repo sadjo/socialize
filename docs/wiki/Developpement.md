@@ -15,7 +15,8 @@ make help          # toutes les commandes
 | --- | --- |
 | `make up` / `make down` | Démarrer / arrêter l'environnement de développement |
 | `make logs`, `make sh` | Suivre les journaux, ouvrir un shell dans le conteneur |
-| `make test` | PHPUnit |
+| `make test` | PHPUnit en parallèle (ParaTest, un processus par cœur ; `p=4` pour en fixer le nombre) |
+| `make test-serie` | PHPUnit seul, un test après l'autre (`f=<filtre>` pour en choisir) |
 | `make quality` | PHP-CS-Fixer, Rector (simulation), PHPStan (niveau max), Deptrac — comme la CI |
 | `make fix` | Appliquer Rector et le style |
 | `make console c="…"` | Commande Symfony, par exemple `make console c="app:demo:seed"` |

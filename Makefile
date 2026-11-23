@@ -3,7 +3,7 @@ DC   = docker compose -f compose.yaml -f compose.dev.yaml
 EXEC = $(DC) exec app
 
 .DEFAULT_GOAL := help
-.PHONY: help build up down logs sh console composer test quality fix prod guide immich-up immich-seed immich-down
+.PHONY: help build up down logs sh console composer test test-serie quality fix prod guide immich-up immich-seed immich-down
 
 help: ## Afficher cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -29,8 +29,11 @@ console: ## Lancer une commande Symfony : make console c="debug:router"
 composer: ## Lancer Composer : make composer c="require symfony/uid"
 	$(EXEC) composer $(c)
 
-test: ## Lancer les tests
-	$(EXEC) php bin/phpunit
+test: ## Lancer les tests en parallèle (ParaTest, un processus par cœur ; p=4 pour en fixer le nombre)
+	$(EXEC) vendor/bin/paratest $(if $(p),--processes=$(p))
+
+test-serie: ## Lancer les tests un par un (PHPUnit seul, f=<filtre> pour en choisir)
+	$(EXEC) php bin/phpunit $(if $(f),--filter $(f))
 
 guide: ## Construire le guide d'utilisation pour le wiki et le site dans var/guide (à relire avant publication)
 	docker run --rm -u $$(id -u):$$(id -g) -v $(CURDIR):/app -w /app -e HOME=/tmp python:3.13-slim sh -c \
