@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.49] - 2026-11-23
+
+Tests run in parallel.
+
+### Changed
+
+- `make test` runs the test suite in parallel with ParaTest, one process per core (`p=4` to set the number);
+  `make test-serie` runs PHPUnit alone, `f=<filter>` to pick tests (tests)
+- Each test process has its own database (SQLite file, or MariaDB database suffix) and its own test media folder
+  (tests)
+- The two federation history tests import a small photo, the others keep the full-size one that the offered image
+  sizes depend on (tests)
+
 ## [0.9.48] - 2026-11-23
 
 Faster continuous integration.
