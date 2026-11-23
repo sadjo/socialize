@@ -109,11 +109,16 @@ small,.small{font-size:.82rem;color:var(--muted)}
 main{min-width:0;padding-block:28px 110px}
 .mtop{display:none}
 .tabbar{display:none}
-/* Menu en icônes seules entre le mobile et 1024 px (tablette en portrait) ; menu large au-delà, dès l'iPad en paysage. */
+/* Menu étroit entre le mobile et 1024 px (tablette en portrait) : icône et petit libellé dessous, car un écran tactile
+   n'a pas de survol pour dévoiler un titre ; menu large au-delà, dès l'iPad en paysage. */
 @media (min-width:768px) and (max-width:1023px){
-  :root{--side-w:72px}
-  .side .lbl,.logo span,.nav .badge{display:none}
-  .nav{justify-content:center;padding:12px}
+  :root{--side-w:84px}
+  .side{overflow-y:auto;scrollbar-width:none}
+  .logo span{display:none}
+  .side .nav{position:relative;flex-direction:column;justify-content:center;gap:3px;padding:8px 2px;text-align:center}
+  .side .lbl{font-size:.66rem;line-height:1.15;overflow-wrap:anywhere}
+  .side .nav.on .lbl{color:var(--accent)}
+  .side .nav .badge{position:absolute;top:3px;left:calc(50% + 5px);margin:0;min-width:18px;height:18px;padding:0 5px;font-size:.65rem}
   .side-version{margin-inline:0;text-align:center;font-size:.68rem}
   .side-help{margin-inline:auto;font-size:.68rem}
   .logo{justify-content:center;padding-inline:0}
