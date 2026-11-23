@@ -51,7 +51,7 @@ Le **menu** (à gauche sur ordinateur, en bas et dans *Menu* sur téléphone) m�
 *Créer*, aux notifications, à votre profil et aux réglages. Les petits **?** à côté des titres ouvrent la partie de
 cette aide qui correspond à la page.
 
-Sur un écran large, **Réduire le menu** (en bas du menu) le rétrécit et *Agrandir* le rétablit ; l'appareil s'en
-souvient. En paysage, le menu réduit ne garde que les icônes (leur nom s'affiche au survol) ; en portrait, chaque icône
+Sur un écran large, la flèche **‹** à droite du logo réduit le menu, et la flèche **›** sous le logo l'agrandit ;
+l'appareil s'en souvient. En paysage, le menu réduit ne garde que les icônes (leur nom s'affiche au survol) ; en portrait, chaque icône
 garde son nom en petit dessous. Sur une tablette en portrait, le menu est toujours réduit ; sur un iPad Pro en portrait,
 le réduire fait apparaître la colonne des suggestions à côté du fil.

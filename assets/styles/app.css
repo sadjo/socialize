@@ -113,10 +113,10 @@ main{min-width:0;padding-block:28px 110px}
    menu » (cookie « menu », attribut data-menu de <html>). Icône et petit libellé dessous, car un écran tactile n'a pas
    de survol pour dévoiler un titre. Les règles dépendent de la largeur du menu lui-même (requête de conteneur). */
 .side{overflow-y:auto;scrollbar-width:none;container:side/inline-size}
+.side-head{display:flex;align-items:center;justify-content:space-between;gap:4px;padding-bottom:22px}
+.side-head .logo{padding-bottom:6px}
+.menu-size{color:var(--muted)}
 .menu-size .i{transition:transform .15s}
-.menu-size .when-reduced,.mobile-menu .menu-size{display:none}
-:root[data-menu="reduit"] .menu-size .when-large{display:none}
-:root[data-menu="reduit"] .menu-size .when-reduced{display:inline}
 :root[data-menu="reduit"] .menu-size .i{transform:scaleX(-1)}
 @media (min-width:768px) and (max-width:1023px){
   :root{--side-w:84px}
@@ -139,6 +139,7 @@ main{min-width:0;padding-block:28px 110px}
 @container side (max-width:120px){
   .logo-mark ~ span{display:none}
   .logo{justify-content:center;padding-inline:0}
+  .side-head{flex-direction:column;gap:6px}
   .nav{position:relative;flex-direction:column;justify-content:center;gap:3px;padding:8px 2px;text-align:center}
   .lbl{font-size:.66rem;line-height:1.15;overflow-wrap:anywhere}
   .nav.on .lbl{color:var(--accent)}

@@ -51,7 +51,7 @@ The **menu** (on the left on a computer, at the bottom and in *Menu* on a phone)
 *Créer* button, notifications, your profile and the settings. The small **?** next to page titles open the part of
 this guide that matches the page.
 
-On a wide screen, **Réduire le menu** (at the bottom of the menu) narrows it and *Agrandir* brings it back; the
-device remembers your choice. In landscape mode the reduced menu keeps only the icons (their name shows on hover); in
+On a wide screen, the **‹** arrow to the right of the logo reduces the menu, and the **›** arrow under the logo
+expands it again; the device remembers your choice. In landscape mode the reduced menu keeps only the icons (their name shows on hover); in
 portrait mode each icon keeps its name in small print underneath. On a tablet in portrait mode the menu is always
 reduced; on an iPad Pro in portrait mode, reducing it shows the suggestions column next to the feed.

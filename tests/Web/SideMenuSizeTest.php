@@ -19,9 +19,9 @@ final class SideMenuSizeTest extends AppWebTestCase
         $this->client->request('GET', '/');
 
         self::assertSelectorExists('html[data-menu="large"]');
-        self::assertSelectorExists('nav.side button.menu-size[data-action="menu-size#toggle"]');
-        self::assertSelectorTextContains('nav.side button.menu-size .when-large', 'Réduire le menu');
-        self::assertSelectorTextContains('nav.side button.menu-size .when-reduced', 'Agrandir');
+        // Bouton à côté du logo, hors des entrées du menu (et donc absent de la fenêtre « Menu » du mobile).
+        self::assertSelectorExists('nav.side .side-head .logo + button.menu-size[data-action="menu-size#toggle"][aria-label="Réduire le menu"]');
+        self::assertSelectorNotExists('dialog.mobile-menu .menu-size');
     }
 
     public function testTheReducedMenuIsKeptFromOnePageToTheNext(): void
@@ -32,6 +32,7 @@ final class SideMenuSizeTest extends AppWebTestCase
         foreach (['/', '/local', '/@hugo'] as $page) {
             $this->client->request('GET', $page);
             self::assertSelectorExists('html[data-menu="reduit"]', $page);
+            self::assertSelectorExists('nav.side button.menu-size[aria-label="Agrandir le menu"]', $page);
         }
 
         // Valeur inconnue : menu large.

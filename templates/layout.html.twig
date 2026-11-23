@@ -39,7 +39,13 @@
 <div class="app{{ show_menu ? '' : ' no-menu' }}">
     {% if show_menu %}
     <nav class="side" aria-label="Navigation principale">
-        <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
+        {# Réduire (à droite du logo) ou agrandir (sous le logo) le menu ; masqué sur tablette en portrait, où il est
+           toujours étroit. Choix mémorisé par l'appareil (cookie « menu »). #}
+        {% set menu_size_label = app.request.cookies.get('menu') == 'reduit' ? 'Agrandir le menu' : 'Réduire le menu' %}
+        <div class="side-head" data-controller="menu-size">
+            <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
+            <button type="button" class="ib menu-size" data-menu-size-target="button" data-action="menu-size#toggle" aria-label="{{ menu_size_label }}" title="{{ menu_size_label }}">{{ ui.icon('left', 'sm') }}</button>
+        </div>
         {{ include('_nav.html.twig') }}
     </nav>
     {% endif %}
