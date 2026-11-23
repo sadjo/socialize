@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 {# Thème et filtre des médias choisis dans Réglages › Apparence ; valeurs par défaut (automatique, léger) pour les
    visiteurs et les comptes Mastodon. #}
-<html lang="fr" data-theme="{{ app.user.theme.value ?? 'auto' }}" data-media-filter="{{ app.user.mediaFilter.value ?? 'light' }}">
+{# Menu de gauche réduit ou large (bouton « Réduire le menu », mémorisé par l'appareil dans le cookie « menu »). #}
+<html lang="fr" data-theme="{{ app.user.theme.value ?? 'auto' }}" data-media-filter="{{ app.user.mediaFilter.value ?? 'light' }}" data-menu="{{ app.request.cookies.get('menu') == 'reduit' ? 'reduit' : 'large' }}">
     <head>
         <meta charset="UTF-8">
         {# Zoom fixe sur mobile : pas de zoom au toucher d'un champ ni au pincement (Android). Voir aussi assets/app.js (iOS). #}

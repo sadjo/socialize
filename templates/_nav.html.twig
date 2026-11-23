@@ -27,6 +27,8 @@
         {% if me or not home_login_only %}<a class="nav{{ current_route == 'app_register' ? ' on' }}" href="{{ path('app_register') }}">{{ ui.icon('user') }}<span class="lbl">Créer un compte</span></a>{% endif %}
     {% endif %}
     <div class="grow"></div>
+    {# Menu de gauche seulement (masqué dans la fenêtre « Menu » du mobile et sur tablette en portrait, où il est déjà étroit). #}
+    <button type="button" class="nav menu-size" data-controller="menu-size" data-action="menu-size#toggle">{{ ui.icon('left') }}<span class="lbl when-large">Réduire le menu</span><span class="lbl when-reduced">Agrandir</span></button>
     {% if me %}
         <a class="nav" href="{{ path('app_logout') }}">{{ ui.icon('logout') }}<span class="lbl">Déconnexion</span></a>
     {% endif %}

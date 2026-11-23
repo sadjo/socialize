@@ -50,3 +50,7 @@ Elle s'ouvre alors en plein écran et peut envoyer des [notifications](notificat
 Le **menu** (à gauche sur ordinateur, en bas et dans *Menu* sur téléphone) mène aux fils, à la recherche, au bouton
 *Créer*, aux notifications, à votre profil et aux réglages. Les petits **?** à côté des titres ouvrent la partie de
 cette aide qui correspond à la page.
+
+Sur un écran large, **Réduire le menu** (en bas du menu) ne garde que les icônes et leur nom en petit ; *Agrandir*
+le rétablit, et l'appareil s'en souvient. Sur une tablette en portrait, le menu est toujours réduit ; sur un iPad Pro
+en portrait, le réduire fait apparaître la colonne des suggestions à côté du fil.

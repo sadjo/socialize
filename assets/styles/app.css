@@ -109,19 +109,37 @@ small,.small{font-size:.82rem;color:var(--muted)}
 main{min-width:0;padding-block:28px 110px}
 .mtop{display:none}
 .tabbar{display:none}
-/* Menu étroit entre le mobile et 1024 px (tablette en portrait) : icône et petit libellé dessous, car un écran tactile
-   n'a pas de survol pour dévoiler un titre ; menu large au-delà, dès l'iPad en paysage. */
+/* Menu étroit : imposé entre le mobile et 1024 px (tablette en portrait), choisi au-delà avec le bouton « Réduire le
+   menu » (cookie « menu », attribut data-menu de <html>). Icône et petit libellé dessous, car un écran tactile n'a pas
+   de survol pour dévoiler un titre. Les règles dépendent de la largeur du menu lui-même (requête de conteneur). */
+.side{overflow-y:auto;scrollbar-width:none;container:side/inline-size}
+.menu-size .i{transition:transform .15s}
+.menu-size .when-reduced,.mobile-menu .menu-size{display:none}
+:root[data-menu="reduit"] .menu-size .when-large{display:none}
+:root[data-menu="reduit"] .menu-size .when-reduced{display:inline}
+:root[data-menu="reduit"] .menu-size .i{transform:scaleX(-1)}
 @media (min-width:768px) and (max-width:1023px){
   :root{--side-w:84px}
-  .side{overflow-y:auto;scrollbar-width:none}
-  .logo span{display:none}
-  .side .nav{position:relative;flex-direction:column;justify-content:center;gap:3px;padding:8px 2px;text-align:center}
-  .side .lbl{font-size:.66rem;line-height:1.15;overflow-wrap:anywhere}
-  .side .nav.on .lbl{color:var(--accent)}
-  .side .nav .badge{position:absolute;top:3px;left:calc(50% + 5px);margin:0;min-width:18px;height:18px;padding:0 5px;font-size:.65rem}
+  .side .menu-size{display:none}
+}
+@media (min-width:1024px){
+  :root[data-menu="reduit"]{--side-w:84px}
+}
+/* Menu réduit sur une tablette en portrait large (iPad Pro, 1024 à 1199 px) : la place gagnée rend la colonne des
+   suggestions, masquée sinon sous 1200 px. */
+@media (min-width:1024px) and (max-width:1199px){
+  :root[data-menu="reduit"] .home{grid-template-columns:minmax(0,480px) 300px;gap:32px}
+  :root[data-menu="reduit"] .rail{display:flex}
+}
+@container side (max-width:120px){
+  .logo-mark ~ span{display:none}
+  .logo{justify-content:center;padding-inline:0}
+  .nav{position:relative;flex-direction:column;justify-content:center;gap:3px;padding:8px 2px;text-align:center}
+  .lbl{font-size:.66rem;line-height:1.15;overflow-wrap:anywhere}
+  .nav.on .lbl{color:var(--accent)}
+  .nav .badge{position:absolute;top:3px;left:calc(50% + 5px);margin:0;min-width:18px;height:18px;padding:0 5px;font-size:.65rem}
   .side-version{margin-inline:0;text-align:center;font-size:.68rem}
   .side-help{margin-inline:auto;font-size:.68rem}
-  .logo{justify-content:center;padding-inline:0}
 }
 @media (max-width:767px){
   .app{grid-template-columns:minmax(0,1fr);gap:0}
