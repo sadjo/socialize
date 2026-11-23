@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.47] - 2026-11-23
+
+Collapsible side menu.
+
+### Added
+
+- Side menu can be reduced with the panel icon to the right of the logo and expanded again with the one under the
+  logo (the chevron turns); the choice is remembered by the device (layout)
+- Reduced menu: icons only in landscape mode (name on hover), name under each icon in portrait mode (layout)
+- On a large tablet in portrait mode (iPad Pro, 1024 to 1199 px), reducing the menu shows the suggestions column next
+  to the feed (layout)
+
+### Fixed
+
+- Narrow side menu: the logo mark is shown again (layout)
+
 ## [0.9.46] - 2026-11-23
 
 Labels in the narrow menu on tablets in portrait mode.
