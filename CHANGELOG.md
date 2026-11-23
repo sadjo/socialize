@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.51] - 2026-11-23
+
+Thumbnails of small photos are no longer enlarged.
+
+### Fixed
+
+- The 4:5 grid thumbnails (240 to 720 px) no longer enlarge a photo smaller than their frame: they keep their format
+  but stop at the largest 4:5 crop of the original, and the page offers a single size. Less processing and storage,
+  same quality (media)
+
 ## [0.9.50] - 2026-11-23
 
 Instagram import moved to the settings.
