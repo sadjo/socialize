@@ -27,6 +27,7 @@ use App\Media\Application\ProcessVideo;
 use App\Media\Application\ProcessVideoHandler;
 use App\Media\Application\StoryComposer;
 use App\Tests\AppWebTestCase;
+use App\Tests\Support\TestStorage;
 use Symfony\Component\HttpFoundation\File\File;
 
 final class InstagramTest extends AppWebTestCase
@@ -497,7 +498,7 @@ final class InstagramTest extends AppWebTestCase
         $crosspost = $this->crosspostOf($post);
         self::assertSame(CrosspostStatus::Published, $crosspost->getStatus());
         self::assertSame('https://www.instagram.com/p/media-1/', $crosspost->getPermalink());
-        self::assertDirectoryDoesNotExist(\dirname(__DIR__, 2).'/var/test-storage/public/crosspost/'.$crosspost->getId()->toBase58(), 'Copies temporaires supprimées.');
+        self::assertDirectoryDoesNotExist(TestStorage::dir('public/crosspost/').$crosspost->getId()->toBase58(), 'Copies temporaires supprimées.');
 
         $this->client->request('GET', '/p/'.$post->getPublicId());
         self::assertSelectorTextContains('.crosspost-status', 'Publiée sur Instagram');

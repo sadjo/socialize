@@ -7,6 +7,7 @@ namespace App\Tests;
 use App\Core\Application\Account\RegisterAccount;
 use App\Core\Domain\Account\AccountRight;
 use App\Core\Domain\Account\User;
+use App\Tests\Support\TestStorage;
 use Jcupitt\Vips\Image;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -26,7 +27,7 @@ abstract class AppWebTestCase extends WebTestCase
 
     protected function setUp(): void
     {
-        new Filesystem()->remove(__DIR__.'/../var/test-storage');
+        new Filesystem()->remove(TestStorage::dir());
         $this->client = static::createClient(server: ['HTTP_ORIGIN' => 'http://localhost']);
     }
 

@@ -22,8 +22,8 @@ when@test:
             originals.storage:
                 adapter: 'local'
                 options:
-                    directory: '%kernel.project_dir%/var/test-storage/originals'
+                    directory: '%kernel.project_dir%/var/test-storage%env(default::TEST_TOKEN)%/originals'
             derivatives.storage:
                 adapter: 'local'
                 options:
-                    directory: '%kernel.project_dir%/var/test-storage/public'
+                    directory: '%kernel.project_dir%/var/test-storage%env(default::TEST_TOKEN)%/public'

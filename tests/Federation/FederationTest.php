@@ -923,7 +923,8 @@ final class FederationTest extends AppWebTestCase
     {
         $create = fn (string $id, string $published, ?string $inReplyTo = null, bool $withImage = true): array => [
             'id' => $id.'/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE,
-            'object' => ['published' => $published] + $this->remoteNote($id, 'Photo '.basename($id), $inReplyTo, $withImage),
+            // Petite photo : son traitement est refait pour chacune des 30 publications importées.
+            'object' => ['published' => $published] + $this->remoteNote($id, 'Photo '.basename($id), $inReplyTo, $withImage, 'https://remote.test/media/petite/1.jpg'),
         ];
         $day = static fn (int $days): string => new \DateTimeImmutable(\sprintf('-%d days', $days))->format(\DATE_ATOM);
         FakeFediverse::$outbox = [
@@ -958,7 +959,7 @@ final class FederationTest extends AppWebTestCase
     {
         for ($i = 1; $i <= 70; ++$i) {
             FakeFediverse::$outbox[] = ['id' => 'https://remote.test/notes/'.$i.'/activity', 'type' => 'Create', 'actor' => FakeFediverse::ALICE,
-                'object' => ['published' => new \DateTimeImmutable('-'.$i.' hours')->format(\DATE_ATOM)] + $this->remoteNote('https://remote.test/notes/'.$i, 'Photo '.$i)];
+                'object' => ['published' => new \DateTimeImmutable('-'.$i.' hours')->format(\DATE_ATOM)] + $this->remoteNote('https://remote.test/notes/'.$i, 'Photo '.$i, imageUrl: 'https://remote.test/media/petite/'.$i.'.jpg')];
         }
 
         $this->followAlice();

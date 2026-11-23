@@ -60,8 +60,8 @@ services:
 
 when@test:
     parameters:
-        app.import_dir: '%kernel.project_dir%/var/test-storage/imports'
-        app.mastodon_upload_dir: '%kernel.project_dir%/var/test-storage/mastodon'
+        app.import_dir: '%kernel.project_dir%/var/test-storage%env(default::TEST_TOKEN)%/imports'
+        app.mastodon_upload_dir: '%kernel.project_dir%/var/test-storage%env(default::TEST_TOKEN)%/mastodon'
     services:
         # Faux envoi des notifications sur les appareils (Web Push).
         App\Tests\Support\FakePushSender: ~

@@ -11,6 +11,7 @@ use App\Integration\Mastodon\Domain\MastodonPublicationState;
 use App\Integration\Mastodon\Infrastructure\Doctrine\MastodonPublicationRepository;
 use App\Tests\AppWebTestCase;
 use App\Tests\Federation\FakeFediverse;
+use App\Tests\Support\TestStorage;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -59,7 +60,7 @@ final class MastodonPublishTest extends AppWebTestCase
         $publication = $this->publication();
         self::assertSame(MastodonPublicationState::Sent, $publication->getState());
         self::assertSame('https://remote.test/users/alice/statuses/100', $publication->getStatusUri());
-        self::assertSame([], glob(__DIR__.'/../../var/test-storage/mastodon/*') ?: [], 'Les fichiers envoyés sont supprimés.');
+        self::assertSame([], glob(TestStorage::dir('mastodon/*')) ?: [], 'Les fichiers envoyés sont supprimés.');
     }
 
     public function testAVideoIsWaitedForUntilTheServerHasProcessedIt(): void
@@ -116,7 +117,7 @@ final class MastodonPublishTest extends AppWebTestCase
         $this->connect();
         $this->submit($this->client->request('GET', '/publier/mastodon'), [$this->jpeg()], ['caption' => 'Refusée']);
         self::assertSame(MastodonPublicationState::Failed, $this->publication()->getState());
-        self::assertSame([], glob(__DIR__.'/../../var/test-storage/mastodon/*') ?: [], 'Les fichiers sont supprimés, même en cas d’échec.');
+        self::assertSame([], glob(TestStorage::dir('mastodon/*')) ?: [], 'Les fichiers sont supprimés, même en cas d’échec.');
 
         $this->client->request('GET', '/@alice@remote.test');
         self::assertSelectorTextContains('.pending-posts', 'non publiée : remote.test a refusé : Validation failed');

@@ -144,7 +144,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and ou
 ```bash
 git clone https://github.com/sadjo/socialize.git && cd socialize
 make up        # http://localhost:8080
-make test      # PHPUnit
+make test      # PHPUnit in parallel (ParaTest); make test-serie f=<filter> for a single test
 make quality   # PHP-CS-Fixer, Rector, PHPStan, Deptrac
 ```
 

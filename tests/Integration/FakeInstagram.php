@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Tests\Support\TestStorage;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -159,7 +160,7 @@ final class FakeInstagram
         $image = null;
         if (isset($params['image_url'])) {
             // Instagram télécharge l'image : elle doit être publique et en JPEG.
-            $file = \dirname(__DIR__, 2).'/var/test-storage/public/'.preg_replace('#^https?://[^/]+/m/#', '', $params['image_url']);
+            $file = TestStorage::dir('public/').preg_replace('#^https?://[^/]+/m/#', '', $params['image_url']);
             $size = is_file($file) ? getimagesize($file) : false;
             if (false === $size || \IMAGETYPE_JPEG !== $size[2]) {
                 return $this->error(400, 'Only JPEG images are supported', 9004);
