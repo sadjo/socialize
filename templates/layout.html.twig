@@ -44,7 +44,11 @@
         {% set menu_size_label = app.request.cookies.get('menu') == 'reduit' ? 'Agrandir le menu' : 'Réduire le menu' %}
         <div class="side-head" data-controller="menu-size">
             <a class="logo" href="{{ path('app_home') }}"><span class="logo-mark"></span><span>social<b>ize</b></span></a>
-            <button type="button" class="ib menu-size" data-menu-size-target="button" data-action="menu-size#toggle" aria-label="{{ menu_size_label }}" title="{{ menu_size_label }}">{{ ui.icon('left', 'sm') }}</button>
+            <button type="button" class="ib menu-size" data-menu-size-target="button" data-action="menu-size#toggle" aria-label="{{ menu_size_label }}" title="{{ menu_size_label }}">
+                {# Fenêtre (rectangle arrondi), panneau (trait à gauche) et chevron ‹ qui pivote en › quand le menu est
+                   réduit : SVG en ligne, pour que la feuille de styles atteigne le chevron. #}
+                <svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path class="chevron" d="m16 15-3-3 3-3"/></svg>
+            </button>
         </div>
         {{ include('_nav.html.twig') }}
     </nav>

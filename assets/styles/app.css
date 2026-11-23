@@ -116,8 +116,8 @@ main{min-width:0;padding-block:28px 110px}
 .side-head{display:flex;align-items:center;justify-content:space-between;gap:4px;padding-bottom:22px}
 .side-head .logo{padding-bottom:6px}
 .menu-size{color:var(--muted)}
-.menu-size .i{transition:transform .15s}
-:root[data-menu="reduit"] .menu-size .i{transform:scaleX(-1)}
+.menu-size .chevron{transform-box:fill-box;transform-origin:center;transition:transform .2s}
+:root[data-menu="reduit"] .menu-size .chevron{transform:rotate(180deg)}
 @media (min-width:768px) and (max-width:1023px){
   :root{--side-w:84px}
   .side .menu-size{display:none}

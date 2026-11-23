@@ -22,6 +22,9 @@ final class SideMenuSizeTest extends AppWebTestCase
         // Bouton à côté du logo, hors des entrées du menu (et donc absent de la fenêtre « Menu » du mobile).
         self::assertSelectorExists('nav.side .side-head .logo + button.menu-size[data-action="menu-size#toggle"][aria-label="Réduire le menu"]');
         self::assertSelectorNotExists('dialog.mobile-menu .menu-size');
+        // Icône : fenêtre, panneau à gauche et chevron qui pivote (atteint par la feuille de styles).
+        self::assertSelectorExists('nav.side button.menu-size svg rect[rx]');
+        self::assertSelectorExists('nav.side button.menu-size svg path.chevron');
     }
 
     public function testTheReducedMenuIsKeptFromOnePageToTheNext(): void
