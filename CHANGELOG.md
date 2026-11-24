@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.55] - 2026-11-24
+
+No port published by SSH deployments.
+
+### Security
+
+- SSH deployments no longer publish any port on the server: the instance is only reachable through
+  its reverse proxy (deploy)
+
 ## [0.9.54] - 2026-11-24
 
 Security updates of Live Components and Twig.
