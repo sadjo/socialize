@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.54] - 2026-11-24
+
+Security updates of Live Components and Twig.
+
+### Security
+
+- Live Components 3.8.1 and Twig 3.31.1: fixes for the security advisories published on 2026-11-24
+  (CVE-2026-133769, CVE-2026-133774, CVE-2026-133778 and others) (dependencies)
+
 ## [0.9.53] - 2026-11-24
 
 Local HTTP port of SSH deployments limited to the server itself.
