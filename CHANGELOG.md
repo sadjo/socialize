@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.53] - 2026-11-24
+
+Local HTTP port of SSH deployments limited to the server itself.
+
+### Security
+
+- SSH deployments publish the local HTTP port on 127.0.0.1 only: the instance is no longer reachable
+  directly from the Internet, only through its reverse proxy (deploy)
+
 ## [0.9.52] - 2026-11-23
 
 GitHub actions on Node 24.
